@@ -1,6 +1,6 @@
-module Features
-  export docnum, catnum, clmnum, txtnum, intol, extract
-  using DataFrames
+  module Features
+export docnum, catnum, clmnum, txtnum, extract, widen
+using DataFrames, ProgressMeter
 
     "typ etykiety tekstu - referencja dokumentu"      const docnum = 1
     "typ etykiety tekstu - kategoria dokument"        const catnum = 2
@@ -15,9 +15,8 @@ elseif type == "claims"   return clmnum
 else                      return txtnum end
 end
 
-
     using StringDistances
-  function intol(test::String, queries::Vector{String}, tol::Float64)
+  function intol(test::String, queries::Vector{String}, tol::Rational)
 """Sprawdza czy przynajmniej jeden z tekstów 
 występuje w tekście z dokładnością do tolerancji"""
 for q in queries
@@ -50,48 +49,188 @@ const btmkeys = ["strona x z x",
   "dokument określający ogólny stan techniki",
   "sprawozdanie wykonał"]
 
-"Punkt na płaszczyźnie" Pt = Tuple{Float64, Float64}
+"Punkt na płaszczyźnie" Pt = Tuple{Float32, Float32}
 "Czworokąt na płaszczyźnie" Box = Tuple{Pt, Pt, Pt, Pt}
 
     """Wyciąga cechy z DataFrame"""
   function extract(df::DataFrame)
-fdf = DataFrame(unit=Int[], 
+fdf = DataFrame(unit=Int[], page=Int[],
                 group=Int[], 
                 type=Int[],
-                pt0=Pt[], 
-                pt1=Pt[], 
-                pt2=Pt[], 
-                pt3=Pt[],
-                length=Int[], 
-                lowercase=Int[], 
-                uppercase=Int[], 
-                digit=Int[],
-                #keywords
+                ptoplft=Pt[], 
+                ptoprgt=Pt[], 
+                pbtmlft=Pt[], 
+                pbtmrgt=Pt[],
+                length=Int[],
                 thdockeys=Int[],  #table-header-docs
                 thcatkeys=Int[],  #table-header-category
                 thclmkeys=Int[],  #table-header-claims
-                btmkeys=Int[])    #bottom-line
+                # btmkeys=Int[],    #bottom-line
+                abbrs=Int[],      #skróty
+                strtabbr=Bool[],  #początek
+                solwords=Int[],   #pojedyncze
+                sentences=Int[],
+                shtcodes=Int[],   #krótkie
+                lngcodes=Int[])   #długie
 fmap = Dict{Tuple{String, Int}, Int}()
-for row in eachrow(df) 
+  @showprogress 1 "🔎" for row in eachrow(df) 
+unit = (row.file, row.page)
+fmap[unit] = get(fmap, unit, length(fmap) + 1)
 
-  unit = (row.file, row.page)
-  fmap[unit] = get(fmap, unit, length(fmap) + 1)
-  
-  push!(fdf, (fmap[unit],
-    row.group, encode(row.type),
-    (row.px0, row.py0), 
-    (row.px1, row.py1),
-    (row.px2, row.py2), 
-    (row.px3, row.py3),
-    length(row.text), 
-    count(islowercase, row.text),
-    count(isuppercase, row.text),
-    count(isdigit, row.text),
-    intol(row.text, thdockeys, 0.2),
-    intol(row.text, thcatkeys, 0.2),
-    intol(row.text, thclmkeys, 0.1),
-    intol(row.text, btmkeys, 0.1)))
-  end
+pts = [(row.px0, row.py0),
+        (row.px1, row.py1),
+        (row.px2, row.py2),
+        (row.px3, row.py3)]
+sort!(pts, by=pt->pt[2])
+top, btm = pts[1:2], pts[3:4]
+sort!(pts, by=pt->pt[1])
+lft, rgt = pts[1:2], pts[3:4]
+
+sentences = Text.wordchain(row.text) |> Text.sententify
+  push!(fdf, (fmap[unit], row.page,
+row.group, encode(row.type),
+commonpt(top, lft),
+commonpt(top, rgt),
+commonpt(btm, lft),
+commonpt(btm, rgt),
+length(row.text),
+intol(row.text, thdockeys, 2//10),
+intol(row.text, thcatkeys, 2//10),
+intol(row.text, thclmkeys, 1//10),
+# intol(row.text, btmkeys, 1//10),
+any(uppercase(x) == x && length(x) < 4 for x in sentences),
+uppercase(sentences[1]) == sentences[1] && length(sentences[1]) < 4,
+count(x -> all(isletter, x) && !(' ' in x), sentences),
+count(x -> ' ' in x, sentences),
+count(x -> all(isdigit, x) && length(x) < 4, sentences),
+count(x -> all(isdigit, x) && length(x) >= 4, sentences)
+))end#for
 return fdf
+end#extract
+  function commonpt(A, B)::Pt
+for a in A
+  for b in B
+    if a[1] == b[1] && a[2] == b[2] return a end
+    end
+  end
+  return A[1]
+  end
+
+
+
+
+      """Łączy pobliskie czworokąty tworząc szeroką ramkę"""
+    function widen(df::Union{DataFrame, SubDataFrame}, n::Int)::Tuple{DataFrame, Matrix{Bool}}
+  labs = zeros(Bool, nrow(df), n)
+  wide, dfnames = copy(df), filter(x -> !(x in ["unit",
+                                                "group",
+                                                # "type",
+                                                "ptoplft", 
+                                                "ptoprgt", 
+                                                "pbtmlft",
+                                                "pbtmrgt"]), names(df))
+  dcol = Vector{Union{Missing, Float32}}(missing, nrow(df))
+  for i in 1:n
+for name in dfnames
+  wide[!, Symbol("$(name)$(i)")] = Vector{Union{Missing, typeof(df[!, name][1])}}(missing, nrow(df))
+  end#for name
+wide[!, "xdist$(i)"] = copy(dcol)
+wide[!, "ydist$(i)"] = copy(dcol)
+  end#for i
+
+  @showprogress 1 "🔍" for (iA, A) in enumerate(eachrow(df))
+  dfA = df[Not(iA), :]
+  xdists, ydists, sqdists = [], [], []
+
+for (ir, r) in enumerate(eachrow(dfA))
+push!(xdists, xdist(A, r))
+push!(ydists, ydist(A, r))
+push!(sqdists, sqrt(xdists[end]^2 + ydists[end]^2))
+end#for ir
+
+    nearby = dfA[sortperm(sqdists)[1:n], :]
+  for (i, r) in enumerate(eachrow(nearby))
+if A.type != txtnum && A.group == r.group
+  labs[iA, i] = 1
+  end
+for name in dfnames
+  wide[iA, Symbol("$(name)$(i)")] = r[name]
+  end#for name
+wide[iA, "xdist$(i)"] = xdists[i]
+wide[iA, "ydist$(i)"] = ydists[i]
+  end#for i
+
+  end#for iA
+return select(wide, Not(:group)), labs
+end#function
+
+
+
+
+    """Oblicza najmniejszą odległość między dwoma prostokątami(!)"""
+  function xdist(A::DataFrameRow, B::DataFrameRow)::Float32
+d, inter = 0.0, max(0, min(A.ptoprgt[1], B.ptoprgt[1]) 
+              - max(A.ptoplft[1], B.ptoplft[1]))
+  if inter == 0
+leftsideA = A.ptoplft[1] < B.ptoplft[1]
+if leftsideA d = B.ptoplft[1] - A.ptoprgt[1]
+        else d = B.ptoprgt[1] - A.ptoplft[1] end
+        end#if
+        return d
+        end#function
+
+
+
+
+    """Oblicza najmniejszą odległość między dwoma prostokątami(!)"""
+  function ydist(A::DataFrameRow, B::DataFrameRow)::Float32
+d, inter = 0.0, max(0, min(A.pbtmrgt[2], B.pbtmrgt[2]) 
+              - max(A.ptoprgt[2], B.ptoprgt[2]))
+  if inter == 0
+ontopA = A.ptoplft[2] < B.ptoplft[2]
+if ontopA d = B.ptoplft[2] - A.pbtmlft[2]
+     else d = B.pbtmlft[2] - A.ptoplft[2] end
+     end#if
+     return d
+     end#function
+
+
+
+
+  module Text
+export wordchain, sententify
+  """Zwraca listę słów z tekstu oraz znaków które je oddzielają"""
+function wordchain(string::String)
+chained = split(string, r"((?=[^a-zA-Z0-9\p{L}])|(?<=[^a-zA-Z0-9\p{L}]))")
+chained = filter(x -> !isempty(x), chained)
+return chained
 end
+
+
+
+
+  """Łączy słowa złożone z liter w sentencje"""
+function sententify(strings::Union{Vector{String}, Vector{SubString{String}}})
+sentified::Vector{String} = [strings[1]]
+lttrprv = all(isletter, strings[1])
+prvsent = lttrprv
+for string in strings[2:end]
+  if all(isletter, collect(string))
+    lttrprv = true
+    if prvsent
+      sentified[end] = sentified[end] * " " * string
+    else
+      push!(sentified, string)
+      prvsent = true
+      end
+  elseif lttrprv && (all(isspace, collect(string)) || string == ".")
+    sentified[end] = sentified[end] * string
+  elseif all(x -> isletter(x) || isdigit(x), collect(string)) 
+    push!(sentified, string) 
+    prvsent = false
+  else prvsent = false end
+end#for
+return sentified
+  end#function
+end#TextFeatures
   end#module
