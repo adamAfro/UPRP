@@ -148,14 +148,12 @@ wide[!, "ydist$(i)"] = copy(dcol)
   @showprogress 1 "🔍" for (iA, A) in enumerate(eachrow(df))
   dfA = df[Not(iA), :]
   xdists, ydists, sqdists = [], [], []
-
-for (ir, r) in enumerate(eachrow(dfA))
+for r in eachrow(dfA)
 push!(xdists, xdist(A, r))
 push!(ydists, ydist(A, r))
 push!(sqdists, sqrt(xdists[end]^2 + ydists[end]^2))
 end#for ir
-
-    nearby = dfA[sortperm(sqdists)[1:n], :]
+    nearby = dfA[sortperm(sqdists)[1:min(n, length(sqdists))], :]
   for (i, r) in enumerate(eachrow(nearby))
 if (A.doctype || A.cattype || A.clmtype) && A.group == r.group
   labs[iA, i] = 1
@@ -167,7 +165,14 @@ wide[iA, "xdist$(i)"] = xdists[i]
 wide[iA, "ydist$(i)"] = ydists[i]
   end#for i
 
-  end#for iA
+for i in length(sqdists)+1:n
+  wide[iA, "xdist$(i)"], wide[iA, "ydist$(i)"] = (1,1)
+  for name in dfnames
+    wide[iA, Symbol("$(name)$(i)")] = 0
+    end#for name
+  end#for i
+
+end#for iA
 
 for name in ["btmlft", "btmrgt", "toplft", "toprgt"]
   wide[!, "x$(name)"] = [pt[1] for pt in wide[!, "p$(name)"]]
