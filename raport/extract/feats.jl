@@ -56,7 +56,9 @@ const btmkeys = ["strona x z x",
   function extract(df::DataFrame)
 fdf = DataFrame(unit=Int[], page=Int[],
                 group=Int[], 
-                type=Int[],
+                doctype=Bool[],
+                cattype=Bool[],
+                clmtype=Bool[],
                 ptoplft=Pt[], 
                 ptoprgt=Pt[], 
                 pbtmlft=Pt[], 
@@ -87,8 +89,13 @@ sort!(pts, by=pt->pt[1])
 lft, rgt = pts[1:2], pts[3:4]
 
 sentences = Text.wordchain(row.text) |> Text.sententify
+type = encode(row.type)
+
   push!(fdf, (fmap[unit], row.page,
-row.group, encode(row.type),
+row.group, 
+type == docnum,
+type == catnum,
+type == clmnum,
 commonpt(top, lft),
 commonpt(top, rgt),
 commonpt(btm, lft),
@@ -150,7 +157,7 @@ end#for ir
 
     nearby = dfA[sortperm(sqdists)[1:n], :]
   for (i, r) in enumerate(eachrow(nearby))
-if A.type != txtnum && A.group == r.group
+if (A.doctype || A.cattype || A.clmtype) && A.group == r.group
   labs[iA, i] = 1
   end
 for name in dfnames
@@ -161,6 +168,12 @@ wide[iA, "ydist$(i)"] = ydists[i]
   end#for i
 
   end#for iA
+
+for name in ["btmlft", "btmrgt", "toplft", "toprgt"]
+  wide[!, "x$(name)"] = [pt[1] for pt in wide[!, "p$(name)"]]
+  wide[!, "y$(name)"] = [pt[2] for pt in wide[!, "p$(name)"]]
+  end; select!(wide, Not(:pbtmlft, :pbtmrgt, :ptoplft, :ptoprgt))
+
 return select(wide, Not(:group)), labs
 end#function
 
