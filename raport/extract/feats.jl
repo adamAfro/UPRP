@@ -1,6 +1,11 @@
   module Features
-export docnum, catnum, clmnum, txtnum, extract, widen
+export docnum, catnum, clmnum, txtnum, extract, widen, widegroup, group
 using DataFrames, ProgressMeter
+
+const RowIdenty = Int
+
+include("../labels/meta.jl") 
+import .DatasetMeta
 
     "typ etykiety tekstu - referencja dokumentu"      const docnum = 1
     "typ etykiety tekstu - kategoria dokument"        const catnum = 2
@@ -127,9 +132,11 @@ for a in A
 
 
       """Łączy pobliskie czworokąty tworząc szeroką ramkę"""
-    function widen(df::Union{DataFrame, SubDataFrame}, n::Int)::Tuple{DataFrame, Matrix{Bool}}
+    function widen(df::Union{DataFrame, SubDataFrame}, n::Int)::Tuple{DataFrame, Matrix{Bool}, Matrix{RowIdenty}}
   labs = zeros(Bool, nrow(df), n)
+  ids = zeros(Int, nrow(df), n)
   wide, dfnames = copy(df), filter(x -> !(x in ["unit",
+                                                "id",
                                                 "group",
                                                 # "type",
                                                 "ptoplft", 
@@ -155,6 +162,7 @@ push!(sqdists, sqrt(xdists[end]^2 + ydists[end]^2))
 end#for ir
     nearby = dfA[sortperm(sqdists)[1:min(n, length(sqdists))], :]
   for (i, r) in enumerate(eachrow(nearby))
+if hasproperty(r, :id) ids[iA, i] = r.id end
 if (A.doctype || A.cattype || A.clmtype) && A.group == r.group
   labs[iA, i] = 1
   end
@@ -179,8 +187,72 @@ for name in ["btmlft", "btmrgt", "toplft", "toprgt"]
   wide[!, "y$(name)"] = [pt[2] for pt in wide[!, "p$(name)"]]
   end; select!(wide, Not(:pbtmlft, :pbtmrgt, :ptoplft, :ptoprgt))
 
-return select(wide, Not(:group)), labs
+return select(wide, Not(:group)), labs, ids
 end#function
+
+
+
+      const Grouped = Vector{Vector{Int}}
+
+    """Szuka grup na podstawie macierzy połączeń sąsiedztwa"""
+  function widegroup(I::Matrix{RowIdenty}, B::Matrix{Bool})::Grouped
+@assert size(I) == size(B) "I, B muszą być tej samej wielkości"
+@assert all(row -> all(x -> x == 0 || x in 1:size(I, 1), row), eachrow(I)) """
+  Indeksy w I muszą zgadzać się z numeracją wierszy macierzy I,B / być 0
+"""
+ptrs, grps = Dict{Int, Int}(), Vector{Set{Int}}()
+for (row, belongings) in enumerate(eachrow(B))
+  ids = I[row, findall(belongings)]
+
+  trgtG = 0
+  # przypisuje istniejącej grupy
+  if haskey(ptrs, row) trgtG = ptrs[row]
+  else for id in ids
+    if haskey(ptrs, id) trgtG = ptrs[id]; break end
+    end#for
+  end#if
+
+  if trgtG == 0 # tworzy nową grupę
+    push!(grps, Set([row])) # z tym indeksem
+    trgtG = length(grps) # zamienia docelową
+    end
+
+  for id in ids
+    if haskey(ptrs, id) # id ma już przypisaną grupę
+      prvG = ptrs[id] # poprzednia grupa
+      if prvG == trgtG continue end
+      for idtaken in grps[prvG] ptrs[idtaken] = trgtG end
+      empty!(grps[prvG]) # zamiast usuwania starej
+      # usuwanie spowodowałoby niekontrolowaną zmianę indeksów
+    else
+      ptrs[id] = trgtG # przypisanie nowej grupy
+      push!(grps[trgtG], id) # dodanie do grupy
+      end
+    end#for
+  end#for row
+groups = [sort(Vector([x for x in G])) for G in grps if !isempty(G)]
+return sort(groups, by=g -> g[1])
+end#group
+
+
+
+
+    """Szuka grup na podstawie zmiennej"""
+  function group(df::DataFrame, unit::Union{Symbol, Vector{Symbol}})::Grouped
+@assert all(x -> String(x) in names(df), unit) """
+  Kolumny podziału jednostek muszą być
+"""
+@assert "group" in names(df) "Musi być kolumna grupy"
+@assert "id" in names(df) "Musi być kolumna id"
+groups = []
+for unitdf in groupby(df, unit)
+  for gdf in groupby(unitdf, :group)
+    push!(groups, gdf.id)
+    end#for
+  end#for
+return sort(groups, by=g -> g[1])
+end#group
+
 
 
 
