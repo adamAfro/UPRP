@@ -187,7 +187,7 @@ for name in ["btmlft", "btmrgt", "toplft", "toprgt"]
   wide[!, "y$(name)"] = [pt[2] for pt in wide[!, "p$(name)"]]
   end; select!(wide, Not(:pbtmlft, :pbtmrgt, :ptoplft, :ptoprgt))
 
-return select(wide, Not(:group)), labs, ids
+return wide, labs, ids
 end#function
 
 
