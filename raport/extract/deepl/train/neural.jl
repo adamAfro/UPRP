@@ -81,19 +81,15 @@ Dvl = DataLoader((Mvl, yvl), batchsize=1000)
 
 
 
-  using Flux: Chain, Dense, relu, sigmoid
-model = Chain(Dense(nvars, 512, relu),
-              Dense(512, 256, relu),
-              Dense(256, 128, relu),
-              Dense(128, 64, relu),
-              Dense(64, 32, relu),
-              Dense(32, NN, sigmoid)) |> gpu
+  using Flux: Chain, Dense, Dropout, relu, sigmoid
+model = Chain(Dense(nvars, 1024, relu),
+              Dense(1024, NN, sigmoid)) |> gpu
 
 
 
 
-  function confussion(M, y)
-tres = 0.5
+
+  function confussion(M, y, tres = 0.5)
 pred = model(M) |> cpu
 labs = y |> cpu
 mxnrow, mxncol = size(labs)
@@ -116,12 +112,13 @@ return C
 end
 
 
-using Flux: train!, params, ADAM, logitcrossentropy
+using Flux: train!, params, ADAM, binarycrossentropy
 using Plots
 layout = @layout [ l; ptr pvl ]
 
-    loss(x, y) = logitcrossentropy(model(x), y) 
-  epochs, opt, losses = 100, ADAM(0.001), []
+  losses = []
+    loss(x, y) = binarycrossentropy(model(x), y) 
+  epochs, opt = 1000, ADAM(0.0005)
 @showprogress "🤖 " for epoch in 1:epochs
   for (x, y) in Dtr
     train!(loss, params(model), [(x, y)], opt)
@@ -131,7 +128,13 @@ layout = @layout [ l; ptr pvl ]
   lossplt = plot(ylim=(0, Inf))
   plot!(lossplt, [loss[1] for loss in losses], label="tr")
   plot!(lossplt, [loss[2] for loss in losses], label="vl")
+  annotate!(lossplt, (0.5, 0.5), text("""
+  tr = $(round(losses[end][1],digits=3))\n
+  vl = $(round(losses[end][2],digits=3))\n
+  diff = $(round(losses[end][2] - losses[end][1],digits=3))
+  """, :center, 12, "black"))
   Ctr, Cvl = confussion(Mtr, ytr), confussion(Mvl, yvl)
+
   Ctrplt = pie([count(row -> row.value == :TP, eachrow(Ctr))
                 count(row -> row.value == :FP, eachrow(Ctr))
                 count(row -> row.value == :FN, eachrow(Ctr))
@@ -164,7 +167,7 @@ stats = DataFrame(n=fill(Int(0), length(G)),
                   groups=fill(Int(0), length(G)))
 
 gmth, pmth = [], []
-for (gid, g) in enumerate(G)
+@showprogress 1 "💏" for (gid, g) in enumerate(G)
   bestp, bestn = 0, 0
   for (pid, p) in enumerate(Gpred)
     n = length(intersect(p, g))
