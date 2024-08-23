@@ -64,10 +64,14 @@ fdf = DataFrame(unit=Int[], page=Int[],
                 doctype=Bool[],
                 cattype=Bool[],
                 clmtype=Bool[],
-                ptoplft=Pt[], 
-                ptoprgt=Pt[], 
-                pbtmlft=Pt[], 
-                pbtmrgt=Pt[],
+                xtoplft=Float32[],
+                ytoplft=Float32[],
+                xtoprgt=Float32[],
+                ytoprgt=Float32[],
+                xbtmlft=Float32[],
+                ybtmlft=Float32[],
+                xbtmrgt=Float32[],
+                ybtmrgt=Float32[],
                 length=Int[],
                 thdockeys=Int[],  #table-header-docs
                 thcatkeys=Int[],  #table-header-category
@@ -101,10 +105,14 @@ row.group,
 type == docnum,
 type == catnum,
 type == clmnum,
-commonpt(top, lft),
-commonpt(top, rgt),
-commonpt(btm, lft),
-commonpt(btm, rgt),
+commonpt(top, lft)[1],
+commonpt(top, lft)[2],
+commonpt(top, rgt)[1],
+commonpt(top, rgt)[2],
+commonpt(btm, lft)[1],
+commonpt(btm, lft)[2],
+commonpt(btm, rgt)[1],
+commonpt(btm, rgt)[2],
 length(row.text),
 intol(row.text, thdockeys, 2//10),
 intol(row.text, thcatkeys, 2//10),
@@ -139,10 +147,10 @@ for a in A
                                                 "id",
                                                 "group",
                                                 # "type",
-                                                "ptoplft", 
-                                                "ptoprgt", 
-                                                "pbtmlft",
-                                                "pbtmrgt"]), names(df))
+                                                "xtoplft", "ytoplft", 
+                                                "xtoprgt", "ytoprgt", 
+                                                "xbtmlft", "ybtmlft",
+                                                "xbtmrgt", "ybtmrgt"]), names(df))
   dcol = Vector{Union{Missing, Float32}}(missing, nrow(df))
   for i in 1:n
 for name in dfnames
@@ -181,11 +189,6 @@ for i in length(sqdists)+1:n
   end#for i
 
 end#for iA
-
-for name in ["btmlft", "btmrgt", "toplft", "toprgt"]
-  wide[!, "x$(name)"] = [pt[1] for pt in wide[!, "p$(name)"]]
-  wide[!, "y$(name)"] = [pt[2] for pt in wide[!, "p$(name)"]]
-  end; select!(wide, Not(:pbtmlft, :pbtmrgt, :ptoplft, :ptoprgt))
 
 return wide, labs, ids
 end#function
@@ -259,12 +262,12 @@ end#group
 
     """Oblicza najmniejszą odległość między dwoma prostokątami(!)"""
   function xdist(A::DataFrameRow, B::DataFrameRow)::Float32
-d, inter = 0.0, max(0, min(A.ptoprgt[1], B.ptoprgt[1]) 
-              - max(A.ptoplft[1], B.ptoplft[1]))
+d, inter = 0.0, max(0, min(A.xtoprgt, B.xtoprgt) 
+              - max(A.xtoplft, B.xtoplft))
   if inter == 0
-leftsideA = A.ptoplft[1] < B.ptoplft[1]
-if leftsideA d = B.ptoplft[1] - A.ptoprgt[1]
-        else d = B.ptoprgt[1] - A.ptoplft[1] end
+leftsideA = A.xtoplft < B.xtoplft
+if leftsideA d = B.xtoplft - A.xtoprgt
+        else d = B.xtoprgt - A.xtoplft end
         end#if
         return d
         end#function
@@ -274,12 +277,12 @@ if leftsideA d = B.ptoplft[1] - A.ptoprgt[1]
 
     """Oblicza najmniejszą odległość między dwoma prostokątami(!)"""
   function ydist(A::DataFrameRow, B::DataFrameRow)::Float32
-d, inter = 0.0, max(0, min(A.pbtmrgt[2], B.pbtmrgt[2]) 
-              - max(A.ptoprgt[2], B.ptoprgt[2]))
+d, inter = 0.0, max(0, min(A.ybtmrgt, B.ybtmrgt) 
+              - max(A.ytoprgt, B.ytoprgt))
   if inter == 0
-ontopA = A.ptoplft[2] < B.ptoplft[2]
-if ontopA d = B.ptoplft[2] - A.pbtmlft[2]
-     else d = B.pbtmlft[2] - A.ptoplft[2] end
+ontopA = A.ytoplft < B.ytoplft
+if ontopA d = B.ytoplft - A.ybtmlft
+     else d = B.ybtmlft - A.ytoplft end
      end#if
      return d
      end#function
