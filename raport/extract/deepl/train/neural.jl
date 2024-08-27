@@ -83,7 +83,7 @@ df = vcat([CSV.read(x, DataFrame; types=DatasetMeta.type)
 
 NNeigh = 24
 Mtr, ytr, Itr, Gtr, Mvl, yvl, Ivl, Gvl = Features.widenmx(df, NNeigh; aug=
-  Features.Augmentation(2, 1, 3, 0, false,false,false,false,false))
+  Features.Augment(2, 3, 1, 0, false,false,true,false,false))
 
   Mtr = transpose(Mtr) |> gpu
   ytr = transpose(ytr) |> gpu

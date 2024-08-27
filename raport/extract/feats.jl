@@ -4,8 +4,10 @@ using DataFrames, ProgressMeter, Random, Statistics
 
 const RowIdenty = Int
 
-include("../labels/meta.jl") 
-import .DatasetMeta
+for p in ["text.jl", "dist.jl", "../labels/meta.jl"]
+  include(p)
+  end
+import .DatasetMeta, .Text, .Dist
 
     "typ etykiety tekstu - referencja dokumentu"      const docnum = 1
     "typ etykiety tekstu - kategoria dokument"        const catnum = 2
@@ -138,9 +140,9 @@ for a in A
 
 
 
-
+        const WideSet = Tuple{DataFrame, Matrix{Bool}, Matrix{RowIdenty}}
       """Łączy pobliskie czworokąty tworząc szeroką ramkę"""
-    function widen(df::Union{DataFrame, SubDataFrame}, n::Int)::Tuple{DataFrame, Matrix{Bool}, Matrix{RowIdenty}}
+    function widen(df::Union{DataFrame, SubDataFrame}, n::Int)::WideSet
   labs = zeros(Bool, nrow(df), n)
   ids = zeros(Int, nrow(df), n)
   wide, dfnames = copy(df), filter(x -> !(x in ["unit",
@@ -164,8 +166,8 @@ wide[!, "ydist$(i)"] = copy(dcol)
   dfA = df[Not(iA), :]
   xdists, ydists, sqdists = [], [], []
 for r in eachrow(dfA)
-push!(xdists, xdist(A, r))
-push!(ydists, ydist(A, r))
+push!(xdists, Dist.x(A, r))
+push!(ydists, Dist.y(A, r))
 push!(sqdists, sqrt(xdists[end]^2 + ydists[end]^2))
 end#for ir
     nearby = dfA[sortperm(sqdists)[1:min(n, length(sqdists))], :]
@@ -240,7 +242,7 @@ end#group
 
 
 
-    """Szuka grup na podstawie zmiennej"""
+    """Tworzy wektor grupujący dopasowany do jednostek badawczych"""
   function group(df::DataFrame, unit::Union{Symbol, Vector{Symbol}})::Grouped
 @assert all(x -> String(x) in names(df), unit) """
   Kolumny podziału jednostek muszą być
@@ -260,77 +262,7 @@ end#group
 
 
 
-    """Oblicza najmniejszą odległość między dwoma prostokątami(!)"""
-  function xdist(A::DataFrameRow, B::DataFrameRow)::Float32
-d, inter = 0.0, max(0, min(A.xtoprgt, B.xtoprgt) 
-              - max(A.xtoplft, B.xtoplft))
-  if inter == 0
-leftsideA = A.xtoplft < B.xtoplft
-if leftsideA d = B.xtoplft - A.xtoprgt
-        else d = B.xtoprgt - A.xtoplft end
-        end#if
-        return d
-        end#function
-
-
-
-
-    """Oblicza najmniejszą odległość między dwoma prostokątami(!)"""
-  function ydist(A::DataFrameRow, B::DataFrameRow)::Float32
-d, inter = 0.0, max(0, min(A.ybtmrgt, B.ybtmrgt) 
-              - max(A.ytoprgt, B.ytoprgt))
-  if inter == 0
-ontopA = A.ytoplft < B.ytoplft
-if ontopA d = B.ytoplft - A.ybtmlft
-     else d = B.ybtmlft - A.ytoplft end
-     end#if
-     return d
-     end#function
-
-
-
-
-  module Text
-export wordchain, sententify
-  """Zwraca listę słów z tekstu oraz znaków które je oddzielają"""
-function wordchain(string::String)
-chained = split(string, r"((?=[^a-zA-Z0-9\p{L}])|(?<=[^a-zA-Z0-9\p{L}]))")
-chained = filter(x -> !isempty(x), chained)
-return chained
-end
-
-
-
-
-  """Łączy słowa złożone z liter w sentencje"""
-function sententify(strings::Union{Vector{String}, Vector{SubString{String}}})
-sentified::Vector{String} = [strings[1]]
-lttrprv = all(isletter, strings[1])
-prvsent = lttrprv
-for string in strings[2:end]
-  if all(isletter, collect(string))
-    lttrprv = true
-    if prvsent
-      sentified[end] = sentified[end] * " " * string
-    else
-      push!(sentified, string)
-      prvsent = true
-      end
-  elseif lttrprv && (all(isspace, collect(string)) || string == ".")
-    sentified[end] = sentified[end] * string
-  elseif all(x -> isletter(x) || isdigit(x), collect(string)) 
-    push!(sentified, string) 
-    prvsent = false
-  else prvsent = false end
-end#for
-return sentified
-  end#function
-end#TextFeatures
-
-
-
-
-struct Augmentation
+struct Augment
   n::Int
   xnoise::Float32
   ynoise::Float32
@@ -341,66 +273,71 @@ struct Augmentation
   shtcodes::Bool
   lngcodes::Bool
   end
-function Augmentation()
-  return Augmentation(0, 0, 0, 0, false, false, false, false, false)
+function Augment()
+  return Augment(0, 0, 0, 0, false, false, false, false, false)
   end
 
 
-
-
-
-
-    """Łączy w jedną, szeroką ramkę, stosuje prepocessing i zwraca obiekty matematyczne"""
-  function widenmx(df::DataFrame, NNeight::Int; trsplit::Rational=4//5, aug::Augmentation=Augmentation())
+      const WideMxSet = Tuple{
+        Matrix{Float32}, Matrix{Bool}, Matrix{RowIdenty}, Grouped,
+        Matrix{Float32}, Matrix{Bool}, Matrix{RowIdenty}, Grouped
+      }
+    """Łączy w jedną, szeroką ramkę, stosuje prepocessing i 
+    zwraca obiekty matematyczne podzielone na zbiór treningowy i walidacyjny"""
+  function widenmx(df::DataFrame, NNeight::Int; trsplit::Rational=4//5, aug::Augment=Augment())::WideMxSet
 filter!(row -> row.type != "text", df)
 gFE = groupby(Features.extract(df), :unit)
 gFE = gFE[shuffle(1:size(gFE, 1))]
 gFE = collect(gFE)
 
 split = round(Int, trsplit*length(gFE))
-for i in 1:aug.n for unit in gFE[1:split]
-  avgh = mean(unit[!, :ybtmlft] .- unit[!, :ytoplft])
-  Aug = copy(unit)
-
-  Aug[:, :ytoplft] .+= aug.xnoise*(rand(nrow(Aug)) .- .5)*avgh
-  Aug[:, :ytoprgt] .+= aug.xnoise*(rand(nrow(Aug)) .- .5)*avgh
-  Aug[:, :ybtmlft] .+= aug.xnoise*(rand(nrow(Aug)) .- .5)*avgh
-  Aug[:, :ybtmrgt] .+= aug.xnoise*(rand(nrow(Aug)) .- .5)*avgh
   
-  Aug[:, :xtoplft] .+= aug.ynoise*(rand(nrow(Aug)) .- .5)*avgh
-  Aug[:, :xtoprgt] .+= aug.ynoise*(rand(nrow(Aug)) .- .5)*avgh
-  Aug[:, :xbtmlft] .+= aug.ynoise*(rand(nrow(Aug)) .- .5)*avgh
-  Aug[:, :xbtmrgt] .+= aug.ynoise*(rand(nrow(Aug)) .- .5)*avgh
+  for i in 1:aug.n for unit in gFE[1:split]
+avgh = mean(unit[!, :ybtmlft] .- unit[!, :ytoplft])
+Aug = copy(unit)
 
-  if aug.lnoise > 0
-    addit = aug.lnoise .* (rand(nrow(Aug)) .- .5) .* (Aug[:, :length] .> 8)
-    Aug[:, :length] .+= ceil.(addit)
-    end
+Aug[:, :ytoplft] .+= aug.xnoise*(rand(nrow(Aug)) .- .5)*avgh
+Aug[:, :ytoprgt] .+= aug.xnoise*(rand(nrow(Aug)) .- .5)*avgh
+Aug[:, :ybtmlft] .+= aug.xnoise*(rand(nrow(Aug)) .- .5)*avgh
+Aug[:, :ybtmrgt] .+= aug.xnoise*(rand(nrow(Aug)) .- .5)*avgh
 
-  if aug.abbr
-    Aug[:, :abbrs] .+= rand(0:2, nrow(Aug)) .* (Aug[:, :abbrs] .> 1)
-    end
+Aug[:, :xtoplft] .+= aug.ynoise*(rand(nrow(Aug)) .- .5)*avgh
+Aug[:, :xtoprgt] .+= aug.ynoise*(rand(nrow(Aug)) .- .5)*avgh
+Aug[:, :xbtmlft] .+= aug.ynoise*(rand(nrow(Aug)) .- .5)*avgh
+Aug[:, :xbtmrgt] .+= aug.ynoise*(rand(nrow(Aug)) .- .5)*avgh
 
-  if aug.solwords
-    Aug[:, :solwords] .+= rand(-1:2, nrow(Aug)) .* (Aug[:, :solwords] .> 2)
-    end
-
-  if aug.sentences
-    Aug[:, :sentences] .+= rand(-1:2, nrow(Aug)) .* (Aug[:, :sentences] .> 2)
-    end  
-
-  if aug.shtcodes
-    Aug[:, :shtcodes] .+= rand(-1:2, nrow(Aug)) .* (Aug[:, :shtcodes] .> 2)
-    end
-
-  if aug.lngcodes
-    Aug[:, :lngcodes] .+= rand(-1:2, nrow(Aug)) .* (Aug[:, :lngcodes] .> 2)
-    end  
-
-  insert!(gFE, split+1, Aug)
+if aug.lnoise > 0
+  addit = aug.lnoise .* (rand(nrow(Aug)) .- .5) .* (Aug[:, :length] .> 8)
+  Aug[:, :length] .+= ceil.(addit)
   end
+
+if aug.abbr
+  Aug[:, :abbrs] .+= rand(0:2, nrow(Aug)) .* (Aug[:, :abbrs] .> 1)
+  end
+
+if aug.solwords
+  Aug[:, :solwords] .+= rand(-1:2, nrow(Aug)) .* (Aug[:, :solwords] .> 2)
+  end
+
+if aug.sentences
+  Aug[:, :sentences] .+= rand(-1:2, nrow(Aug)) .* (Aug[:, :sentences] .> 2)
+  end  
+
+if aug.shtcodes
+  Aug[:, :shtcodes] .+= rand(-1:2, nrow(Aug)) .* (Aug[:, :shtcodes] .> 2)
+  end
+
+if aug.lngcodes
+  Aug[:, :lngcodes] .+= rand(-1:2, nrow(Aug)) .* (Aug[:, :lngcodes] .> 2)
+  end  
+
+insert!(gFE, split+1, Aug)
+end
   end#Aug
+
 split *= 1+aug.n
+
+
 
 idtr = 1; for unit in gFE[1:split]
   unit[!, :id] = idtr:idtr+nrow(unit)-1
