@@ -102,3 +102,79 @@ end#progress
 
 df.width = df.px0 .- df.px2
 df.length = length.(df.text)
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+# Budowa sieci
+# ref: https://github.com/CarloLucibello/GraphNeuralNetworks.jl/blob/master/examples/link_prediction_pubmed.jl
+import Flux as Neural; using GraphNeuralNetworks; using CUDA
+
+device = Neural.cpu # TODO fix4gpu
+
+struct DotPredictor end
+function (::DotPredictor)(g, x)
+z = apply_edges((xi, xj, e) -> sum(xi .* xj, dims = 1), g, xi = x, xj = x)
+# z = apply_edges(xi_dot_xj, g, xi=x, xj=x) # Same with built-in method
+return vec(z)
+end
+
+G = GNNGraph(W; ndata=(;features=hcat(df.x, df.y,
+                                      df.width, 
+                                      df.length)')) |> device
+η = 0.001
+nvar = size(G.ndata.features, 1)
+
+function loss(model, pos, neg=nothing; measure=false)
+h = model(G.ndata.features)
+if neg === nothing neg = negative_sample(pos) end
+pscore, nscore = pred(pos, h), pred(neg, h)
+scores = [pscore; nscore]
+labels = [fill!(similar(pscore), 1); fill!(similar(nscore), 0)]
+logit = Neural.logitbinarycrossentropy(scores, labels)
+if measure
+  acc = 0.5 * mean(pscore .>= 0) + 0.5 * mean(nscore .< 0)
+  return logit, acc
+else return logit end
+end
+
+train, test = rand_edge_split(G, 0.9)
+testneg = negative_sample(G, num_neg_edges=test.num_edges)
+chain = GNNChain( GCNConv(nvar => 128, Neural.relu),
+                  GCNConv(128 => 128, Neural.relu),
+                  GCNConv(128 => 128, Neural.relu),
+                  Neural.Dense(128, 128),
+                  Neural.Dense(128, 1) )
+model = WithGraph(chain, train) |> device
+opti = Neural.setup(Neural.Adam(η), model)
+pred = DotPredictor()
+
+losses = reports = DataFrame(epoch = Int[],
+                             train = Float64[],
+                             test = Float64[],
+                             acc = Float64[])
+repeats = 100
+progress = Progress(repeats, 1, "🧠")
+for epoch in 1:repeats
+grads = Neural.gradient(model -> loss(model, train), model)
+Neural.update!(opti, model, grads[1])
+push!(losses, (epoch,
+              loss(model, train, measure=true)[1],
+              loss(model, test, testneg, measure=true)...))
+gain = missing
+if nrow(losses) > 1 
+  gain = losses[end - 1, :test] - losses[end, :test]
+  end
+next!(progress; showvalues = [(:accuracy,  losses.acc[end]),
+                              (:test, losses.test[end]),
+                              (:train, losses.train[end]),
+                              (:overfit, losses.test[end] 
+                                        -losses.train[end]),
+                              (:gain, gain)])
+                              end
