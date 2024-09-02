@@ -149,15 +149,15 @@ end
 
 
 
-"Tworzy macierz do sieci"
-function mx(df::DataFrame)::Tuple{Matrix{Float32}, Vector{Bool}}
+"Tworzy krawędzie i macierz do sieci"
+function mx(df::DataFrame)::Tuple{Matrix{Float32}, DataFrame}
 df = copy(df)
 edges = distnet!(df)
 df.id = 1:nrow(df)
 dircols!(df, edges)
 edgedircols!(edges, df)
 M = Matrix{Float32}(select(edges, Not([:from, :to, :group])))
-return M, edges[:, :group]
+return M, edges
 end
 
 
@@ -176,7 +176,7 @@ end
 
 
 "Trenowanie sieci"
-function train(model, Mtr, ytr, Mvl, yvl; epochs = 100, opti = Neural.ADAM(0.001))
+function train!(model, Mtr, ytr, Mvl, yvl; epochs = 100, opti = Neural.ADAM(0.001))
 Dtr = Iterators.repeated((Mtr, ytr), epochs)
 progress = Progress(epochs, 1, "🧠")
 for epoch in 1:epochs
@@ -189,6 +189,119 @@ next!(progress; showvalues = [
 (:test, test),
 (:train, train),
 (:overfit, test - train)])
+end#for epoch
+end#train
+
+
+
+"Tworzy wektor grup - każda to (pod)wektor z wartościami id (jako `Int`), pomija puste grupy"
+function edgegroup(from::Vector{Int}, to::Vector{Int})::Vector{Vector{Int}}
+@assert length(from) == length(to)
+groups, ptrs = Vector{Set{Int}}(), Dict{Int, Int}()
+for i in 1:length(from)
+if haskey(ptrs, from[i]) && haskey(ptrs, to[i])
+  keep, move = ptrs[from[i]], ptrs[to[i]]
+  if keep == move continue end
+  for id in groups[move]
+    push!(groups[keep], id)
+    ptrs[id] = keep
+  end
+  empty!(groups[move])
+elseif haskey(ptrs, from[i])
+  keep = ptrs[from[i]]
+  push!(groups[keep], to[i])
+  ptrs[to[i]] = keep
+elseif haskey(ptrs, to[i])
+  keep = ptrs[to[i]]
+  push!(groups[keep], from[i])
+  ptrs[from[i]] = keep
+else
+  push!(groups, Set([from[i], to[i]]))
+  ptrs[from[i]] = length(groups)
+  ptrs[to[i]] = length(groups)
+end
+end
+groups = [sort(Vector([x for x in G])) for G in groups if !isempty(G)]
+return sort(groups, by=g -> g[1])
+end
+
+function edgegroup(edges::DataFrame)::Vector{Vector{Int}}
+E = filter(row -> row.group == true, edges)
+return edgegroup(E.from, E.to)
+end
+
+
+
+"""Funkcja szukająca dobranej grupy i oceniająca"""
+function gcount(Gpred::Vector{Vector{Int}}, G::Vector{Vector{Int}})
+stats = DataFrame(n=fill(Int(0), length(G)), max=map(length, G), groups=fill(Int(0), length(G)))
+sort!(Gpred, by=length, rev=true)
+sort!(G,     by=length, rev=true)
+gmth, pmth = [], []
+@showprogress 1 "💏" for (gid, g) in enumerate(G)
+bestp, bestn = 0, 0
+for (pid, p) in enumerate(Gpred)
+  n = length(intersect(p, g))
+  if n > bestn 
+    bestp = pid
+    bestn = n 
+    end
+  end#for
+if bestn > 0
+  push!(gmth, gid)
+  push!(pmth, bestp)
+  stats[gid, :n] = bestn
+  stats[gid, :max] = length(g)
+  for (ogid, other) in enumerate(G)
+    stats[gid, :groups] += length(intersect(g, other)) > 0
+    end#for
+  end
+end#for g
+
+added = DataFrame(n=Int[], groups=Int[])
+for pid in setdiff(1:length(Gpred), pmth)
+  groups = 0
+  for g in G
+    groups += length(intersect(Gpred[pid], g)) > 0
+    end#for g
+  push!(added, (length(Gpred[pid]), groups))
+  end#for p
+
+omitted = DataFrame(gid=Int[], n=Int[], groups=Int[])
+for gid in setdiff(1:length(G), gmth)
+  groups = 0
+  for p in Gpred
+    groups += length(intersect(p, G[gid])) > 0
+    end#for p
+  push!(omitted, (gid, length(G[gid]), groups))
+  end#for g
+return stats, added, omitted
+end#gstat
+
+
+
+"Trenowanie sieci z uwzględnieniem jakości grupowania"
+function train!(model, Mtr, ytr, Gtr, Etr, Mts, yts, Gts, Ets; epochs::Int, opti=Neural.ADAM(0.001))
+Etr, Ets = copy(Etr), copy(Ets)
+Dtr = Iterators.repeated((Mtr, ytr), epochs)
+progress = Progress(epochs, 1, "🧠")
+for epoch in 1:epochs
+for (x, y) in Dtr Neural.train!(loss, Neural.params(model), [(x, y)], opti) end
+test = loss(Mts, yts)
+train = loss(Mtr, ytr)
+predmx = model(Mts)
+accuracy = acc(yts, predmx)
+Ets.group = [collect(row) for row in eachrow(round.(Int, predmx))][1]
+Gpred = edgegroup(Ets)
+expected, added, omitted = gcount(Gpred, Gts)
+next!(progress; showvalues = [
+(:accuracy, accuracy),
+(:test, test),
+(:train, train),
+(:overfit, test - train),
+(:added, nrow(added)),
+(:omitted, nrow(omitted)),
+(:fullfillment, round(mean(expected.n ./ expected.max); digits=3))])
 end#for epoch
 end#train
 
@@ -225,17 +338,18 @@ df.sentences = length.(sented) .- df.codes .- df.years
 df.length = length.(df.text)
 df.width = df.px2 .- df.px0
 
-Mtr, ytr = filter(x -> x.test == false, df) |> mx
+Mtr, Etr = filter(x -> x.test == false, df) |> mx
 Mtr = replace(Mtr, Inf32 => 2.0f0)
-Mtr, ytr = Mtr' |> Neural.gpu, reshape(ytr, 1, :) |> Neural.gpu
+Mtr, ytr = Mtr' |> Neural.gpu, reshape(Etr[:,:group], 1, :) |> Neural.gpu
+Gtr = edgegroup(Etr)
 
-Mts, yts = filter(x -> x.test == true, df) |> mx
+Mts, Ets = filter(x -> x.test == true, df) |> mx
 Mts = replace(Mts, Inf32 => 2.0f0)
-Mts, yts = Mts' |> Neural.gpu, reshape(yts, 1, :) |> Neural.gpu
-
+Mts, yts = Mts' |> Neural.gpu, reshape(Ets[:,:group], 1, :) |> Neural.gpu
+Gts = edgegroup(Ets)
 
 model = Neural.Chain( Neural.Dense(size(Mtr, 1), 64, Neural.relu),
                       Neural.Dense(64, 32, Neural.relu),
                       Neural.Dense(32, 1, Neural.sigmoid)) |> Neural.gpu
 
-train(model, Mtr, ytr, Mts, yts; epochs = 100)
+Y = train!(model, Mtr, ytr, Gtr, Etr, Mts, yts, Gts, Ets; epochs = 30)
