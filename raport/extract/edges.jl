@@ -28,6 +28,7 @@ for idx in findall(isfinite, offsets)
   of, sf = offsets[i, j], shifts[i, j]
   if of == 0 && sf == 0 continue end 
   push!(edges, (unit[i, :id], unit[j, :id], 
+                hasproperty(unit, :group) && 
                 unit[i, :group] == unit[j, :group], of, sf))
                 end
 id += nrow(unit)
@@ -138,7 +139,9 @@ edges = net!(df)
 df.id = 1:nrow(df)
 dircols!(df, edges)
 edgedircols!(edges, df)
-M = Matrix{Float32}(select(edges, Not([:from, :to])))
+exclude = [:from, :to]
+if hasproperty(df, :group) push!(exclude, :group) end
+M = Matrix{Float32}(select(edges, Not(exclude)))
 return M, edges
 end
 
