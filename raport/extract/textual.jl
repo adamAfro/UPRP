@@ -1,4 +1,9 @@
 module Textual
+using StringDistances
+
+function levenshtein(str1::String, str2::String)
+return evaluate(Levenshtein(), str1, str2)
+end
 
 
 
@@ -46,6 +51,28 @@ return (startswith(string, "20") ||
 
 function codealike(string::String)::Bool
 return count(isdigit, string) > 4
+end
+
+
+
+"""Czy w tekście znajduje się słowo _dokument_:\n
+1. słowo dokument (l. poj.)
+2. słowo dokumenty (l. mn.)
+3. dokument/y poprzedzające dalszy tekst\n
+`tol` - tolerancja dla odległości między słowami"""
+function dockeyword(string::String, tol::Float64)::Int
+words = split(string, " ")
+n = length(words)
+for (i, word) in enumerate(words)
+word = lowercase(String(word))
+dist = levenshtein("dokument", word)
+if dist >= length(word)*tol continue end
+if i < n return 3 end
+if levenshtein("dokumenty", word) < dist ||
+   levenshtein("dokumentów", word) < dist
+return 2 else return 1 end
+end
+return 0
 end
 
 
