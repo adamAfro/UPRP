@@ -1,5 +1,5 @@
 using CSV, DataFrames, ProgressMeter, LinearAlgebra, Statistics, Random
-for pth in ["paths.jl", "spatial.jl", "textual.jl"] include(pth) end
+for pth in ["../paths.jl", "spatial.jl", "textual.jl"] include(pth) end
 import .Spatial, .Paths, .Textual
 import Flux as Neural; using CUDA, BSON
 
