@@ -16,6 +16,8 @@ shift=Float32[])
 @showprogress "📐" for unit in groupby(df, :unit)
 unit.id = range(id, length=nrow(unit))
 quads = quadvec(unit)
+# ponowne zliczanie środków czworokątów jest szybsze niż użycie
+# gotowych środków z funkcją collect(zip(...))
 middles = midvec(unit)
 unit.x = [m[1] for m in middles]
 unit.y = [m[2] for m in middles]
