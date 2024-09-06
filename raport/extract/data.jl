@@ -13,7 +13,7 @@ colnames = Dict(
 
 
 
-function load(;train=false)::Union{Tuple{DataFrame, DataFrame}, DataFrame}
+function load(;train=false,grouped=false)::Union{Tuple{DataFrame, DataFrame}, DataFrame}
 
 ps = Paths.Recog.list(labeled=train)
 dfs = []
@@ -40,6 +40,10 @@ push!(dfs, CSV.read(p, DataFrame; types=Dict(
 "py3" => Float32
 ))) end#for
 df = vcat(dfs...)
+
+if grouped
+df = filter(row -> row.group != 1, df)
+end
 
 df.x = Float32.((df.x0 .+ df.x1 .+ df.x2 .+ df.x3) ./ 4)
 df.y = Float32.((df.y0 .+ df.y1 .+ df.y2 .+ df.y3) ./ 4)

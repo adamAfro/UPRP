@@ -110,10 +110,10 @@ end#train
 
 tr, ts = Data.load(train=true)
 
-Mtr, ytr = Matrix(tr[:, [Data.colnames[:pts]..., Data.colnames[:tbl]..., Data.colnames[:txt]...]]), tr.group .!= 1
+Mtr, ytr = Matrix(tr[:, [Data.colnames[:pos]..., Data.colnames[:tbl]..., Data.colnames[:txt]...]]), tr.group .!= 1
 Mtr = Mtr' |> Neural.gpu
 ytr = ytr' |> Neural.gpu
-Mts, yts = Matrix(ts[:, [Data.colnames[:pts]..., Data.colnames[:tbl]..., Data.colnames[:txt]...]]), ts.group .!= 1
+Mts, yts = Matrix(ts[:, [Data.colnames[:pos]..., Data.colnames[:tbl]..., Data.colnames[:txt]...]]), ts.group .!= 1
 Mts = Mts' |> Neural.gpu
 yts = yts' |> Neural.gpu
 
@@ -125,6 +125,7 @@ train!(fmodel, Mtr, ytr, Mts, yts; epochs = 100, opti = Neural.ADAM(0.001))
 
 
 
+tr, ts = Data.load(train=true, grouped=true)
 Mtr, Etr = Edges.mx(tr[:, [:unit, :group, Data.colnames[:pts]..., Data.colnames[:txt]...]])
 Mtr = replace(Mtr, Inf32 => 2.0f0)
 Mtr, ytr = Mtr' |> Neural.gpu, reshape(Etr[:,:group], 1, :) |> Neural.gpu
@@ -139,7 +140,8 @@ gmodel = Neural.Chain( Neural.Dense(size(Mtr, 1), 64, Neural.relu),
                       Neural.Dense(64, 32, Neural.relu),
                       Neural.Dense(32, 1, Neural.sigmoid)) |> Neural.gpu
 
-train!(gmodel, Mtr, ytr, Gtr, Etr, Mts, yts, Gts, Ets; epochs=40)
+train!(gmodel, Mtr, ytr, Mts, yts; epochs=90)
+train!(gmodel, Mtr, ytr, Gtr, Etr, Mts, yts, Gts, Ets; epochs=10)
 
 
 
