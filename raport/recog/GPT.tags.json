@@ -1,0 +1,12 @@
+[
+{ "tag": "<data>", "desc": "Dowolne wystąpienie daty bądź innego okresu czasu w tekście" },
+{ "tag": "<osoba>", "desc": "Dowolne wystąpienie imienia, nazwiska bądź inicjałów osoby" },
+{ "tag": "<lokacja>", "desc": "Dowolne wystąpienie nazwy lokalizacji" },
+{ "tag": "<organizacja>", "desc": "Dowolne wystąpienie nazwy organizacji/firmy " },
+{ "tag": "<tytuł>", "desc": "Dowolne wystąpienie tytułu, strony internetowej, książki, nazwy artykułu, itp." },
+{ "tag": "<nazwa>", "desc": "Dowolne wystąpienie nazwy własnej innego typu niż wymienione powyżej" },
+{ "tag": "<zakres>", "desc": "Zakres liczbowy" },
+{ "tag": "<litera>", "desc": "Kod składajacy się z pojedynczej litery" },
+{ "tag": "<numer>", "desc": "Dowolny kod złożony z cyfr" },
+{ "tag": "<kod>", "desc": "Dowolny kod złożony z liter, może poprzedzać numer albo być pojedynczą literą" }
+]
