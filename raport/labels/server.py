@@ -1,11 +1,37 @@
-import http.server, os
+import http.server, os, re
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-path_sample:str
-path_save:str
-dir_output = 'output'
+path_sample:str = "sample.json"
+path_save:str = "save.csv"
 
-def get_dir_PDF() -> str: pass
-def get_dir_OCR() -> str: pass
+def get_num(fid: str) -> str:
+    num = fid
+    if "/" in num: num = num.split("/")[-1]
+    if "." in num: num = num.split(".")[0]
+    return num
+
+folders_PDF = os.listdir("../docs")
+matches_PDF = [re.match(r"(\d+)-(\d+)\(\d+\)", f) for f in folders_PDF]
+ranges_PDF = [(int(m.group(1)), int(m.group(2))) for m in matches_PDF if m is not None]
+
+folders_OCR = os.listdir("../recog/output")
+matches_OCR = [re.match(r"(\d+)-(\d+)\(\d+\)", f) for f in folders_OCR]
+ranges_OCR = [(int(m.group(1)), int(m.group(2))) for m in matches_OCR if m is not None]
+
+def get_fpath(fid:str, target:str) -> str:
+    if target == "PDF":
+        ranges = ranges_PDF
+        folders = folders_PDF
+    elif target == "OCR":
+        ranges = ranges_OCR
+        folders = folders_OCR
+    num = get_num(fid)
+    i_range = next((i for i, (start, end) in enumerate(ranges) if start <= int(num) <= end), None)
+    folder = folders[i_range] if i_range is not None else None
+    if target == "PDF":
+        return f"../docs/{folder}/{num}.pdf"
+    elif target == "OCR":
+        return f"../recog/output/{folder}/{num}.csv"
 
 class Server(http.server.SimpleHTTPRequestHandler):
 
@@ -19,7 +45,7 @@ class Server(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(b'Access forbidden')
             return
         
-        csv_match = re.match(r'/(\d+)\.pdf.csv$', self.path)
+        csv_match = re.match(r'/(\d+)\.csv$', self.path)
         if csv_match is not None:
             self.send_CSV_JSON(csv_match)
             return
@@ -100,7 +126,7 @@ class Server(http.server.SimpleHTTPRequestHandler):
         from io import BytesIO
         import base64
 
-        pdf_path = get_dir_PDF(pdf_match.group(0)[1:])
+        pdf_path = get_fpath(pdf_match.group(0)[1:], target="PDF")
         if not os.path.exists(pdf_path):
             self.send_response(404)
             self.end_headers()
@@ -139,7 +165,7 @@ class Server(http.server.SimpleHTTPRequestHandler):
 
         import csv, json
 
-        csv_file = get_dir_OCR(csv_match.group(0)[1:])
+        csv_file = get_fpath(csv_match.group(0)[1:], target="OCR")
         if not os.path.exists(csv_file):
             self.send_response(404)
             self.end_headers()

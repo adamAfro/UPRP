@@ -195,7 +195,7 @@
     }
     
     function getOCRJSON(num) {
-      return fetch(num + '.pdf.csv')
+      return fetch(num + '.csv')
         .then(res => res.json())
         .then(json => json)
     }
