@@ -24,7 +24,7 @@ df['unit'] = (df['P'].astype(str) + ':' + df['page'].astype(str)).factorize()[0]
 df['group'] = df['group'].factorize()[0] + 1
 df['type'] = df['type'].apply(lambda x: 1 if x == 'docs' else 
                                         2 if x == 'category' else 
-                                        3 if x == 'claim' else 
+                                        3 if x == 'claims' else 
                                         0)
 
 df = df[['P', 'page', 'unit', 'text',
