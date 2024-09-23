@@ -16,20 +16,27 @@ from tqdm import tqdm as progress
 rm = glob.glob('**/*.crop.jpg', recursive=True)
 for f in progress(rm): os.remove(f)
 
-for u, U in progress(X.groupby('unit')):
+def crop(G):
   try:
+    u, U = G
+    a = (U['ybtmrgt'] - U['ytoplft']).mean()
     P, pg = U['P'].unique()[0], U['page'].unique()[0]
-    lft = U[['xtoplft', 'xbtmlft']].min().min()
-    rgt = U[['xtoprgt', 'xbtmrgt']].max().max()
     top = U[['ytoplft', 'ytoprgt']].min().min()
     btm = U[['ybtmlft', 'ybtmrgt']].max().max()
-    h, w = btm - top, rgt - lft
-    if h < 10 or w < 10: continue
     f = next(f for f in Fs if f.endswith(f"{P}.{pg}.jpg"))
-    img = Image.open(f).crop((lft, top, rgt, btm))
-    img = img.resize((int(img.width//2.4), int(img.height//2.4)), 
-                     Image.Resampling.LANCZOS)
+    I = Image.open(f)
+    lft, rgt = 0, I.width
+    h, w = btm - top, rgt - lft
+    if h < 10 or w < 10: return
+    I = I.crop((lft, top, rgt, btm))
+    I = I.resize((int(10*I.width//a), int(10*I.height//a)), Image.Resampling.LANCZOS)
     f = f.replace(".jpg", ".crop.jpg")
-    dir(path.dirname(f), exist_ok=True)
-    img.save(f, 'JPEG')
+    os.makedirs(os.path.dirname(f), exist_ok=True)
+    I.save(f, 'JPEG')
   except Exception as e: print(e)
+  
+from concurrent.futures import ProcessPoolExecutor
+from tqdm import tqdm as progress
+G = list(X.groupby('unit'))
+with ProcessPoolExecutor() as executor:
+    list(progress(executor.map(crop, G), total=len(G)))
