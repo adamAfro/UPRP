@@ -70,6 +70,7 @@ for u, U in prg(X.groupby('unit')):
                     index=U.index, columns=Q)
   H = U.loc[ (Y[QH] > 2/3).any(axis=1) ]
   F = U.loc[ (Y[QF] > 2/3).any(axis=1) ]
+  if H.empty and F.empty: continue
   lH = H[["ybtmlft", "ybtmrgt"]].max().max() if not H.empty else U["ytoplft"].min()
   lF = F[["ytoplft", "ytoprgt"]].min().min() if not F.empty else U["ybtmlft"].max()
   D = U.loc[ (U["ytoplft"] > lH) & (U["ybtmlft"] < lF) ]
@@ -95,6 +96,7 @@ for u, U in prg(X.groupby('unit')):
                       index=U.index, columns=Q)
     H = U.loc[ (Y[QH] > 0.65).any(axis=1) ]
     F = U.loc[ (Y[QF] > 0.65).any(axis=1) ]
+    if H.empty and F.empty: continue
     lH = H["ybtmlft"].max() if not H.empty else U["ytoplft"].min()
     lF = F["ytoplft"].min() if not F.empty else U["ybtmlft"].max()
     D = U.loc[ (U["ytoplft"] > lH) & (U["ybtmlft"] < lF) ]
