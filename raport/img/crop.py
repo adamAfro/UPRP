@@ -29,7 +29,9 @@ def crop(G):
     h, w = btm - top, rgt - lft
     if h < 10 or w < 10: return
     I = I.crop((lft, top, rgt, btm))
-    I = I.resize((int(10*I.width//a), int(10*I.height//a)), Image.Resampling.LANCZOS)
+    I = I.resize((min(I.width, int(15*I.width//a)), 
+                  min(I.height, int(15*I.height//a))), 
+                  Image.Resampling.LANCZOS)
     f = f.replace(".jpg", ".crop.jpg")
     os.makedirs(os.path.dirname(f), exist_ok=True)
     I.save(f, 'JPEG')
