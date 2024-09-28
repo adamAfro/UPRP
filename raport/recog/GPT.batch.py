@@ -111,8 +111,33 @@ def pull(X:list):
       with open(o, "w", encoding="utf-8") as f: 
         f.write(r)
 
-rprep(ls(), 128)#sample
-GPT.ask("batches/random128.jsonl")#send24requests
-GPT.lsat(24, (11, 40), M=9)#checkprogress
-X = GPT.fetchat(24, (11, 40), M=9)#getresults
-pull(X)#writeresults
+# prep(ls(), 64)#sample
+
+def ask(n=32):
+  
+  from tqdm import tqdm as progress
+  from os import listdir, path
+  
+
+  A = GPT.lsat(26, (10,00))
+  AFsB = [x.metadata['batch'] for x in A if x.status not in ['failed']]
+  AFsB = list(set(AFsB))
+  DFsB = [x.metadata['batch'] for x in A if x.status in ['completed']]
+  progress(initial=len(DFsB), total=len(AFsB), desc="zakończone")
+
+  FsB = [f for f in listdir("batches") if f.endswith(".jsonl")]
+  FsB = [path.join("batches", f) for f in FsB]
+  FsB = [f for f in FsB if "random" not in f]
+  progress(initial=len(AFsB), total=len(FsB), desc="wysłane")
+
+  FsB = [f for f in FsB if f not in AFsB]
+  print(f"pozostało: {len(FsB)}")
+
+  for f in progress(FsB[:n], desc="wysyłanie zapytań"): GPT.ask(f)
+
+ask(128)
+
+
+l = GPT.lsat(26, (12,20))
+X = GPT.fetchat(26, (10,00))
+pull(X)
