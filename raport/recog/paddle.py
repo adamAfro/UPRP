@@ -3,6 +3,7 @@ def dir(pdf_dir:str, ocr_dir:str, file_limit:int=None, paddle_args:dict={}, prep
     """
     Przykład użycia w notatniku:
     ```
+    from ocrify import ocrify_dir
     import paddle
     if paddle.is_compiled_with_cuda():
         paddle.set_device('gpu:0')
@@ -10,7 +11,7 @@ def dir(pdf_dir:str, ocr_dir:str, file_limit:int=None, paddle_args:dict={}, prep
     else:
         print("coś jest nie tak z GPU")
 
-    dir('../docs', 'output')
+    ocrify_dir('../docs', 'output', paddle_args={'lang':'en'})
     ```
     """
 
