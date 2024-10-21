@@ -8,6 +8,18 @@ ddrop, drnme = dict(columns=["PID*", "ID"]), dict(columns={ "ID*": "ID" })
 uward = dict(left_on="PID", right_on="ID", how="left", suffixes=("", "*"))
 udrop = dict(columns=["PID", "ID*", "PID*"])
 
+def assignment():
+  
+  R = "XML/root/pl-patent-document/bibliographic-data/assignees/assignee/"
+  X = read_csv(R + "df.csv", dtype=str)
+  X["XID"] = X["ID"]
+
+  X = merge(X, **dward, right=read_csv(R + "addressbook/df.csv", dtype=str)).drop(**ddrop).rename(**drnme)
+  X = merge(X, **dward, right=read_csv(R + "addressbook/name/df.csv", dtype=str)).drop(**ddrop).rename(**drnme)
+  
+  Y = DataFrame({ "P": X["P"], "name": X["$"] }).drop_duplicates()
+
+  return Y
 
 def names():
 
@@ -61,3 +73,4 @@ def titles():
 names().to_csv("names.csv", index=False)
 dates().to_csv("dates.csv", index=False)
 titles().to_csv("titles.csv", index=False)
+assignment().to_csv("assignment.csv", index=False)
