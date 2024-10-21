@@ -58,9 +58,14 @@ def dates():
 
   Y = concat(L, axis=0).replace("~", nan).dropna()
   Y = Y.drop_duplicates(subset=["P", "ID", "date"], keep="first")
-  Y["date"] = to_datetime(Y["date"], format="%Y%m%d")
 
-  return Y.drop(columns="ID")
+  Y["date"] = to_datetime(Y["date"], format="%Y%m%d")
+  
+  Y["y"] = Y["date"].dt.year
+  Y["m"] = Y["date"].dt.month
+  Y["d"] = Y["date"].dt.day
+
+  return Y.drop(columns=["date", "ID"])
 
 def titles():
   
