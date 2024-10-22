@@ -10,13 +10,19 @@ A = merge(A, read_csv(r + "bibliographic-data/assignees/assignee/addressbook/nam
 A = DataFrame({ "P": A["P-0"], "name": A["$"], "lang": A["&lang"].str.upper() }).drop_duplicates()
 A.to_csv("assignment.csv", index=False)
 
+A0 = A[["P", "name"]].copy()
+A0['name'] = A0['name'].str.replace(r"[^\w\.]", " ", regex=True)
+A0 = A0.dropna().apply(lambda x: [(str(x["P"]), w) for w in x['name'].split()], axis=1)
+A0 = DataFrame(A0.explode().tolist(), columns=["P", "name"]).drop_duplicates()
+A0.replace("", NA).dropna().to_csv("assignment.chunks.csv", index=False)
+
 
 N = read_csv(r+"bibliographic-data/parties/inventors/inventor/df.csv")
 N = merge(N, read_csv(r+"bibliographic-data/parties/inventors/inventor/addressbook/df.csv"),
           left_on="ID", right_on="PID", how="left", suffixes=("-0", "-1"))
 N = merge(N, read_csv(r+"bibliographic-data/parties/inventors/inventor/addressbook/address/df.csv"),
           left_on="ID-1", right_on="PID", how="left", suffixes=("-1", "-2"))
-N = DataFrame({"P": N["P"], 
+N = DataFrame({"P": N["P"],
                "ID": N["ID-0"],
                "lang": N["&lang"].str.upper(),
                "first": N["$first-name"].str.upper(),
@@ -24,6 +30,13 @@ N = DataFrame({"P": N["P"],
 if N["lang"].nunique() == 1: N = N.drop(columns=["lang"])
 N = N.drop_duplicates(subset=["P", "ID", "first", "last"], keep="first").drop(columns=["ID"])
 N.to_csv("names.csv", index=False)
+
+N0 = concat([N[['P', 'first']].rename(columns={"first":"name"}), 
+             N[['P', 'last']].rename(columns={"last":"name"})])
+N0['name'] = N0['name'].str.replace(r"[^\w\.]", " ", regex=True)
+N0 = N0.dropna().apply(lambda x: [(str(x["P"]), w) for w in x['name'].split()], axis=1)
+N0 = DataFrame(N0.explode().tolist(), columns=["P", "name"]).drop_duplicates()
+N0.replace("", NA).dropna().to_csv("names.chunks.csv", index=False)
 
 
 D = []
