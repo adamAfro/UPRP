@@ -27,14 +27,14 @@ N.to_csv("names.csv", index=False)
 
 
 D = []
-for k, t, x in [('&date-publ', 'publication', r+"df.csv"),
+for k, t, x in [('&date-publ', 'root-publication', r+"df.csv"),
                 ('$date', 'application', r+"bibliographic-data/application-reference/document-id/df.csv"),
                 ('$date', 'publication', r+"bibliographic-data/publication-reference/document-id/df.csv"),
-                ('$date-publ', 'publication', r+"bibliographic-data/publication-reference/document-id/df.csv"),
-                ('$date', 'print', r+"bibliographic-data/dates-of-public-availability/unexamined-printed-without-grant/document-id/df.csv"),
+                ('$date-publ', 'publication-alt', r+"bibliographic-data/publication-reference/document-id/df.csv"),
+                ('$date', 'pre-grant', r+"bibliographic-data/dates-of-public-availability/unexamined-printed-without-grant/document-id/df.csv"),
                 ("$date", "fill", r+"bibliographic-data/date-exhibition-filed/df.csv"),
-                ("$date", "fill", r+"bibliographic-data/pct-or-regional-filing-data/document-id/df.csv"),
-                ("$date", "publication", r+"bibliographic-data/pct-or-regional-publishing-data/document-id/df.csv")]:
+                ("$date", "reg-fill", r+"bibliographic-data/pct-or-regional-filing-data/document-id/df.csv"),
+                ("$date", "reg-publication", r+"bibliographic-data/pct-or-regional-publishing-data/document-id/df.csv")]:
 
   X = read_csv(x, dtype=str)
   X = DataFrame({ "P": X["P"], "date": X[k], "type": t })
