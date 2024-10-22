@@ -1,5 +1,4 @@
 from pandas import read_csv, merge, DataFrame, to_datetime, concat, NA
-from numpy import nan
 
 r = "frames/XML/root/pl-patent-document/"
 
@@ -51,7 +50,9 @@ D.to_csv("dates.csv", index=False)
 
 
 P = read_csv(r+"df.csv", dtype=str)
-P = P["P"]
+P = DataFrame({ "P": P["P"], "number": P["&doc-number"] })
+                           # „Numer prawa wyłącznego” #UPRP
+P.loc[P['P'] == P['number'], 'number'] = NA
 P.to_csv("numbers.csv", index=False)
 
 

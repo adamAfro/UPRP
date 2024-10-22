@@ -1,4 +1,4 @@
-from pandas import read_csv, DataFrame, merge
+from pandas import read_csv, DataFrame, merge, concat
 import re
 
 def date(x:str):
@@ -73,7 +73,8 @@ class R:
   P = DataFrame(P.tolist())
 
 class M:
-  P = read_csv('../meta/numbers.csv', dtype=str)["P"].replace("-A", "")
+  P = read_csv('../meta/numbers.csv', dtype=str)
+  P["P"] = P["P"].replace("-A", "")
   D = read_csv('../meta/dates.csv', dtype=str)
   D['y'] = D['y'].astype(int)
   D['m'] = D['m'].astype(int)
@@ -83,10 +84,21 @@ class M:
 
 class L:
   D = merge(R.D, M.D, on=['d', 'm', 'y'], how="left").dropna()
-  P = merge(R.P, M.P, on='P', how="left").dropna()
-  X = merge(D, P, on=['docs', 'P', 'raport'], how="inner").drop_duplicates()
-  Y = merge(X.rename(columns={'docs': 'index'}),
-            R.X.drop(columns=['raport']), on='index',
-            how="left", suffixes=('', '^')).drop(columns=['index'])
+  P = merge(R.P, M.P["P"], on='P', how="left").dropna()
+  U = merge(R.P.rename(columns={"P":"number"}), M.P.dropna(),
+            on='number', how="left").dropna() # „Numer prawa wyłącznego” #UPRP
+  P = concat([P, U])
+  P['number'] = P['number'].fillna(P['P'])
 
-L.Y.to_csv('linkage.date.csv', index=False)
+  X = merge(P, D, on=['docs', 'P', 'raport'], how="left").drop_duplicates()
+  X = X.rename(columns={'docs': 'index', "type": "metadate"})
+
+  Q = merge(X, R.X.drop(columns=['raport']), 
+            on='index', how="left", suffixes=('', '^'))
+  Y = Q.drop_duplicates(subset=['P', 'index'], keep='first')
+  Y = Y[["raport", "page", "index",
+         "P", "number", "docs",
+         "category", "claims",
+         "metadate", "d", "m", "y"]].convert_dtypes()
+
+L.Y.to_csv('linkage.date.csv')
