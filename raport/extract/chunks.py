@@ -136,13 +136,13 @@ E = DataFrame(E.explode().tolist())
 E["normal"] = E["content"].progress_apply(lambda x: 
   ''.join(filter(lambda c: c.isalpha() or c == '.', x.upper()))).fillna("")
 
-N = read_csv("../../meta/frames/names.csv")
+N = read_csv("../../meta/names.csv")
 N = set(n for A in [N["first"].str.replace(r"[^\w\.]", ' ', regex=True).values, 
                     N["last"].str.replace(r"[^\w\.]", ' ', regex=True).values] 
         for n in A if type(n) == str)
 N = set([y for n in N for y in n.split() if len(y) > 3])
 
-B = read_csv("../../meta/frames/assignment.csv")
+B = read_csv("../../meta/assignment.csv")
 B = B["name"].str.replace(r"[^\w\.]", " ", regex=True).str.cat(sep=" ")
 B = B.upper().split()
 B = set([b for b in (set(B) - N) if len(b) > 3])

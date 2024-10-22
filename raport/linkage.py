@@ -73,13 +73,13 @@ class R:
   P = DataFrame(P.tolist())
 
 class M:
-  P = read_csv('../meta/frames/XML/root/df.csv', dtype=str)["P"].replace("-A", "")
-  D = read_csv('../meta/frames/dates.csv', dtype=str)
+  P = read_csv('../meta/numbers.csv', dtype=str)["P"].replace("-A", "")
+  D = read_csv('../meta/dates.csv', dtype=str)
   D['y'] = D['y'].astype(int)
   D['m'] = D['m'].astype(int)
   D['d'] = D['d'].astype(int)
-  N = read_csv('../meta/frames/names.csv', dtype=str)
-  O = read_csv('../meta/frames/assignment.csv', dtype=str)
+  N = read_csv('../meta/names.csv', dtype=str)
+  O = read_csv('../meta/assignment.csv', dtype=str)
 
 class L:
   D = merge(R.D, M.D, on=['d', 'm', 'y'], how="left").dropna()
