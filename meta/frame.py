@@ -7,7 +7,7 @@ A = merge(A, read_csv(r + "bibliographic-data/assignees/assignee/addressbook/df.
           left_on="ID", right_on="PID", how="left", suffixes=("-0", "-1"))
 A = merge(A, read_csv(r + "bibliographic-data/assignees/assignee/addressbook/name/df.csv", dtype=str), 
           left_on="ID-1", right_on="PID", how="left", suffixes=("-1", "-2"))
-A = DataFrame({ "P": A["P-0"], "name": A["$"], "lang": A["&lang"].str.upper() }).drop_duplicates()
+A = DataFrame({ "P": A["P-0"], "name": A["$"].str.upper(), "lang": A["&lang"].str.upper() }).drop_duplicates()
 A.to_csv("assignment.csv", index=False)
 
 A0 = A[["P", "name"]].copy()
@@ -15,6 +15,18 @@ A0['name'] = A0['name'].str.replace(r"[^\w\.]", " ", regex=True)
 A0 = A0.dropna().apply(lambda x: [(str(x["P"]), w) for w in x['name'].split()], axis=1)
 A0 = DataFrame(A0.explode().tolist(), columns=["P", "name"]).drop_duplicates()
 A0.replace("", NA).dropna().to_csv("assignment.chunks.csv", index=False)
+
+
+G = read_csv(r+"bibliographic-data/assignees/assignee/addressbook/address/df.csv", dtype=str)
+G = DataFrame({ "P": G["P"], "name": G["$city"] }).drop_duplicates()
+G.to_csv("cities.csv", index=False)
+
+G0 = G[["P", "name"]].copy()
+G0['name'] = G0['name'].str.replace(r"[^\w\.]", " ", regex=True)
+G0 = G0.dropna().apply(lambda x: [(str(x["P"]), w) for w in x['name'].split()], axis=1)
+G0 = DataFrame(G0.explode().tolist(), columns=["P", "name"]).drop_duplicates()
+G0["name"] = G0["name"].str.upper()
+G0.replace("", NA).dropna().to_csv("cities.chunks.csv", index=False)
 
 
 N = read_csv(r+"bibliographic-data/parties/inventors/inventor/df.csv")
@@ -70,6 +82,13 @@ P.to_csv("numbers.csv", index=False)
 
 
 T = read_csv(r+"bibliographic-data/invention-title/df.csv", dtype=str)
-T = DataFrame({ "P": T["P"], "lang": T["&lang"], "title": T["$"] })
-T = T.dropna().drop_duplicates(subset=["P", "lang", "title"], keep="first")
+T = DataFrame({ "P": T["P"], "lang": T["&lang"], "name": T["$"] })
+T = T.dropna().drop_duplicates(subset=["P", "lang", "name"], keep="first")
 T.to_csv("titles.csv", index=False)
+
+T0 = T[["P", "name"]].copy()
+T0['name'] = T0['name'].str.replace(r"[^\w\.]", " ", regex=True)
+T0 = T0.dropna().apply(lambda x: [(str(x["P"]), w) for w in x['name'].split()], axis=1)
+T0 = DataFrame(T0.explode().tolist(), columns=["P", "name"]).drop_duplicates()
+T0["name"] = T0["name"].str.upper()
+T0.replace("", NA).dropna().to_csv("titles.chunks.csv", index=False)

@@ -105,4 +105,7 @@ Y = Y[["raport", "page", "index",
         "datetype", "d", "m", "y",
         "keys", "common", "words"]].convert_dtypes()
 
-# Y.to_csv('docs.linkage.csv')
+Y = Y.sort_values(["keys", "common", "y"], ascending=False)
+Y = Y.drop_duplicates(subset=['index'])
+Y = Y[(~Y['datetype'].isna())|(~Y['words'].isna())]
+Y.to_csv('docs.linkage.csv')

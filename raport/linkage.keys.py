@@ -1,11 +1,15 @@
 from pandas import read_csv, merge, concat
+from tqdm import tqdm as progress
 
 byidL = dict(left_index=True, right_index=True, how="left")
 
 class M: #Meta
   
   W = concat([read_csv('../meta/names.chunks.csv', dtype=str),
-              read_csv('../meta/assignment.chunks.csv', dtype=str)])
+              read_csv('../meta/assignment.chunks.csv', dtype=str),
+              read_csv('../meta/cities.chunks.csv', dtype=str),
+              read_csv('../meta/titles.chunks.csv', dtype=str)])
+
   W = W[W['name'].str.len() > 3].drop_duplicates()
   W = W.set_index("name")
 
@@ -29,7 +33,10 @@ K = merge(R.K, M.K, **byidL).dropna().reset_index().drop_duplicates()
 K = K.value_counts(subset=["P", "docs"]).reset_index()
 K = K.rename(columns={'count': 'keys'})
 
-C = merge(R.C, M.C, **byidL).dropna().reset_index().drop_duplicates()
+C = concat([merge(R.C, C, **byidL)
+            for C in progress([M.C[b:b +int(1000)]
+            for b in range(0, len(M.C), int(1000))])])
+C = C.dropna().reset_index().drop_duplicates()
 C = C.value_counts(subset=["P", "docs"]).reset_index()
 C = C.rename(columns={'count': 'common'})
 C['words'] = R.n[C['docs']].values
