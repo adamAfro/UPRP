@@ -1,8 +1,7 @@
 from pandas import read_csv, DataFrame, merge, concat
-import re
 
 def date(x:str):
-  from pandas import NA as missing
+  from numpy import nan as missing
   from itertools import product
   import re
   Q1 = re.findall(r'(?<!\d)(\d{1})(?!\d)', x)
@@ -59,6 +58,7 @@ en = [["jan", "january"],
       ["dec", "december"]]
 
 class R:
+  import re
   X = read_csv('recog/docs.csv', dtype=str)
   X['index'] = X.index.astype(str)
   X.rename(columns={"P": "raport"}, inplace=True)
@@ -67,38 +67,42 @@ class R:
   D = E[ E['name'] == "date" ].apply(axis=1, func=lambda r: 
     [{**d, "docs": r['docs'], "raport": r['raport'] } for d in date(r['content'])])
   D = DataFrame([d for l in D for d in l])
+  D['y'] = D['y'].astype("Int64")
+  D['m'] = D['m'].astype("Int64")
+  D['d'] = D['d'].astype("Int64")
 
   P = E[E['name'] == "patent"].apply(axis=1, func=lambda r: 
     { "P": ''.join(re.findall(r"\d", r['content'])), "docs": r['docs'], "raport": r['raport'] })
   P = DataFrame(P.tolist())
+  P['P'].apply(lambda x: x if len(x) >= 6 else "0"*(6-len(x)) + x)
+  P = P[P['P'].str.len() == 6]
 
 class M:
   P = read_csv('../meta/numbers.csv', dtype=str)
   P["P"] = P["P"].replace("-A", "")
   D = read_csv('../meta/dates.csv', dtype=str)
-  D['y'] = D['y'].astype(int)
-  D['m'] = D['m'].astype(int)
-  D['d'] = D['d'].astype(int)
-  N = read_csv('../meta/names.csv', dtype=str)
-  O = read_csv('../meta/assignment.csv', dtype=str)
+  D['y'] = D['y'].astype("Int64")
+  D['m'] = D['m'].astype("Int64")
+  D['d'] = D['d'].astype("Int64")
 
-class L:
-  D = merge(R.D, M.D, on=['d', 'm', 'y'], how="left").dropna()
-  P = merge(R.P, M.P["P"], on='P', how="left").dropna()
-  U = merge(R.P.rename(columns={"P":"number"}), M.P.dropna(),
-            on='number', how="left").dropna() # „Numer prawa wyłącznego” #UPRP
-  P = concat([P, U])
-  P['number'] = P['number'].fillna(P['P'])
+P = R.P[ R.P['P'].isin(M.P['P']) ].copy(); P['number'] = P['P']
+N = merge(R.P.rename(columns={"P":"number"}), M.P.dropna(), "inner", on="number")
+P = concat([P, N]).drop_duplicates()
 
-  X = merge(P, D, on=['docs', 'P', 'raport'], how="left").drop_duplicates()
-  X = X.rename(columns={'docs': 'index', "type": "metadate"})
+D = merge(R.D, M.D, "inner", on=['d', 'm', 'y'])
+Y = merge(P, D, "left", on=['docs', 'P', 'raport'])
 
-  Q = merge(X, R.X.drop(columns=['raport']), 
-            on='index', how="left", suffixes=('', '^'))
-  Y = Q.drop_duplicates(subset=['P', 'index'], keep='first')
-  Y = Y[["raport", "page", "index",
-         "P", "number", "docs",
-         "category", "claims",
-         "metadate", "d", "m", "y"]].convert_dtypes()
+K = read_csv("linkage.keys.csv", dtype=str)
+Y = merge(Y, K, on=['docs', 'P'], how="left")
 
-L.Y.to_csv('docs.linkage.csv')
+Y = Y.rename(columns={'docs': 'index', "type": "datetype"})
+
+Y = merge(Y, R.X.drop(columns=['raport']), on='index', how="left")
+Y = Y.drop_duplicates(subset=['P', 'index'], keep='first')
+Y = Y[["raport", "page", "index",
+        "P", "number", "docs",
+        "category", "claims",
+        "datetype", "d", "m", "y",
+        "keys", "common", "words"]].convert_dtypes()
+
+# Y.to_csv('docs.linkage.csv')

@@ -136,18 +136,6 @@ E = DataFrame(E.explode().tolist())
 E["normal"] = E["content"].progress_apply(lambda x: 
   ''.join(filter(lambda c: c.isalpha() or c == '.', x.upper()))).fillna("")
 
-N0 = read_csv("../../meta/names.chunks.csv").dropna()
-N0 = set(n for n in N0["name"].str.upper() if len(n) > 3)
-
-A0 = read_csv("../../meta/assignment.chunks.csv").dropna()
-A0 = set(a for a in A0["name"].str.upper() if len(a) > 3) - N0
-
-E["name"] = E.progress_apply(lambda x: 
-  x['name'] if x['name'] != "word" else
-  "name" if x['normal'] in N0 else
-  "org" if x['normal'] in A0 else x['name'], axis=1)
-
 E = E[ E["content"].str.len() > 0 ]
-# E["pattern"] = pattern(E["content"])
 E = E.convert_dtypes()
-E.drop(columns=["normal"]).to_csv("docs.chunks.csv", index=False)
+E.to_csv("docs.chunks.csv", index=False)
