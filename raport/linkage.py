@@ -1,4 +1,5 @@
 from pandas import read_csv, DataFrame, merge, concat
+import re
 
 def date(x:str):
   from numpy import nan as missing
@@ -107,5 +108,4 @@ Y = Y[["raport", "page", "index",
 
 Y = Y.sort_values(["keys", "common", "y"], ascending=False)
 Y = Y.drop_duplicates(subset=['index'])
-Y = Y[(~Y['datetype'].isna())|(~Y['words'].isna())]
 Y.to_csv('docs.linkage.csv')
