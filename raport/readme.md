@@ -1,5 +1,5 @@
 Raporty
--------
+=======
 
 Dane z raportów w formacie *PDF* zostają wyciągnięte, za pomocą
 multimodalnego modelu językowego, do postaci obserwacji tekstowych.
@@ -8,49 +8,46 @@ na słowa. Późniejsze parowanie w.w. ma na celu walidację
 samych kodów.
 
 Schemat procesu wyciagania danych
-=================================
+---------------------------------
 
 ```mermaid
-graph TD;
-
+---
+title: Pozyskiwanie powiązań
+---
+graph LR
+M[(Metadane)] --> p
 G[(UPRP.GOV.PL)]
-M0[(Meta.XML)]
-M[(Metadane)]
+--> p[pobieranie]
+--> PDF[(Dokumenty)]
+--> OCR[Paddle-OCR-v4-pl]
+--> OCV[OpenCV.crop]
+--> GPT[OpenAI-GPT-4o-mini]
+--> R0[(Powiązania+)]
+```
 
-R0[(Powiązania.PDF)]
-R[(Powiązania+)]
-y[(Powiązania)]
-
-G   --> fetch.XML --> M0
-M0  --> parsowanie.XML     --> M
-G   --> fetch.PDF --> R0
-M   --> fetch.PDF
-
-OCR[Paddle-OCR-v4-pl]
-GPT[OpenAI-GPT-4o-mini]
-OCV[OpenCV.crop]
-
-R0  --> OCR --> OCV --> GPT --> R
-
-K[parowanie kluczy]
-C[parowanie podrzędnych]
-D[parowanie dat]
-V[walidacja]
-
-R --> przeszukiwanie
-
-      przeszukiwanie --> D; M --> D
-      przeszukiwanie --> K; M --> K
-      przeszukiwanie --> C; M --> C
-
-D --> V; K --> V; C --> V
-
-V --> y
+```mermaid
+---
+title: Pozyskiwanie i sprawdzanie danych w raportach
+---
+graph LR
+m[pozyskiwanie metadanych]
+--> M[(Metadane)]
+--> r[pozyskiwanie powiązań] 
+--> R0[(Powiązania+)]
+R0 --> P[przeszukiwanie]
+P --> D[parowanie dat]
+P --> K[parowanie kluczy]
+P --> C[parowanie podrzędnych]
+M --> D; M --> K; M --> C
+D --> R; K --> R; C --> R
+G[(UPRP.GOV.PL)]
+G --- m; G --- r
+R[(Powiązania)]
 ```
 
 
 Definicje
-=========
+---------
 
 - **Stan faktyczny** - eksperci rozpoznają powiązania między
 patentami, a innymi pracami wynalazczymi, albo świadczącymi
@@ -83,7 +80,7 @@ w Polskim Urzędzie Patentowym.
 
 
 Walidacja przez łączenie
-========================
+------------------------
 
 Walidacja polega na łączeniu danych rozpoznanych z raportów 
 z danymi pobranymi na temat samych patentów.
@@ -99,44 +96,19 @@ jeśli kod rozpoznany pasuje do patentu o dużej zbieżności
 kluczy, to brak jest przesłanek do odrzucenia takiej relacji
 jako błędnej.
 
-
 ```mermaid
-graph LR;
-
-P[(Numery P.)]
-P --- pP[/numer P./]
-P --- nP[/numer alternatywny/]
-
-D[(Daty.)]
-D --- pD[/numer P./]
-D --- dD[/dzień/]
-D --- mD[/miesiąc/]
-D --- yD[/rok/]
-
-X[(Klucze)]
-X --- pX[/numer P./]
-X --- nX[/klucz/]
-nX -.- nY
-
+graph TB
 cR[cięcie]
-cR --> Y[(Klucze)]
-Y --- pY[/numer P./]
-Y --- nY[/klucz/]
-dD -.- dR
-mD -.- mR
-yD -.- yR
-
-pP -.- pR
-nP -.- pR
-
-pR[/numer P./]  --- R
-pR -.-> cR
-nR[/słowa/]     --- R
-nR --> cR
-
-dR[/dzień/]     --- R
-mR[/miesiąc/]   --- R
-yR[/rok/]       --- R
-
+  pR --> cR
+  nR --- cR
+  cR --> Y
+Y[(Klucze)]
+  Y --- pY[/numer P./]
+  Y --- nY[/klucz/]
 R[(Raporty)]
+R --- pR[/numer P./]
+R -.- nR[/słowa/]
+R -.- dR[/dzień/]
+R -.- mR[/miesiąc/]
+R -.- yR[/rok/]
 ```
