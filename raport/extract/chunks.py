@@ -99,13 +99,7 @@ def alphanumcut(r:Series, p:str, name:str=None):
     Y.append(y)
   return Y
 
-X = read_csv('../recog/docs.csv').dropna(subset="docs")
-for normalized, Q in {
-  "-": "−–—", ",": "‚、", ">": "›",
-  "...": "…", "'": "`‘’′´", '"': "“”„", "+": "⁺",
-  "A": "Ａ", "C": "Ｃ", "D": "Ｄ",
-  "E": "Ｅ", "I": "Ｉ", "L": "Ｌ", "Y": "Ｙ" }.items():
-  for q in Q: X["docs"] = X["docs"].str.replace(q, normalized)
+X = read_csv('../docs.csv')
 
 E = X.apply(lambda x: [(ch, x.name, x["P"]) for ch in split(x["docs"])], axis=1)
 E = DataFrame(E.explode().tolist(), columns=["content", "docs", "raport"])

@@ -60,7 +60,7 @@ en = [["jan", "january"],
 
 class R:
   import re
-  X = read_csv('recog/docs.csv', dtype=str)
+  X = read_csv('docs.csv', dtype=str)
   X['index'] = X.index.astype(str)
   X.rename(columns={"P": "raport"}, inplace=True)
   E = read_csv('extract/docs.chunks.csv', dtype=str)
