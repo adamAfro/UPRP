@@ -56,3 +56,6 @@ def matchre(q, k):
 with warnings.catch_warnings():#regexcatch
   warnings.simplefilter("ignore", UserWarning)
   for k, q in reversed(Q.items()): matchre(q, k)
+
+N['datestr'] = N[[m[0] for m in month['PL']] + [m[0] for m in month['EN']]].any(axis=1)
+N.drop(columns=[m[0] for m in month['PL']] + [m[0] for m in month['EN']], inplace=True)
