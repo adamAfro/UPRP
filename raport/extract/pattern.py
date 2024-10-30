@@ -28,22 +28,31 @@ N = read_csv('../docs.csv')
 N = N.reset_index().rename(columns={'docs':'text', 'index':'docs'})
 N = N[['docs', 'text']]
 
-N3 = N.progress_apply(lambda x: [(x['docs'], y, 3) for y in Sentence.nsub(x['text'], 3)], axis=1)
-N5 = N.progress_apply(lambda x: [(x['docs'], y, 5) for y in Sentence.nsub(x['text'], 5)], axis=1)
-N7 = N.progress_apply(lambda x: [(x['docs'], y, 7) for y in Sentence.nsub(x['text'], 7)], axis=1)
+N3 = N.progress_apply(lambda x: [(3, x['docs'], y, p) for y, p in Sentence.nsub(x['text'], 3)], axis=1)
+N5 = N.progress_apply(lambda x: [(5, x['docs'], y, p) for y, p in Sentence.nsub(x['text'], 5)], axis=1)
+N7 = N.progress_apply(lambda x: [(7, x['docs'], y, p) for y, p in Sentence.nsub(x['text'], 7)], axis=1)
 
 N = DataFrame([*N3.explode().tolist(),
                *N5.explode().tolist(),
                *N7.explode().tolist()],
-               columns=['docs', 'text', 'n'])
+               columns=['n', 'docs', 'text', 'start'])
 N['norm'] = N['text'].str.replace(r'[^\w\.]', " ", regex=True)
 N['norm'] = N['norm'].str.replace(r'(\d)(\.)', lambda m: m.group(1) + " "*len(m.group(2)), regex=True)
+N['norm'] = N['norm'].str.lower()
 
 N['pattern'] = N['norm'].progress_apply(pattern)
 N = N.drop_duplicates(subset=['docs', 'pattern'])
+
+def match(k): return matchre(Q[k], k)
+def matchre(q, k):
+  global N
+  print(q)
+  print(k, end=' ')
+  N[k] = N['norm'].str.contains(q, regex=True)
+  n = N[N[k]]['docs'].nunique()
+  r = N[N[k]]['docs'].nunique()/N['docs'].nunique()
+  print(n, f'{round(r*100, 2)}%')
+
 with warnings.catch_warnings():#regexcatch
   warnings.simplefilter("ignore", UserWarning)
-  for k, v in Q.items():
-    print(k, end=' ')
-    N[k] = N['norm'].str.contains(v, regex=True)
-    print('✅')
+  for k, q in reversed(Q.items()): matchre(q, k)

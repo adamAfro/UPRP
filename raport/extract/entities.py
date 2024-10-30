@@ -65,7 +65,7 @@ class Sentence:
 
     X = [w for w in re.split(by, x) if len(w) > 0]
     n = nwords*2-1
-    if len(X) <= n: return [x]
+    if len(X) <= n: return [(x, 0.0)]
 
     start, end = '', ''
     if re.fullmatch(by, X[ 0]): start, X = X[0], X[1:]
@@ -79,7 +79,7 @@ class Sentence:
     Y[0] = start + Y[0]
     Y[-1] = Y[-1] + end
 
-    return Y
+    return [(y, i/len(Y)) for i, y in enumerate(Y)]
   
   def extract(a:str, target:str, b=None):
     F = list(re.finditer(target, a))
