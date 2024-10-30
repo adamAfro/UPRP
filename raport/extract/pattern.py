@@ -1,4 +1,4 @@
-from entities import Q, Sentence
+from entities import Q, Sentence, month
 from pandas import read_csv, DataFrame
 from tqdm import tqdm as progress; progress.pandas()
 import warnings

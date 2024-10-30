@@ -1,36 +1,30 @@
 import re
 
-class Month:
-  class PL:
-    m = [["styczeń", "stycznia", "stycz", "sty"],
-        ["luty", "lutego", "lut"],
-        ["marzec", "marca", "marz", "mar"],
-        ["kwiecień", "kwietnia", "kwiec", "kwi", "kw"],
-        ["maj", "maja"],
-        ["czerwiec", "czerwca", "czerw"],
-        ["lipiec", "lipca", "lip"],
-        ["sierpień", "sierpnia", "sierp"],
-        ["wrzesień", "września", "wrześ"],
-        ["październik", "października", "paźdz"],
-        ["listopad", "listopada", "list"],
-        ["grudzień", "grud"]]
-    q = [x for l in m for x in l]
-    
-  class EN:
-    m = [["jan", "january"], 
-        ["feb", "february"], 
-        ["mar", "march"], 
-        ["apr", "april"], 
-        ["may"], 
-        ["jun", "june"], 
-        ["jul", "july"], 
-        ["aug", "august"], 
-        ["sep", "september"], 
-        ["oct", "october"], 
-        ["nov", "november"], 
-        ["dec", "december"]]
-    q = [x for l in m for x in l]
-  
+month = dict( PL=[["styczeń", "stycznia", "stycz", "sty"],
+                  ["luty", "lutego", "lut"],
+                  ["marzec", "marca", "marz", "mar"],
+                  ["kwiecień", "kwietnia", "kwiec", "kwi", "kw"],
+                  ["maj", "maja"],
+                  ["czerwiec", "czerwca", "czerw", "czer", "cze"],
+                  ["lipiec", "lipca", "lip"],
+                  ["sierpień", "sierpnia", "sierp", "sier", "sie"],
+                  ["wrzesień", "września", "wrześ", "wrz"],
+                  ["październik", "października", "paźdz", "paź"],
+                  ["listopad", "listopada", "list", "lis"],
+                  ["grudzień", "grud", "gru"]],
+              EN=[["january", "jan"],
+                  ["february", "feb"],
+                  ["march", "mar"],
+                  ["april", "apr"],
+                  ["may"],
+                  ["june", "jun"],
+                  ["july", "jul"],
+                  ["august", "aug"],
+                  ["september", "sep"],
+                  ["october", "oct"],
+                  ["november", "nov"],
+                  ["december", "dec"]] )
+
 Q = dict( alnum = r'[\w\D]{1,8}\s*(\d{2,}\s*)+',
           digital = r'(?<!\D)(\d{2,}\D{0,3})+',
           digits5 = r'\b\d{5,}\b',
@@ -39,8 +33,8 @@ Q = dict( alnum = r'[\w\D]{1,8}\s*(\d{2,}\s*)+',
           patent5 = r'[\w\D]{1,8}\s*(\d{5,}\s*)+',
           PL56 = r'((((patent|p)[\srplu\W]{1,8})|(numer|nr)\D{1,5})\s*\d?\d{2}\s*\d{3})',
 
-          datestr = re.compile('|'.join(["(\d{2}|\d{4})\s+(" + "|".join(Month.PL.q) + ")\s+(\d{2}|\d{4})",
-                                         "(\d{2}|\d{4})\s+(" + "|".join(Month.EN.q) + ")\s+(\d{2}|\d{4})"])),
+          **{ m[0]: re.compile("(\d{2}|\d{4})\s+(" + "|".join(m) + ")\s+(\d{2}|\d{4})") for m in month['PL'] },
+          **{ m[0]: re.compile("(\d{2}|\d{4})\s+(" + "|".join(m) + ")\s+(\d{2}|\d{4})") for m in month['EN'] },
           datenum = re.compile('|'.join(["\d{4}\s+\d{1,2}\s+\d{1,2}",
                                          "\d{1,2}\s+\d{1,2}\s+\d{4}",
                                          "\d{1,2}\s+\d{1,2}\s+\d{2}",
