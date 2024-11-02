@@ -1,135 +1,131 @@
-from pandas import read_csv, DataFrame, Series
+from pandas import read_csv, DataFrame
 from tqdm import tqdm as progress; progress.pandas()
-import re
 
-def split(x:str,  open = ['[', '(', '{'],
-                  close = [']', ')', '}', ',', ';', ':'],
-                  shift = ['"']):
-  i, y, Y = 0, '', []
-  for i in range(len(x)):
-    if x[i] in open:
-      if len(y) > 0: Y.append(y)
-      y = x[i]
-    elif x[i] in close:
-      Y.append(y + x[i])
-      y = ''
-    elif x[i] in shift:
-      if (len(y) > 0) and (y[0] != x[i]): 
-        Y.append(y); y = x[i]
-      else: Y.append(y + x[i]); y = ''
-    else: y += x[i]
-  if len(y) > 0: Y.append(y)
-  return Y
+class Sentence:
 
-def pattern(v:Series):
-  v = v.copy()
+  def split(x:str,  open = ['[', '(', '{'],
+                    close = [']', ')', '}', ',', ';', ':'],
+                    shift = ['"']):
+    i, y, Y = 0, '', []
+    for i in range(len(x)):
+      if x[i] in open:
+        if len(y) > 0: Y.append(y)
+        y = x[i]
+      elif x[i] in close:
+        Y.append(y + x[i])
+        y = ''
+      elif x[i] in shift:
+        if (len(y) > 0) and (y[0] != x[i]): 
+          Y.append(y); y = x[i]
+        else: Y.append(y + x[i]); y = ''
+      else: y += x[i]
+    if len(y) > 0: Y.append(y)
+    return Y
   
-  protocol = r'(\bhttps?://|www\.)'
-  v = v.str.replace(protocol, "//", regex=True)
-  alpha = r'([^\W\d]+)'
-  v = v.str.replace(alpha, lambda m:"C" if len(m.group(1)) > 8 else
-                                    "B" if len(m.group(1)) > 3 else
-                                    "A" if len(m.group(1)) > 1 else "L", regex=True)
-  
-  v = v.str.replace('L.', "I").str.replace('A.', "I")
-  v = v.str.replace(r'\d+', lambda m: str(len(m.group(0))), regex=True)
-  
-  webstart = r'//\S+'
-  v = v.str.replace(webstart, "U", regex=True)
+  def extract(N:str, target:str, T=None):
+    import re
+    F = list(re.finditer(target, N))
+    I = [i for m in F for i in m.span()]
+    Q = [i for i in I if any((i == m.start()) for m in F)]
+    if len(I) == 0: 
+      if T is None: return [(N, False)]
+      else: return [(N, T, False)]
+    if I[0] != 0: I = [0] + I
+    if I[-1]+1 != len(N): I = I + [len(N)]
+    Y = [N[I[i]:I[i+1]] for i in range(len(I)-1)]
+    Y = [(Y[i], I[i] in Q) for i in range(len(Y))]
+    if T is not None:
+      Y = [(N[I[i]:I[i+1]], T[I[i]:I[i+1]], Y[i][1]) for i in range(len(I)-1)]
+    return Y
 
-  v = v.str.replace(r'[\W\s]', " ", regex=True)
-  v = v.str.replace(r'\s{2,}', " ", regex=True)
-  
-  return v
+class Entity:
+  import os, json
+  def patregex( code = r'\b[a-z]{1,3}\.?(\s[a-z]{1,2}\.?)?', cforce = True,
+                num = r'nume?r?|nr\.?',
+                pat = r'(?<![a-z])(pate?n?t?|p)[\W]{0,2}',
+                digits = r'((\d{3,}\s*\d{2,})|(\d{2,}\s*){3,})\s*(\d{2,}\s*)?',
+                pre = r'(?<!(?<=\d)r|\d|\s)\s*',
+                suf = r'(\w\d?\s*)?(?!\s*\d)(?!\s*doi)(?!\s*https\s*doi)' ):
 
-class PL:
-  m = [["styczeń", "stycznia", "stycz", "sty"],
-       ["luty", "lutego", "lut"],
-       ["marzec", "marca", "marz", "mar"],
-       ["kwiecień", "kwietnia", "kwiec", "kwi", "kw"],
-       ["maj", "maja"],
-       ["czerwiec", "czerwca", "czerw"],
-       ["lipiec", "lipca", "lip"],
-       ["sierpień", "sierpnia", "sierp"],
-       ["wrzesień", "września", "wrześ"],
-       ["październik", "października", "paźdz"],
-       ["listopad", "listopada", "list"],
-       ["grudzień", "grud"]]
-  q = [x for l in m for x in l]
-  
-class EN:
-  m = [["jan", "january"], 
-       ["feb", "february"], 
-       ["mar", "march"], 
-       ["apr", "april"], 
-       ["may"], 
-       ["jun", "june"], 
-       ["jul", "july"], 
-       ["aug", "august"], 
-       ["sep", "september"], 
-       ["oct", "october"], 
-       ["nov", "november"], 
-       ["dec", "december"]]
-  q = [x for l in m for x in l]
+    alpha = rf"({num}|({code})|{pat}){{1,3}}"
+    if cforce:
+      alpha = rf"({num}|{pat}){{1,2}}"
+      alpha = rf"({alpha})?{code}({alpha})?"
+    return rf"{pre}{alpha}\s*{digits}{suf}"
 
-def alphanumcut(r:Series, p:str, name:str=None):
-  import re
-  try: 
-    if r['name'] != 'unmatched': return [r.to_dict()]
-  except: pass
-  x = r["content"].lower()
-  x = re.sub(r'[^\w\.]', " ", x)
-  x = re.sub(r'(\d)(\.)', lambda m: m.group(1) + " "*len(m.group(2)), x)
-  F = list(re.finditer(p, x))
-  I = [i for m in F for i in m.span()]
-  Q = [i for i in I if any((i == m.start()) for m in F)]
-  if len(I) == 0:
-    y = r.to_dict()
-    y["name"] = "unmatched"
-    return [y]
-  if I[0] != 0: I = [0] + I
-  if I[-1]+1 != len(x): I = I + [len(x)]
-  U = [r["content"][I[i]:I[i+1]] for i in range(len(I)-1)]
-  Y = []
-  for i in range(len(U)):
-    y = r.copy().to_dict()
-    y["content"] = U[i]
-    if name is not None:
-      y['name'] = name if I[i] in Q else "unmatched"
-    Y.append(y)
-  return Y
+  with open(os.path.join('month.json'), 'r') as f: month = json.load(f)
+  datenum = [ r"\d{4}\s+\d{1,2}\s+\d{1,2}",
+              r"\d{1,2}\s+\d{1,2}\s+\d{4}",
+              r"\d{1,2}\s+\d{1,2}\s+\d{2}",
+              r"\d{2}\s+\d{1,2}\s+\d{1,2}" ]
+
+Q = dict(
+  etal = r'\b(et\s*al\.?|i\s*in{1,2}i?\.?)\b',
+
+  pub = r"(wyd?a?n?i?e?|vol|publ?i?k?a?c?j?a?)\.?\s*(\d\s*)+",
+  
+  pgnum = r'\b((?<!(?<=p)l|\s)\s*p{1,2}|s(tr)?)\.?\s*\d{1,5}\s+\d{1,5}\b',
+
+  code = Entity.patregex(cforce=False),
+  code56 = Entity.patregex(cforce=False,
+                            digits = r'\d?\d{2}\s*\d{3}'),
+  EP56 = Entity.patregex(r'ep\.?\s*[^\Wp]?\s*\w?',
+                  digits = r'\d?\d{2}\s*\d{3}'),
+  PL56 = Entity.patregex(r'pl\.?\s*[^\Wp]?\s*\w?',
+                  digits = r'\d?\d{2}\s*\d{3}'),
+
+  Lmonth = rf"\d+\s*({'|'.join([ m for M in Entity.month['PL'] + Entity.month['EN'] for m in M ])})\s*\d*",
+  Rmonth = rf"\s*\d*({'|'.join([ m for M in Entity.month['PL'] + Entity.month['EN'] for m in M ])})\s*\d+",
+  fullmonth = rf"({'|'.join([ M[0] for M in Entity.month['PL'] + Entity.month['EN'] ] + [M[1] for M in Entity.month['PL']])})",
+  yearnum = r"(?<!\d|\s)\s*(20[012]\d|19\d{2})\s*(?!\s\d)",
+  datenum = rf"{'|'.join(Entity.datenum)}"
+)
+
+def extract(x, k, C, ignore=[]):
+  if len(ignore) > 0:
+    if any((hasattr(x, i) and (x[i]) == True) for i in ignore):
+      return [(x['docs'], x['text'], x['norm'], False, *x[C])]
+
+  return [(x['docs'], T, N, m, *x[C])
+    for N, T, m in Sentence.extract(x['norm'], Q[k], x['text'])]
 
 X = read_csv('../docs.csv')
+X = X.reset_index().rename(columns={'docs':'text', 'index':'docs'})
+X = X[['docs', 'text']]
 
-E = X.apply(lambda x: [(ch, x.name, x["P"]) for ch in split(x["docs"])], axis=1)
-E = DataFrame(E.explode().tolist(), columns=["content", "docs", "raport"])
+X['norm'] = X['text'].str.replace(r'[^\w\.]', " ", regex=True)
+X['norm'] = X['norm'].str.replace(r'(\d)(\.)', lambda m: m.group(1) + " "*len(m.group(2)), regex=True)
+X['norm'] = X['norm'].str.lower()
 
-yQ = ["(\d{2}|\d{4})\s+(" + '|'.join(PL.q) + ")\s+(\d{2}|\d{4})",
-      "(\d{2}|\d{4})\s+(" + '|'.join(EN.q) + ")\s+(\d{2}|\d{4})",
-      '\d{4}\s+\d{1,2}\s+\d{1,2}',
-      '\d{1,2}\s+\d{1,2}\s+\d{4}',
-      '\d{1,2}\s+\d{1,2}\s+\d{2}',
-      '\d{2}\s+\d{1,2}\s+\d{1,2}']
-yQ = re.compile('|'.join(yQ))
+def extraction(k:str, ignore=[]):
+  global X
+  C = X.columns[~X.columns.isin(["docs", "text", "norm"])]
+  X = X.progress_apply(lambda x: extract(x, k, C, ignore), axis=1)
+  C = ["docs", "text", "norm", k, *C]
+  X = DataFrame(X.explode().tolist(), columns=C)
+  X = X.dropna(subset=['text'])
 
-E = E.progress_apply(lambda r: alphanumcut(r, yQ, "date"), axis=1)
-E = DataFrame(E.explode().tolist())
+for k in ['code', 'datenum', 'Lmonth', 'Rmonth']:
+  extraction(k, ignore=Q.keys())
+  print(k, X[k].sum())
 
-pQ = ['((((patent|p)[\srplu\W]{1,5})|(numer|nr)\D{1,5})\s*\d*\d{2}\s*\d{3})']
-pQ = re.compile('|'.join(pQ))
+for k in ['EP56', 'PL56', 'code56', 'pgnum', 'pub']: 
+  extraction(k, ignore=Q.keys())
+  print(k, X[k].sum())
 
-E = E.progress_apply(lambda r: alphanumcut(r, pQ, "patent"), axis=1)
-E = DataFrame(E.explode().tolist())
+for k in ['etal', 'yearnum', 'fullmonth']: 
+  extraction(k, ignore=Q.keys())
+  print(k, X[k].sum())
 
-E = E.progress_apply(lambda r: alphanumcut(r, "[^\W\d]{1,3}\d{7,}", "foreign"), axis=1)
-E = DataFrame(E.explode().tolist())
+for k in ['EP56', 'PL56', 'code56', 'pgnum', 'pub']:
+  X.loc[X['code'], k] = X.loc[X['code'], 'norm'].str.contains(k, regex=True)
+  print(k, X[k].sum())
 
-E = E.progress_apply(lambda r: alphanumcut(r, "[^\W\d]+", "word"), axis=1)
-E = DataFrame(E.explode().tolist())
-
-E["normal"] = E["content"].progress_apply(lambda x: 
-  ''.join(filter(lambda c: c.isalpha() or c == '.', x.upper()))).fillna("")
-
-E = E[ E["content"].str.len() > 0 ]
-E = E.convert_dtypes()
-E.to_csv("docs.chunks.csv", index=False)
+C = X.columns[~X.columns.isin(["docs", "text", "norm"])]
+X = X.progress_apply(lambda x:
+  [(x['docs'], x['text'], *x[C])] if x[Q.keys()].any() else 
+  [(x['docs'], y, *x[C]) for y in Sentence.split(x['text'])], axis=1)
+C = ["docs", "text", *C]
+X = DataFrame(X.explode().tolist(), columns=C)
+X = X.dropna(subset=['text'])
+X.to_csv('docs.chunks.csv')
