@@ -1,136 +1,132 @@
 from pandas import read_csv, DataFrame
 from tqdm import tqdm as progress; progress.pandas()
+import os, json, warnings
 
-class Sentence:
+def extract(x:str, target:str, v=None):
+  "-> list[(sliced N, slice start, is-target-bool, T sliced like N if present)]"
+  import re
+  F = list(re.finditer(target, x))
+  I = [i for m in F for i in m.span()]
+  Q = [i for i in I if any((i == m.start()) for m in F)]
+  if len(I) == 0: 
+    if v is None: return [(x, 0, False)]
+    else: return [(x, 0, False, v)]
+  if I[0] != 0: I = [0] + I
+  if I[-1]+1 != len(x): I = I + [len(x)]
+  Y = [x[I[i]:I[i+1]] for i in range(len(I)-1)]
+  Y = [(Y[i], I[i], I[i] in Q) for i in range(len(Y))]
+  if v is not None: Y = [(*Y[i], v[I[i]:I[i+1]]) for i in range(len(I)-1)]
+  return Y
 
-  def split(x:str,  open = ['[', '(', '{'],
-                    close = [']', ')', '}', ',', ';', ':'],
-                    shift = ['"'], L0=0):
-    "-> list[(sliced x, slice start, slice end)]"
-    i, y, Y = 0, '', []
-    for i in range(len(x)):
-      if x[i] in open:
-        if len(y) > 0: Y.append(y)
-        y = x[i]
-      elif x[i] in close:
-        Y.append(y + x[i])
-        y = ''
-      elif x[i] in shift:
-        if (len(y) > 0) and (y[0] != x[i]): 
-          Y.append(y); y = x[i]
-        else: Y.append(y + x[i]); y = ''
-      else: y += x[i]
-    if len(y) > 0: Y.append(y)
-    L = [sum([len(y) for y in Y[:i]]) + L0 for i in range(len(Y))]
-    Y = [(Y[i], L[i], L[i]+len(Y[i])-1) for i in range(len(Y))]
-    return Y
-  
-  def extract(N:str, target:str, T=None, L0=0):
-    "-> list[(sliced N, slice start, slice end, is-target-bool, T sliced like N if present)]"
-    import re
-    F = list(re.finditer(target, N))
-    I = [i for m in F for i in m.span()]
-    Q = [i for i in I if any((i == m.start()) for m in F)]
-    if len(I) == 0: 
-      if T is None: return [(N, L0, L0 + len(N)-1, False)]
-      else: return [(N, L0, L0 + len(N)-1, False, T)]
-    if I[0] != 0: I = [0] + I
-    if I[-1]+1 != len(N): I = I + [len(N)]
-    Y = [N[I[i]:I[i+1]] for i in range(len(I)-1)]
-    Y = [(Y[i], I[i] + L0, I[i] + L0 + len(Y[i]) - 1, I[i] in Q) for i in range(len(Y))]
-    if T is not None: Y = [(*Y[i], T[I[i]:I[i+1]]) for i in range(len(I)-1)]
-    return Y
+def patregex( code = r'\b[a-z]{1,3}\.?(\s[a-z]{1,2}\.?)?', cforce = True,
+              num = r'nume?r?|nr\.?',
+              pat = r'(?<![a-z])(pate?n?t?|p)[\W]{0,2}',
+              digits = r'((\d{3,}\s*\d{2,})|(\d{2,}\s*){3,})(\s*\d{2,})?',
+              pre = r'(?<!(?<=\d)r|\d|\s)\s*',
+              suf = r'(\s*[a-z]\d?(?!\w))?(?!\s*(doi|https\s*doi))' ):
 
-class Entity:
-  import os, json
-  def patregex( code = r'\b[a-z]{1,3}\.?(\s[a-z]{1,2}\.?)?', cforce = True,
-                num = r'nume?r?|nr\.?',
-                pat = r'(?<![a-z])(pate?n?t?|p)[\W]{0,2}',
-                digits = r'((\d{3,}\s*\d{2,})|(\d{2,}\s*){3,})\s*(\d{2,}\s*)?',
-                pre = r'(?<!(?<=\d)r|\d|\s)\s*',
-                suf = r'(\w\d?\s*)?(?!\s*\d)(?!\s*doi)(?!\s*https\s*doi)' ):
+  alpha = rf"({num}|({code})|{pat}){{1,3}}"
+  if cforce:
+    alpha = rf"({num}|{pat}){{1,2}}"
+    alpha = rf"({alpha})?{code}({alpha})?"
+  return rf"{pre}{alpha}\s*{digits}{suf}"
 
-    alpha = rf"({num}|({code})|{pat}){{1,3}}"
-    if cforce:
-      alpha = rf"({num}|{pat}){{1,2}}"
-      alpha = rf"({alpha})?{code}({alpha})?"
-    return rf"{pre}{alpha}\s*{digits}{suf}"
+def dateregex(y=4, spaced=True, daymonth=True):
+  y = r"(20[012]\d|19\d{2})" if y == 4 else r"\d{2}"
+  y = rf"{y}(\s*r(?!\w))?\.?"
+  D = y
+  if daymonth:
+    d = r"[0123]?\d{1}"
+    m = r"[01]?\d{1}"
+    dm = rf"({d}\s+{m}|{m}\s+{d})"
+    D = rf"({y}\s+{dm}|{dm}\s+{y})"
 
-  with open(os.path.join('month.json'), 'r') as f: month = json.load(f)
-  datenum = [ r"\d{4}\s+\d{1,2}\s+\d{1,2}",
-              r"\d{1,2}\s+\d{1,2}\s+\d{4}",
-              r"\d{1,2}\s+\d{1,2}\s+\d{2}",
-              r"\d{2}\s+\d{1,2}\s+\d{1,2}" ]
+  R = rf"(?<!\d){D}(?!\d)"
+  if not spaced: R.replace("\\s+", "\\s*")
+  return R
+
+with open(os.path.join('month.json'), 'r') as f: month = json.load(f)
 
 Q = dict(
-  etal = r'\b(et\s*al\.?|i\s*in{1,2}i?\.?)\b',
-
-  pub = r"(wyd?a?n?i?e?|vol|publ?i?k?a?c?j?a?)\.?\s*(\d\s*)+",
   
+  etal = r'\b(et\s*al\.?|i\s*in{1,2}i?\.?)\b',
+  pub = r"(wyd?a?n?i?e?|vol|publ?i?k?a?c?j?a?)\.?\s*(\d\s*)+",
   pgnum = r'\b((?<!(?<=p)l|\s)\s*p{1,2}|s(tr)?)\.?\s*\d{1,5}\s+\d{1,5}\b',
 
-  code = Entity.patregex(cforce=False),
-  code56 = Entity.patregex(cforce=False,
-                            digits = r'\d?\d{2}\s*\d{3}'),
-  EP56 = Entity.patregex(r'ep\.?\s*[^\Wp]?\s*\w?',
-                  digits = r'\d?\d{2}\s*\d{3}'),
-  PL56 = Entity.patregex(r'pl\.?\s*[^\Wp]?\s*\w?',
-                  digits = r'\d?\d{2}\s*\d{3}'),
+  code = patregex(cforce=False),
+  code56 = patregex(cforce=False, digits = r'\d?\d{2}\s*\d{3}'),
+  EP56 = patregex(r'ep\.?\s*[^\Wp]?\s*\w?', digits = r'\d?\d{2}\s*\d{3}'),
+  PL56 = patregex(r'pl\.?\s*[^\Wp]?\s*\w?', digits = r'\d?\d{2}\s*\d{3}'),
 
-  Lmonth = rf"\d+\s*({'|'.join([ m for M in Entity.month['PL'] + Entity.month['EN'] for m in M ])})\s*\d*",
-  Rmonth = rf"\s*\d*({'|'.join([ m for M in Entity.month['PL'] + Entity.month['EN'] for m in M ])})\s*\d+",
-  fullmonth = rf"({'|'.join([ M[0] for M in Entity.month['PL'] + Entity.month['EN'] ] + [M[1] for M in Entity.month['PL']])})",
-  yearnum = r"(?<!\d|\s)\s*(20[012]\d|19\d{2})\s*(?!\s\d)",
-  datenum = rf"{'|'.join(Entity.datenum)}"
+  Lmonth = rf"\d+\s*({'|'.join([ m for M in month['PL'] + month['EN'] for m in M ])})\s*\d*",
+  Rmonth = rf"\s*\d*({'|'.join([ m for M in month['PL'] + month['EN'] for m in M ])})\s*\d+",
+  fullmonth = rf"({'|'.join([ M[0] for M in month['PL'] + month['EN'] ] + [M[1] for M in month['PL']])})",
+  yearnum = dateregex(4, daymonth=False),
+  datealt = dateregex(2),
+  datenum = dateregex(4),
+  datealt0 = dateregex(2, spaced=False),
+  datenum0 = dateregex(4, spaced=False),
+  
+  group = r'[\(\[\{\"][^\)\]\}"]+[\)\]\}\"]'
 )
 
-X = read_csv('../docs.csv').sample(1000, random_state=0)
+K = Q.keys()
+def Fgen(k:str, G=K):
+  return (lambda t0, N0, a0, M0: [(t0, N0, a0, M0)] if any(M0[k] for k in G) 
+          else [(t,  N,  a0+a, { **M0, k: m }) for N, a, m, t in extract(N0, Q[k], t0)])
+def txtFgen(k:str, G=K):
+  return (lambda t0, N0, a0, M0: [(t0, N0, a0, M0)] if any(M0[k] for k in G) 
+          else [(t,  N,  a0+a, { **M0, k: m }) for t, a, m, N in extract(t0, Q[k], N0)])
+F = [
+  Fgen('datenum'),
+  Fgen('code'),
+  Fgen('Lmonth'), Fgen('Rmonth'),
+  Fgen('EP56'), Fgen('PL56'), Fgen('code56'),
+  Fgen('pgnum'), Fgen('pub'), Fgen('etal'),
+  Fgen('datealt'), Fgen('yearnum'), Fgen('fullmonth'),
+  txtFgen('group')
+]
+
+def chain(t:str, N:str, a:int=0):
+  global F, K
+  "F[i](t, N, a, M) -> list[(t, N, a, M)]"
+  Y = [(t, N, a, { k:False for k in Q.keys() })]
+  for f in F:
+    Y = [y for t, N, a, M in Y for y in f(t, N, a, M)]
+  return Y
+
+X = read_csv('../docs.csv')
 X = X.reset_index().rename(columns={'docs':'text', 'index':'docs'})
 X = X[['docs', 'text']]
 
-X['start'], X['end'] = 0, X['text'].str.len()
+X['start'] = 0
 X['norm'] = X['text'].str.replace(r'[^\w\.]', " ", regex=True)
 X['norm'] = X['norm'].str.replace(r'(\d)(\.)', lambda m: m.group(1) + " "*len(m.group(2)), regex=True)
 X['norm'] = X['norm'].str.lower()
 
-C0 = ["docs", "text", "start", "end", "norm"]
-def extract(k:str, ignore=[]):
-  global X
-  C = X.columns[~X.columns.isin(C0)]
-  def f(x):
-    "-> list[(doc.id., slice, start, end, norm.slice, k-match, ...matches)]"
-    if len(ignore) > 0:
-      if any((hasattr(x, i) and (x[i]) == True) for i in ignore):
-        return [(*x[C0], False, *x[C])]
+X = X.progress_apply(lambda x: [{ "docs": x['docs'], "text": t, "norm": N, "start": a, **M } 
+                                for t, N, a, M in chain(x['text'], x['norm'])], axis=1)
+X = DataFrame(X.explode().tolist())
+X.insert(4, "end", X['start'] + X['text'].str.len() - 1)
+X = X[X['start'] <= X['end']]
 
-    return [(x['docs'], T, a, z, N, m, *x[C])
-      for N, a, z, m, T in Sentence.extract(x['norm'], Q[k], x['text'], x['start'])]
+with warnings.catch_warnings():
+  warnings.simplefilter("ignore", UserWarning)
 
-  X = X.progress_apply(f, axis=1)
-  C = [*C0, k, *C]
-  X = DataFrame(X.explode().tolist(), columns=C)
-  X = X[X['start'] <= X['end']]
+  for k in ['EP56', 'PL56', 'code56', 'pgnum', 'pub', 'yearnum', 'datealt0', 'datenum0']:
+    X.loc[X['code'], k] = X.loc[X['code'], 'norm'].str.contains(Q[k], regex=True)
+  for k0 in ['Lmonth', 'Rmonth']:
+    X.loc[X[k0], "fullmonth"] = X.loc[X[k0], 'norm'].str.contains(Q["fullmonth"], regex=True)
 
-for k in ['code', 'datenum', 'Lmonth', 'Rmonth']:
-  extract(k, ignore=Q.keys())
-  print(k, X[k].sum())
+print("X.shape", X.shape)
+print("docs", (DataFrame(X.groupby('docs').any()[K].sum(axis=0)).T/X['docs'].nunique()).round(2), sep='\n')
+M0 = DataFrame(None, index=K, columns=K)
+for i, k0 in enumerate(M0.index):
+  for k in M0.columns[:i+1]:
+    if k != k0: M0.loc[k, k0] = ""
+    y = X.loc[X[k0], k].sum()
+    r = round(y / X.shape[0] * 100, 2)
+    M0.loc[k0, k] = f"{r:.2f}" if r > 0.0 else '0+  ' if y > 0 else '0   '
+print("frac. X[x]&X[y]", M0, sep='\n')
 
-for k in ['EP56', 'PL56', 'code56', 'pgnum', 'pub']: 
-  extract(k, ignore=Q.keys())
-  print(k, X[k].sum())
-
-for k in ['etal', 'yearnum', 'fullmonth']: 
-  extract(k, ignore=Q.keys())
-  print(k, X[k].sum())
-
-for k in ['EP56', 'PL56', 'code56', 'pgnum', 'pub']:
-  X.loc[X['code'], k] = X.loc[X['code'], 'norm'].str.contains(k, regex=True)
-  print(k, X[k].sum())
-
-C = X.columns[~X.columns.isin(C0)]
-X = X.progress_apply(lambda x:
-  [(x['docs'], x['text'], x['start'], x['end'], *x[C])] if x[Q.keys()].any() else 
-  [(x['docs'], y, a, z, *x[C]) for y, a, z in Sentence.split(x['text'], L0=x['start'])], axis=1)
-X = DataFrame(X.explode().tolist(), columns=[c for c in C0 if c != "norm"] + [c for c in C])
-X = X.dropna(subset=['text'])
-X.to_csv('docs.chunks.csv')
+X.drop(columns=["norm"]).to_csv('docs.chunks.csv')
