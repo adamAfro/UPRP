@@ -23,7 +23,7 @@ def patregex( code = r'\b[a-z]{1,3}\.?(\s[a-z]{1,2}\.?)?', cforce = True,
               pat = r'(?<![a-z])(pate?n?t?|p)[\W]{0,2}',
               digits = r'((\d{3,}\s*\d{2,})|(\d{2,}\s*){3,})(\s*\d{2,})?',
               pre = r'(?<!(?<=\d)r|\d|\s)\s*',
-              suf = r'(\s*[a-z]\d?(?!\w))?(?!\s*(doi|https\s*doi))' ):
+              suf = r'(\s*[a-z]\d?(?!\w)\s?)?(?!\s*(doi|https\s*doi))' ):
 
   alpha = rf"({num}|({code})|{pat}){{1,3}}"
   if cforce:
@@ -73,29 +73,35 @@ Q = dict(
   datealt0 = dateregex(2, spaced=False),
   datenum0 = dateregex(4, spaced=False),
   
-  supgroup = r'[\(\[\{\"]([^\)\]\}"]*[\(\[\{\"][^\)\]\}"]*[\)\]\}\"][^\)\]\}"]*)+[\)\]\}\"]',
-  group = r'[\(\[\{\"][^\)\]\}"]+[\)\]\}\"]',
+  supgroup = '|'.join([rf'\{a}.*[\{{\}}\[\]\(\)\"].*\{b}' for a,b in ['()', '[]', '{}', '""']]),
+  group = '|'.join([rf'\{a}.{{3,}}\{b}' for a,b in ['()', '[]', '{}', '""']]),
   URL = r'http[s]?://(?:\w|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',
 )
 
 K = Q.keys()
-def Fgen(k:str, G=K):
+def Fgen(k:str, G=[k for k in K if k not in ['supgroup', 'group']]):
   return (lambda t0, N0, a0, M0: [(t0, N0, a0, M0)] if any(M0[k] for k in G) 
           else [(t,  N,  a0+a, { **M0, k: m }) for N, a, m, t in extract(N0, Q[k], t0)])
-def txtFgen(k:str, G=K):
+def txtFgen(k:str, G=[k for k in K if k not in ['supgroup', 'group']]):
   return (lambda t0, N0, a0, M0: [(t0, N0, a0, M0)] if any(M0[k] for k in G) 
           else [(t,  N,  a0+a, { **M0, k: m }) for t, a, m, N in extract(t0, Q[k], N0)])
 F = [
+
+  lambda t0, N0, a0, M0: [(t,  N,  a0+a, { **M0, 'supgroup': m, 'supgroup-i': i }) 
+    for i, (t, a, m, N) in enumerate(extract(t0, Q['supgroup'], N0))],
+
+  lambda t0, N0, a0, M0: [(t,  N,  a0+a, { **M0, 'group': m, 'group-i': i }) 
+    for i, (t, a, m, N) in enumerate(extract(t0, Q['group'], N0))],
+
   txtFgen('URL'),
   Fgen('datenum'),
   Fgen('LDOI'), Fgen('RDOI'),
   Fgen('EP'), Fgen('PL'), Fgen('code'),
   Fgen('Lmonth'), Fgen('Rmonth'),
   Fgen('EP56'), Fgen('PL56'), Fgen('code56'),
+
   Fgen('pgnum'), Fgen('pub'), Fgen('etal'),
   Fgen('datealt'), Fgen('yearnum'), Fgen('fullmonth'),
-  txtFgen('supgroup'),
-  txtFgen('group'),
 ]
 
 def chain(t:str, N:str, a:int=0):
