@@ -1,6 +1,7 @@
 #komórka
-from pandas import read_csv
+from pandas import read_csv, to_numeric
 from matplotlib.pyplot import subplots, rcParams as plotsetup
+from matplotlib.ticker import MaxNLocator
 plotsetup['figure.figsize'] = [12, 12]
 F = {}
 X = read_csv('docs.chunks.csv')
@@ -29,3 +30,23 @@ C['text'].str.extract(r"([\s\d\W]{5,})")[0]\
 .value_counts().sort_index()\
 .plot.barh(title="Liczba cyfr w wyrażeniach kodo-podobnych", 
           ylabel="pomiędzy zestawem 1. a 2.", xlabel='', ax=F["C"][1][2]);
+
+#komórka
+D = X.query("datenum or datenumy or datealt0 or datealt or Rmonth or Lmonth or fullmonth")
+
+F["D"] = subplots(3,1, sharex=True, tight_layout=True)
+
+D['text'].str.extract("(?<!\d)(\d{1})(?!\d)")[0].value_counts().sort_index()\
+.plot.barh(title="Liczby w dato-podobnych wyrażeniach",
+           ylabel="liczba jednocyfrowa", ax=F["D"][1][0]);
+
+D['text'].str.extract("(?<!\d)(\d{2})(?!\d)")[0].value_counts().sort_index()\
+.plot.barh(ylabel="liczba dwucyfrowa", ax=F["D"][1][1]);
+F["D"][1][1].yaxis.set_major_locator(MaxNLocator(nbins=10))
+
+D['text'].str.extract("(?<!\d)(\d{4})(?!\d)")[0].value_counts().sort_index()\
+.plot.barh(ylabel="liczba czterocyfrowe", ax=F["D"][1][2]);
+F["D"][1][2].yaxis.set_major_locator(MaxNLocator(nbins=10))
+
+
+#komórka
