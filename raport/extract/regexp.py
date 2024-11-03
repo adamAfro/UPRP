@@ -33,7 +33,7 @@ def patregex( code = r'\b[a-z]{1,3}\.?(\s[a-z]{1,2}\.?)?', cforce = True,
 
 def dateregex(y=4, spaced=True, daymonth=True):
   y = r"(20[012]\d|19\d{2})" if y == 4 else r"\d{2}"
-  y = rf"{y}(\s*r(?!\w))?\.?"
+  if spaced: y = rf"{y}(\s*r(?!\w))?\.?"
   D = y
   if daymonth:
     d = r"[0123]?\d{1}"
@@ -53,7 +53,13 @@ Q = dict(
   pub = r"(wyd?a?n?i?e?|vol|publ?i?k?a?c?j?a?)\.?\s*(\d\s*)+",
   pgnum = r'\b((?<!(?<=p)l|\s)\s*p{1,2}|s(tr)?)\.?\s*\d{1,5}\s+\d{1,5}\b',
 
+  LDOI = r"(https\s*)?\s*doi\.?\s*[\d\s\.]+",
+  RDOI = r"[\d\s\.]+\s*(ht{2}ps?\s*)?doi\.?\b",
+
   code = patregex(cforce=False),
+  EP = patregex(r'ep\.?\s*[^\Wp]?\s*\w?'),
+  PL = patregex(r'pl\.?\s*[^\Wp]?\s*\w?'),
+
   code56 = patregex(cforce=False, digits = r'\d?\d{2}\s*\d{3}'),
   EP56 = patregex(r'ep\.?\s*[^\Wp]?\s*\w?', digits = r'\d?\d{2}\s*\d{3}'),
   PL56 = patregex(r'pl\.?\s*[^\Wp]?\s*\w?', digits = r'\d?\d{2}\s*\d{3}'),
@@ -67,7 +73,9 @@ Q = dict(
   datealt0 = dateregex(2, spaced=False),
   datenum0 = dateregex(4, spaced=False),
   
-  group = r'[\(\[\{\"][^\)\]\}"]+[\)\]\}\"]'
+  supgroup = r'[\(\[\{\"]([^\)\]\}"]*[\(\[\{\"][^\)\]\}"]*[\)\]\}\"][^\)\]\}"]*)+[\)\]\}\"]',
+  group = r'[\(\[\{\"][^\)\]\}"]+[\)\]\}\"]',
+  URL = r'http[s]?://(?:\w|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',
 )
 
 K = Q.keys()
@@ -78,13 +86,16 @@ def txtFgen(k:str, G=K):
   return (lambda t0, N0, a0, M0: [(t0, N0, a0, M0)] if any(M0[k] for k in G) 
           else [(t,  N,  a0+a, { **M0, k: m }) for t, a, m, N in extract(t0, Q[k], N0)])
 F = [
+  txtFgen('URL'),
   Fgen('datenum'),
-  Fgen('code'),
+  Fgen('LDOI'), Fgen('RDOI'),
+  Fgen('EP'), Fgen('PL'), Fgen('code'),
   Fgen('Lmonth'), Fgen('Rmonth'),
   Fgen('EP56'), Fgen('PL56'), Fgen('code56'),
   Fgen('pgnum'), Fgen('pub'), Fgen('etal'),
   Fgen('datealt'), Fgen('yearnum'), Fgen('fullmonth'),
-  txtFgen('group')
+  txtFgen('supgroup'),
+  txtFgen('group'),
 ]
 
 def chain(t:str, N:str, a:int=0):
@@ -113,8 +124,9 @@ X = X[X['start'] <= X['end']]
 with warnings.catch_warnings():
   warnings.simplefilter("ignore", UserWarning)
 
-  for k in ['EP56', 'PL56', 'code56', 'pgnum', 'pub', 'yearnum', 'datealt0', 'datenum0']:
-    X.loc[X['code'], k] = X.loc[X['code'], 'norm'].str.contains(Q[k], regex=True)
+  for k0 in ['EP', 'PL', 'code']:
+    for k in ['EP56', 'PL56', 'code56', 'pgnum', 'pub', 'yearnum', 'datealt0', 'datenum0']:
+      X.loc[X[k0], k] = X.loc[X[k0], 'norm'].str.contains(Q[k], regex=True)
   for k0 in ['Lmonth', 'Rmonth']:
     X.loc[X[k0], "fullmonth"] = X.loc[X[k0], 'norm'].str.contains(Q["fullmonth"], regex=True)
 
@@ -129,4 +141,15 @@ for i, k0 in enumerate(M0.index):
     M0.loc[k0, k] = f"{r:.2f}" if r > 0.0 else '0+  ' if y > 0 else '0   '
 print("frac. X[x]&X[y]", M0, sep='\n')
 
-X.drop(columns=["norm"]).to_csv('docs.chunks.csv')
+X.drop(columns=["norm"]).to_csv('docs.chunks.csv', index=False)
+
+from nbclient import NotebookClient
+import nbformat
+with open("insight.py", "r") as f: x = f.read()
+
+J = nbformat.v4.new_notebook()
+J.cells = [nbformat.v4.new_code_cell(c) 
+           for c in x.split("#komórka")]
+
+NotebookClient(J).execute()
+nbformat.write(J, "insight.ipynb")
