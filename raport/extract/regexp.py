@@ -12,7 +12,7 @@ def extract(x:str, target:str, v=None):
     if v is None: return [(x, 0, False)]
     else: return [(x, 0, False, v)]
   if I[0] != 0: I = [0] + I
-  if I[-1]+1 != len(x): I = I + [len(x)]
+  I = I + [len(x)]
   Y = [x[I[i]:I[i+1]] for i in range(len(I)-1)]
   Y = [(Y[i], I[i], I[i] in Q) for i in range(len(Y))]
   if v is not None: Y = [(*Y[i], v[I[i]:I[i+1]]) for i in range(len(I)-1)]
