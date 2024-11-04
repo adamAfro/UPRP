@@ -1,6 +1,6 @@
 from pandas import read_csv, DataFrame
 from tqdm import tqdm as progress; progress.pandas()
-import os, json, re
+import os, json
 
 def extract(x:str, q:str):
   "-> list[(sliced x, start index, q-match-bool]"
@@ -39,9 +39,9 @@ Q['braceseriesL'] = rf"(?<!\w){brace}\s*[{''.join(sep)}]{R0}"
 Q['braceseriesR'] = rf"{L0}[{''.join(sep)}]\s*{brace}(?!\w)"
 
 abbr = r"[^\W\d]{1,4}\.?"
-Q["abbrX"] = rf"{L0}{abbr}{R0}"
-Q["abbrL"] = rf"(?<!\w){abbr}{R0}"
-Q["abbrR"] = rf"{L0}{abbr}(?!\w)"
+Q["abbrX"] = rf"{L0}{abbr}(?:\s+{abbr})*{R0}"
+Q["abbrL"] = rf"(?<!\w){abbr}(?:\s+{abbr})*{R0}"
+Q["abbrR"] = rf"{L0}{abbr}(?:\s+{abbr})*(?!\w)"
 
 sep += [r'\.'] + sep + [r'\s']
 Q['series0'] = "(?:" + '|'.join([rf"(?:\d+\s*{s}+\s*)+" for s in sep]) + ")\s*\d+"
@@ -114,8 +114,13 @@ def kmerge(X):
     i += 1
   return X
 
-X = read_csv('../docs.csv').reset_index().sample(12000, random_state=0)
+X = read_csv('../docs.csv').reset_index()#.sample(24000, random_state=0)
 X = X.rename(columns={'docs':'text', 'index':'docs'})[['docs', 'text']]
 f = lambda x: kmerge(extractk(x.to_dict()))
 X = DataFrame(X.progress_apply(f, axis=1).explode().tolist())
+X = X.drop(columns=['typeL', 'typeR'])
+X = X.drop(X.query("text.str.match(r'^[\W_]+$')").index)
+X['code'] = ((~X['type'].isna())&(X['type'] != 'URL')).astype(int)
 X['end'] = X['start'] + X['text'].str.len() - 1
+X = X[['docs', 'start', 'end', 'text', 'code']]
+X.convert_dtypes().to_csv('code.csv', index=False)
