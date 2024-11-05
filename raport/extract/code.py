@@ -99,3 +99,16 @@ fMo = lambda x: [(x['docs'], x['start'], x['end'], *c) for c in month(x['text'])
 M = DataFrame([y for u in U.progress_apply(fMo, axis=1) if u for y in u],
               columns=['docs', 'start', 'end', 'numstart', 'numend', 'text', 'day', 'month', 'year'])\
               .convert_dtypes().drop_duplicates(subset=['docs', 'day', 'month', 'year'])
+
+P = U['text'].str.extract('(?P<C>' + '|'.join([
+  r'[\W\s]*'.join(k) for k in Co.keys()]) + ')' + \
+  r'[\W\s]*(?P<X>(?:\d\W?\s?){5,})(?!\d)' + \
+  r'[\W\s]{,3}(?P<S>[^\w\s]*[0123abuABU][^\w\s]*[0123a-zA-Z])?')\
+  .dropna(subset=['C', 'X'])
+
+P[P.duplicated(subset=['C', 'X'], keep='first')]
+
+Pp = U['text'].str.extract(r'(?P<C>(?<!\w)p\.?)' + \
+  r'[\W\s]*(?P<X>(?:\d\W?\s?){5,})(?!\d)' + \
+  r'[\W\s]{,3}(?P<S>[^\w\s]*[0123abuABU][^\w\s]*[0123a-zA-Z])?')\
+  .dropna(subset=['C', 'X'])
