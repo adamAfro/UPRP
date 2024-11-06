@@ -105,16 +105,16 @@ P = U['text'].str.extract('(?P<C>' + '|'.join([
   r'[\W\s]*'.join(k) for k in Co.keys()]) + ')' + \
   r'[\W\s]*(?P<X>(?:\d\W?\s?){5,})(?!\d)' + \
   r'[\W\s]{,3}(?P<S>[^\w\s]*[0123abuABU][^\w\s]*[0123a-zA-Z])?')\
-  .dropna(subset=['C', 'X'])
-
-P[P.duplicated(subset=['C', 'X'], keep='first')]
+  .dropna(subset=['C', 'X']).join(U.drop('numerical', axis=1))\
+  .rename(columns={'C':'country', 'X':'number', 'S':'sufix'})
 
 Pp = U['text'].str.extract(r'(?P<C>(?<!\w)p\.?)' + \
   r'[\W\s]*(?P<X>(?:\d\W?\s?){5,})(?!\d)' + \
   r'[\W\s]{,3}(?P<S>[^\w\s]*[0123abuABU][^\w\s]*[0123a-zA-Z])?')\
-  .dropna(subset=['C', 'X'])
+  .dropna(subset=['C', 'X']).join(U.drop('numerical', axis=1))\
+  .rename(columns={'C':'country', 'X':'number', 'S':'sufix'})
 
-P.to_csv('patent.csv', index=False)
-Pp.to_csv('patent.p-.csv', index=False)
-D.to_csv('date.num.csv', index=False)
-M.to_csv('date.month.csv', index=False)
+P.convert_dtypes().to_csv('patent.csv', index=False)
+Pp.convert_dtypes().to_csv('patent.p-.csv', index=False)
+D.convert_dtypes().to_csv('date.num.csv', index=False)
+M.convert_dtypes().to_csv('date.month.csv', index=False)
