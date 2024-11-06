@@ -43,7 +43,8 @@ def date(d:str|None, m:str|None, y:str):
     if D.year > 2024: return None
     return (None if d0 else D.day, None if m0 else D.month, D.year)
   except ValueError: return None
-  
+
+with open(os.path.join('country.json'), 'r') as fN: Co = json.load(fN)
 with open(os.path.join('month.json'), 'r') as fN: Mo = json.load(fN)
 mo = '|'.join([ m for M in Mo['PL'] + Mo['EN'] for m in M ])
 
@@ -112,3 +113,8 @@ Pp = U['text'].str.extract(r'(?P<C>(?<!\w)p\.?)' + \
   r'[\W\s]*(?P<X>(?:\d\W?\s?){5,})(?!\d)' + \
   r'[\W\s]{,3}(?P<S>[^\w\s]*[0123abuABU][^\w\s]*[0123a-zA-Z])?')\
   .dropna(subset=['C', 'X'])
+
+P.to_csv('patent.csv', index=False)
+Pp.to_csv('patent.p-.csv', index=False)
+D.to_csv('date.num.csv', index=False)
+M.to_csv('date.month.csv', index=False)
