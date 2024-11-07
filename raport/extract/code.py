@@ -2,8 +2,20 @@ from pandas import read_csv, DataFrame
 from tqdm import tqdm as progress; progress.pandas()
 import os, json, re
 
+# Wyciąganie kodów
+# ----------------
+#
+# Wyszukiwanie kodów z tekstu polega na użyciu wyrażeń regularnych.
+# Z racji, że są to wyrażenia alfanumeryczne i kombinacji jest wiele
+# to trzeba zdefiniować kilka klas wyrażeń regularnych, które
+# później są łączone i odpowiednio oznaczane jako poprawne lub nie.
+# Niektóre wyr. są pożądane same w sobie - np. cyfry, inne tylko jeśli
+# są obok innych, np. skrót krajowy przy cyfrze: PL 000000.
+# Po wyszukaniu wyrażeń te są łączone na podstawie sąsiedztwa, 
+# a później oznaczane jako oczekiwane na podstawie tego, czy
+# zawierają jeden z wcześniej określonych wzorców (patrz: klasa `Expr`)
 class Expr:
-  "przechowuje regexy `Q` z nazwanymi grupami i nazwy `K0` tych grup co są `True`"
+  "Przechowuje wyr. re. `Q` z nazwanymi grupami i nazwy `K0` oczekiwanych grup."
   def __init__(self, Q:dict, K0:list=[]): self.Q, self.K0 = Q, K0
   def union(self, x:str):
     "->(złączone znajdy `Q`, początek, koniec, czy nazwa znajdy jest w `K0`)"
@@ -21,7 +33,19 @@ class Expr:
         M[-1] = (x0 + x, a0, max(b0, b), m0 or m)
     return M
 
+# Wyszukiwanie dat
+# ----------------
+# 
+# Znalezione kody mogą być datami, ale nawet jeśli je przypominają
+# wcale nie oznacza, że są one poprawne: liczba określająca
+# dzień (o ile określony) musi być koniecznie w przedziale 1-31, 
+# to można sprawdzic wyrażeniami regularnymi, ale to czy rzeczywiście
+# 31 jest pradziwym dniem wcale nie jest pewne, ze wzlgędu na różnice
+# w miesiącach czy latach przestępnych (28/29-luty).
+# Zadanie wykonuje funkcja `date`, która umożliwia dodatkowo
+# testowanie niepełnych dat, np. 12.08 może dotyczyć grudnia 2008r.
 def date(d:str|None, m:str|None, y:str):
+  "Używa modułu `datetime` do weryfikacji poprawności daty."
   from datetime import date as f
   import re
   
@@ -48,6 +72,16 @@ with open(os.path.join('country.json'), 'r') as fN: Co = json.load(fN)
 with open(os.path.join('month.json'), 'r') as fN: Mo = json.load(fN)
 mo = '|'.join([ m for M in Mo['PL'] + Mo['EN'] for m in M ])
 
+# Daty numeryczne
+# ---------------
+#
+# Daty numeryczne mogą być zapisane w różnych formatach, gdzie
+# liczba z rokiem jest po lewe albo prawej stronie. Może być też
+# sam rok, może zawierać dzień, może tylko miesiąc. Dodatkowo 
+# ułożenie dzień/miesiąc/rok wcale nie jest pewne, np. data
+# 2010.10.09 może dotyczyć 9 października albo 10 września.
+# Funkcja `datenum` znajduje wszystkie możliwe daty numeryczne
+# i używa funkcji `date` do weryfikacji poprawności.
 def datenum(x:str, Q = [q for s, qd, qY4, qNd in [(
   r"[\W\s]{1,3}", r"(?:3[01]|[012]?\d)", r"(?:20[012]\d|19\d\d)", r"(?:3[2-9]|[4-9]\d)")] 
   for q in [rf"(?<!\d)(?P<A>{qd})?{s}(?P<B>{qd}){s}(?P<Y>{qY4}|{qNd}|{qd})(?!\d)",
@@ -59,6 +93,14 @@ def datenum(x:str, Q = [q for s, qd, qY4, qNd in [(
       [(r,x,date(d.get('B', None), d.get('A', None), d.get('Y'))) for r,x,d in M]
   return [(a,b,x,*D) for (a,b),x,D in V if D]
 
+# Daty zapisane słownie
+# ---------------------
+#
+# Daty zapisane słownie są najczęściej zapisane po polsku albo
+# angielsku. Położenie lat wcale nie jest pewne, np. 11 12 wrzesień
+# może być 2012 albo 2011 rokiem i odpowiednio 12 albo 11 dniem.
+# Funkcja `month` znajduje wszystkie możliwe daty słowne i używa
+# funkcji `date` do weryfikacji poprawności.
 def month(x:str, Q = [(i,q) for s0, s, qYd, M in [(r"[\W\s]{0,3}", r"[\W\s]{1,3}", r"(?:20[012]\d|19\d\d|\d\d)", 
   [(i, '|'.join(a+b)) for i, a, b in zip(range(1, 12+1), Mo['PL'], Mo['EN'])])] for i, q in
   [(i, rf"((?P<A>{qYd}){s})?(?P<B>{qYd}){s0}(?P<M>{q})") for i, q in M]+
@@ -73,10 +115,19 @@ def month(x:str, Q = [(i,q) for s0, s, qYd, M in [(r"[\W\s]{0,3}", r"[\W\s]{1,3}
 X = read_csv('../docs.csv').reset_index()
 X = X.rename(columns={'docs':'text', 'index':'docs'})[['docs', 'text']]
 
+# Usuwanie linków
+# ---------------
+# Linki są zwyczajnie usuwane i zastępowane spacjami, aby
+# zachować spójność pozostałych informacji.
 qURL=r'(http[s]?://(?:\w|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+)'
 X['text'] = X['text'].progress_apply(lambda x:
   re.sub(qURL, lambda m: ' '*len(m.group()), x))
 
+# Wyciąganie kodów z danych
+# -------------------------
+#
+# Poniżej znajduje się zastosowanie w.w. metody do wyszukiwania
+# kodów alfanumerycznych.
 eN = Expr(Q=re.compile('(?:' + '|'.join(rf'(?P<{k}>{q})' for k, q in {
   "month":  rf"(?:(?<=\d\s|.\d)(?:{mo})(?!\w)|(?<!\w)(?:{mo})(?=\s*\d))",
   "alnum":  r"(?<!\w)(?:[^\W\d]+\d|\d+[^\W\d])\w*(?!\w)",
