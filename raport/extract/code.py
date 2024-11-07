@@ -83,7 +83,7 @@ mo = '|'.join([ m for M in Mo['PL'] + Mo['EN'] for m in M ])
 # Funkcja `datenum` znajduje wszystkie możliwe daty numeryczne
 # i używa funkcji `date` do weryfikacji poprawności.
 def datenum(x:str, Q = [q for s, qd, qY4, qNd in [(
-  r"[\W\s]{1,3}", r"(?:3[01]|[012]?\d)", r"(?:20[012]\d|19\d\d)", r"(?:3[2-9]|[4-9]\d)")] 
+  r"[\W\s]{1,3}", r"\b(?:3[01]|[012]?\d)\b", r"\b(?:20[012]\d|19\d\d)\b", r"\b(?:3[2-9]|[4-9]\d)\b")] 
   for q in [rf"(?<!\d)(?P<A>{qd})?{s}(?P<B>{qd}){s}(?P<Y>{qY4}|{qNd}|{qd})(?!\d)",
             rf"(?<!\d)(?P<Y>{qY4}|{qNd}){s}(?P<A>{qd}){s}(?P<B>{qd})?(?!\d)",
             rf"(?<!\d)(?P<Y>{qY4})(?!\d)",]]):
@@ -101,7 +101,7 @@ def datenum(x:str, Q = [q for s, qd, qY4, qNd in [(
 # może być 2012 albo 2011 rokiem i odpowiednio 12 albo 11 dniem.
 # Funkcja `month` znajduje wszystkie możliwe daty słowne i używa
 # funkcji `date` do weryfikacji poprawności.
-def month(x:str, Q = [(i,q) for s0, s, qYd, M in [(r"[\W\s]{0,3}", r"[\W\s]{1,3}", r"(?:20[012]\d|19\d\d|\d\d)", 
+def month(x:str, Q = [(i,q) for s0, s, qYd, M in [(r"[\W\s]{0,3}", r"\b[\W\s]{1,3}\b", r"\b(?:20[012]\d|19\d\d|\d\d)\b", 
   [(i, '|'.join(a+b)) for i, a, b in zip(range(1, 12+1), Mo['PL'], Mo['EN'])])] for i, q in
   [(i, rf"((?P<A>{qYd}){s})?(?P<B>{qYd}){s0}(?P<M>{q})") for i, q in M]+
   [(i, rf"(?P<M>{q}){s0}(?P<A>{qYd})({s}(?P<B>{qYd}))?") for i, q in M]+
@@ -159,29 +159,87 @@ D = DataFrame([y for u in U.progress_apply(fD, axis=1) if u for y in u],
               columns=['docs', 'start', 'end', 'numstart', 'numend', 'text', 'day', 'month', 'year'])\
               .convert_dtypes().drop_duplicates(subset=['docs', 'day', 'month', 'year'])
 
+D['start'], D['end'] = D['start'] + D['numstart'], D['start'] + D['numend']
+D = D.sort_values(['day', 'month', 'year'], ascending=False)
+
 fMo = lambda x: [(x['docs'], x['start'], x['end'], *c) for c in month(x['text'])]
 M = DataFrame([y for u in U.progress_apply(fMo, axis=1) if u for y in u],
               columns=['docs', 'start', 'end', 'numstart', 'numend', 'text', 'day', 'month', 'year'])\
               .convert_dtypes().drop_duplicates(subset=['docs', 'day', 'month', 'year'])
 
+M['start'], M['end'] = M['start'] + M['numstart'], M['start'] + M['numend']
+M = M.sort_values(['day', 'month', 'year'], ascending=False)
+
 Series([X.shape[0], U.shape[0], D.shape[0], M.shape[0]],
        ['cytowania', 'kody', 'daty numeryczne', 'daty słowne'])\
   .plot.bar(title='Wyszukiwanie dat w cytowaniach')
 
-P = U['text'].str.extract('(?P<C>' + '|'.join([
-  r'[\W\s]*'.join(k) for k in Co.keys()]) + ')' + \
-  r'[\W\s]*(?P<X>(?:\d\W?\s?){5,})(?!\d)' + \
-  r'[\W\s]{,3}(?P<S>[^\w\s]*[0123abuABU][^\w\s]*[0123a-zA-Z])?')\
-  .dropna(subset=['C', 'X']).join(U.drop('numerical', axis=1))\
-  .rename(columns={'C':'country', 'X':'number', 'S':'sufix'})
+# Kody patentowe
+# --------------
+#
+# W znalezionych kodach, część jest kodami patentowymi. Te
+# zaczynają się skrótem krajowym, a później jest numer.
+# Na końcu może być dodatkowy skrót dot. samego dokumentu.
+P = U.progress_apply(lambda u:
+  [{ "start": u['start'], "end": u['end'], "docs": u['docs'], "text": u['text'],
+    **m.groupdict(), "codestart": m.start(), "codeend": m.end()} for m in re.finditer(
+    r'(?P<country>' + '|'.join(['(?<![^\W\d])' + r'[\W\s]*'.join(k) for k in Co.keys()]) + ')' + \
+    r'[\W\s]*(?P<number>(?:\d\W?\s?){5,})(?!\d)' + \
+    r'[\W\s]{,3}(?P<sufix>[^\w\s]*[0123abuABUXY][^\w\s\)\}\]]*[0123a-zA-Z]?[^\w\s]*)?', u['text'])], axis=1)
+P = DataFrame(P.explode().dropna().tolist()).convert_dtypes()
+P['start'], P['end'] = P['start'] + P['codestart'], P['start'] + P['codeend']
 
-Pp = U['text'].str.extract(r'(?P<C>(?<!\w)p\.?)' + \
-  r'[\W\s]*(?P<X>(?:\d\W?\s?){5,})(?!\d)' + \
-  r'[\W\s]{,3}(?P<S>[^\w\s]*[0123abuABU][^\w\s]*[0123a-zA-Z])?')\
-  .dropna(subset=['C', 'X']).join(U.drop('numerical', axis=1))\
-  .rename(columns={'C':'country', 'X':'number', 'S':'sufix'})
+Series([X.shape[0], U.shape[0], P.shape[0]],
+       ['cytowania', 'kody', 'kody patentowe'])\
+  .plot.bar(title='Wyszukiwanie patentów w cytowaniach')
+
+# Usuwanie dat z kodów z patentami
+# --------------------------------
+#
+# Przez mechanizm skryptu niektóre daty są powiązane z kodami,
+# bo między nimi nie było żadnego jednoznacznego separatora, np.
+# przecinka, ew. był taki, który spełnia inne funkcji, np. kropka.
+P['country'] = P['country'].str.replace('\W', '', regex=True).str.upper()
+P['number'] = P['number'].str.replace('\D', '', regex=True)
+P['numlen'] = P['number'].str.len()
+P['numlenmed'] = P.groupby('country')['numlen'].transform('median')
+
+c0 = P['country'].value_counts().to_frame().query('count > 1000').index
+P.query('country in @c0').groupby('numlen')['country']\
+ .value_counts().unstack().plot.bar(title='Ilość cyfr w kodzie przy najliczniejszych państwach',
+                                     ylabel='n-kodów', xlabel='ilość cyfr').legend()
+
+P.query('(country in @c0) and (numlen >= numlenmed + 6)').groupby('numlen')['country']\
+ .value_counts().unstack().plot.bar(title='Ilość cyfr w kodzie przy najliczniejszych państwach',
+                                    ylabel='n-kodów', xlabel='ilość cyfr dla n-cyfr ≥ mediana grupy + 6').legend()
+
+# W takich przypadkach, daty są usuwane z końców kodów.
+# To tam są z reguły. Dla uproszczenia brane są pod uwagę wyłącznie
+# daty zawierające pełną informację o dniu: dzień, miesiąc, rok.
+# Do weryfikacji używane są wszystkie daty po odfiltrowaniu tych,
+# które nie zaczynają się w kodach patentowych.
+Dp = D.dropna(subset=['day', 'month'])\
+      .drop_duplicates(subset=['docs', 'start'])\
+      .merge(P, 'inner', on='docs', suffixes=('D', ''))\
+      .query('(start <= startD < end)')\
+      [['startD', 'endD', 'docs', 'start', 'textD']]
+
+# Usuwanie dat to zwyczajne zastąpienie ich pustym ciągiem.
+P = P.merge(Dp, on=['docs', 'start'], how='left')
+P['textD'] = P['textD'].fillna("").str.replace("\D", "", regex=True).fillna("")
+P['number'] = P.progress_apply(lambda x: x['number'].replace(x['textD'], ""), axis=1)
+P['numlen'] = P['number'].str.len()
+P['numlenmed'] = P.groupby('country')['numlen'].transform('median')
+
+Ppignore = True
+if not Ppignore:
+  Pp = U['text'].str.extract(r'(?P<C>(?<!\w)p\.?)' + \
+    r'[\W\s]*(?P<X>(?:\d\W?\s?){5,})(?!\d)' + \
+    r'[\W\s]{,3}(?P<S>[^\w\s]*[0123abuABU][^\w\s]*[0123a-zA-Z])?')\
+    .dropna(subset=['C', 'X']).join(U.drop('numerical', axis=1))\
+    .rename(columns={'C':'country', 'X':'number', 'S':'sufix'})
 
 P.convert_dtypes().to_csv('patent.csv', index=False)
-Pp.convert_dtypes().to_csv('patent.p-.csv', index=False)
+# Pp.convert_dtypes().to_csv('patent.p-.csv', index=False)
 D.convert_dtypes().to_csv('date.num.csv', index=False)
 M.convert_dtypes().to_csv('date.month.csv', index=False)
