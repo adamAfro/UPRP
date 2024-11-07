@@ -1,4 +1,4 @@
-from pandas import read_csv, DataFrame
+from pandas import read_csv, DataFrame, Series
 from tqdm import tqdm as progress; progress.pandas()
 import os, json, re
 
@@ -115,13 +115,20 @@ def month(x:str, Q = [(i,q) for s0, s, qYd, M in [(r"[\W\s]{0,3}", r"[\W\s]{1,3}
 X = read_csv('../docs.csv').reset_index()
 X = X.rename(columns={'docs':'text', 'index':'docs'})[['docs', 'text']]
 
+X['text'].str.len().plot.hist(title='Hist. dłg. tekstu', bins=100, 
+                              xlabel='dłg. tekstu', ylabel='n-dokumentów');
+
 # Usuwanie linków
 # ---------------
 # Linki są zwyczajnie usuwane i zastępowane spacjami, aby
 # zachować spójność pozostałych informacji.
-qURL=r'(http[s]?://(?:\w|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+)'
+qURL=r'(?:http[s]?://(?:\w|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+)'
+nURL = X['text'].str.contains(qURL).sum()
 X['text'] = X['text'].progress_apply(lambda x:
   re.sub(qURL, lambda m: ' '*len(m.group()), x))
+
+Series([X.shape[0]-nURL, nURL], index=['brak URL', 'URL'])\
+  .plot.pie(title='Wystąpienia adresów URL');
 
 # Wyciąganie kodów z danych
 # -------------------------
@@ -142,6 +149,11 @@ U = DataFrame(X.progress_apply(fN, axis=1).explode().tolist(),
                columns=['docs', 'text', 'start', 'end', 'numerical'])\
                .dropna().query('numerical==True')
 
+Series([X.shape[0], U.shape[0]], ['cytowania', 'kody'])\
+  .plot.bar(title='Wyszukiwanie kodów w cytowaniach');
+
+# Wyciąganie dat z danych
+# -----------------------
 fD = lambda x: [(x['docs'], x['start'], x['end'], *c) for c in datenum(x['text'])]
 D = DataFrame([y for u in U.progress_apply(fD, axis=1) if u for y in u],
               columns=['docs', 'start', 'end', 'numstart', 'numend', 'text', 'day', 'month', 'year'])\
@@ -151,6 +163,10 @@ fMo = lambda x: [(x['docs'], x['start'], x['end'], *c) for c in month(x['text'])
 M = DataFrame([y for u in U.progress_apply(fMo, axis=1) if u for y in u],
               columns=['docs', 'start', 'end', 'numstart', 'numend', 'text', 'day', 'month', 'year'])\
               .convert_dtypes().drop_duplicates(subset=['docs', 'day', 'month', 'year'])
+
+Series([X.shape[0], U.shape[0], D.shape[0], M.shape[0]],
+       ['cytowania', 'kody', 'daty numeryczne', 'daty słowne'])\
+  .plot.bar(title='Wyszukiwanie dat w cytowaniach')
 
 P = U['text'].str.extract('(?P<C>' + '|'.join([
   r'[\W\s]*'.join(k) for k in Co.keys()]) + ')' + \
