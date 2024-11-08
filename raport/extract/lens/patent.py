@@ -88,11 +88,15 @@ X = X.query('country in @c.query("1000<=count").index')
 Q = []
 for f0 in os.listdir('req'):
   with open(f'req/{f0}') as f: q = json.load(f)
+  if f0.endswith('0-res.json'):
+    for n in q['doc_number']:
+      Q.append({ "country": q['jurisdiction'], "number": n, "matches": 0 })
+    continue
   with open(f'res/{f0}') as f: R = json.load(f)
   for n in q['doc_number']:
     k = sum([1 for d in R['data'] if (n == d['doc_number'])
-               and (q['jurisdiction'] == d['jurisdiction'])])
-    if (k == 0) and (R['results'] < R['total']): continue
+              and (q['jurisdiction'] == d['jurisdiction'])])
+    if (k == 0) and ((R.get('results', 0) == 0) or (R['results'] < R['total'])): continue
     Q.append({ "country": q['jurisdiction'], "number": n, "matches": k })
 Q = DataFrame(Q)
 Q['matches'].value_counts().sort_index()\
@@ -128,23 +132,32 @@ X = X.query('matches.isnull()').drop('matches', axis=1)
 # * wybranie arbitralnie odpowiedniej długości kodów patentowych:
 # różne kraje mają różne długości, a pośród nich jest wiele odstępstw;
 # * ustalenie jurysdykcji.
-for c in X0['country'].value_counts().sort_values(ascending=False).index:
-  l = X0.query('country == @c')['number'].str.len().mode().values[0]
-  C = X.query('(country == @c) and (number.str.len() == @l)')
-  print(c, l, f'{Q[Q["country"] == c].shape[0]} 💾')
-  dt = 60/10 # maks. 10 zap. na min.
-  with progress(total=C.shape[0]) as p:
-    i, n, m5 = 0, 75, [100, 100, 100, 100, 100]
-    while i < C.shape[0]:
-      t0 = time.time()
-      B = C.iloc[i:i+n]
-      R = API(c, [v for v in B['number'].values])
-      dt0 = time.time() - t0
-      if dt0 < dt: time.sleep(dt - dt0 + 0.1)
+for c in X0['country'].value_counts().sort_values(ascending=True).index:
+  for l in X0.query('country == @c')['number'].str.len().value_counts()\
+    .sort_values(ascending=False).index:
+    
+    C = X.query('(country == @c) and (number.str.len() == @l)')
+    print(c, l, f'{Q[Q["country"] == c].shape[0]} 💾')
+    dt = 60/10 # maks. 10 zap. na min.
+    if C.shape[0] < 75: continue
+    with progress(total=C.shape[0]) as p:
+      i, n, m5 = 0, 75, [100, 100, 100]
+      while i < C.shape[0]:
+        t0 = time.time()
+        B = C.iloc[i:i+n]
+        R = API(c, [v for v in B['number'].values])
+        dt0 = time.time() - t0
+        if dt0 < dt: time.sleep(dt - dt0 + 0.1)
 
-      p.update(n)
-      i += n
+        p.update(n)
+        i += n
 
-      m5 = [m5[1], m5[2], m5[3], m5[4], R['results']]
-      n = int(n + (95 - sum(m5)/5)//5)
-      p.set_postfix({'n': n, 'total': R['total'], 'results': R['results'] })
+        if R.get('results', 0) == 0:
+          print('📐💔')
+          with open(f'req/{datetime.datetime.now().strftime("%Y-%m-%d-%H:%M:%S")}-0-res.json', 'w') as f: 
+            f.write(json.dumps({ "jurisdiction": c, "doc_number": [n for n in C['number']] }))
+          break
+        m5 = [m5[1], m5[2], R['results']]
+        n = int(n + (95 - sum(m5)/len(m5))//5)
+        p.set_postfix({'n': n, 'total': R['total'], 'results': R['results'] })
+        
