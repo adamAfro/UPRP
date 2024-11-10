@@ -30,11 +30,7 @@ X = read_csv("../../raport/extract/patent.csv", dtype=str)[["country", "number",
 # Urząd patentowy USA oferuje swoje dane od 2001 roku, oraz
 # całościowe w postaci ogólnodostępnych plików. Z tego powodu
 # są pomijane w zapytaniach.
-# Z podobnych względów mogą być pomijane inne kraje,
-# co do których brak pewności o isteniniu takiej bazy (CN, JP).
 X = X.query('~country.str.startswith("US")')
-X = X.query('~country.str.startswith("CN")')
-X = X.query('~country.str.startswith("JP")')
 
 
 # Odfiltrowanie patentów polskich
@@ -48,7 +44,7 @@ X = X.query('~country.str.startswith("PL")')
 # -------------
 #
 # Ze względu na liczność zbiorów, wybierane są tylko
-# te, które mają więcej niż 1000 patentów. Inne zbiory mogą
+# te, które mają więcej niż 100 patentów. Inne zbiory mogą
 # być błędne, albo i nie. W każdym razie ich liczność jest
 # argumentem przeciw temu, dlatego na wstępie są poimjane.
 c = X['country'].value_counts().to_frame()
@@ -56,7 +52,7 @@ c.query('1000<=count').plot.barh()
 c.query('100<=count<1000').plot.barh()
 c.query('10<=count<100').plot.barh()
 c.query('1<=count<10').plot.barh()
-X = X.query('country in @c.query("1000<=count").index')
+X = X.query('country in @c.query("100<=count").index')
 
 # Ograniczenia API
 # ---------------
