@@ -1,4 +1,4 @@
-from pandas import read_csv, DataFrame, Series
+from pandas import read_csv, DataFrame, Series, concat
 from tqdm import tqdm as progress; progress.pandas()
 import os, json, re
 
@@ -237,9 +237,9 @@ if not Ppignore:
     r'[\W\s]*(?P<X>(?:\d\W?\s?){5,})(?!\d)' + \
     r'[\W\s]{,3}(?P<S>[^\w\s]*[0123abuABU][^\w\s]*[0123a-zA-Z])?')\
     .dropna(subset=['C', 'X']).join(U.drop('numerical', axis=1))\
-    .rename(columns={'C':'country', 'X':'number', 'S':'sufix'})
+    .rename(columns={'C':'country', 'X':'number', 'S':'suffix'})
 
-P.convert_dtypes().to_csv('patent.csv', index=False)
+P[["docs", "start", "end", "text", "country", "prefix", "number", "suffix"]]\
+  .convert_dtypes().to_csv('patent.csv', index=False)
 # Pp.convert_dtypes().to_csv('patent.p-.csv', index=False)
-D.convert_dtypes().to_csv('date.num.csv', index=False)
-M.convert_dtypes().to_csv('date.month.csv', index=False)
+concat([D, M]).convert_dtypes().to_csv('date.csv', index=False)
