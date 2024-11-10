@@ -16,6 +16,7 @@ for f0 in os.listdir('res'):
     
     x['publ'] = b.get('publication_reference', {}).get('date', None)
     x['appl'] = b.get('application_reference', {}).get('date', None)
+    x['applno'] = b.get('application_reference', {}).get('doc_number', None)
     x['claim'] = b.get('priority_claims', {}).get('earliest_claim', {}).get('date', None)
     for t in b.get('invention_title', [{}]):
       if t.get("lang", None) == "en":
@@ -31,4 +32,4 @@ for f0 in os.listdir('res'):
 
     Y.append(x)
 
-DataFrame(Y).convert_dtypes().to_csv('patent.csv', index=False)
+DataFrame(Y).convert_dtypes().to_csv('patents.csv', index=False)
