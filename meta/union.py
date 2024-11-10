@@ -1,30 +1,25 @@
-from pandas import read_csv, concat
+from pandas import read_csv, concat, to_datetime
 
-L = read_csv('ext/api.lens.org/patents.csv', dtype=str)
-L['source'] = 'api.lens.org'
+Y = []
+for f0, s0 in [("patents.csv", "api.uprp.gov.pl"),
+              ("ext/api.lens.org/patents.csv", "api.lens.org"),
+              ("ext/bulkdata.uspto.gov/patents.csv", "bulkdata.uspto.gov")]:
 
-L['publ'] = L['publ'].fillna('0000-00-00')
-L['year'] = L['publ'].str[:4].astype(int).replace(0, None)
-L['month'] = L['publ'].str[5:7].astype(int).replace(0, None) 
-L['day'] = L['publ'].str[8:10].astype(int).replace(0, None)
+  X = read_csv(f0, dtype=str)
+  X['source'] = s0
 
-L['appl'] = L['appl'].fillna('0000-00-00')
-L['applyear'] = L['appl'].str[:4].astype(int).replace(0, None)
-L['applmonth'] = L['appl'].str[5:7].astype(int).replace(0, None) 
-L['applday'] = L['appl'].str[8:10].astype(int).replace(0, None)
-L = L.drop(columns=['publ', 'appl'])
+  X['publ'] = to_datetime(X['publ'], dayfirst=False, format='mixed', errors='coerce')
+  X['year'] = X['publ'].dt.year
+  X['month'] = X['publ'].dt.month
+  X['day'] = X['publ'].dt.day
 
-U = read_csv('ext/bulkdata.uspto.gov/patents.csv', dtype=str)
-U['source'] = 'bulkdata.uspto.gov'
+  X['appl'] = to_datetime(X['appl'], dayfirst=False, format='mixed', errors='coerce')
+  X['applyear'] = X['appl'].dt.year
+  X['applmonth'] = X['appl'].dt.month
+  X['applday'] = X['appl'].dt.day
+  X = X.drop(columns=['publ', 'appl'])
 
-U['year'] = U['publ'].str[:4].astype(int)
-U['month'] = U['publ'].str[4:6].astype(int) 
-U['day'] = U['publ'].str[6:8].astype(int)
+  Y.append(X)
 
-U['applyear'] = U['appl'].str[:4].astype(int)
-U['applmonth'] = U['appl'].str[4:6].astype(int) 
-U['applday'] = U['appl'].str[6:8].astype(int)
-U = U.drop(columns=['publ', 'appl'])
-
-# TODO: łączenie patentów polskich
-concat([L, U]).to_csv('ext/patents.csv', index=False)
+Y = concat(Y).convert_dtypes(str)
+Y.to_csv("union.csv", index=False)

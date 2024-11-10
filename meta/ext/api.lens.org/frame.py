@@ -32,4 +32,9 @@ for f0 in os.listdir('res'):
 
     Y.append(x)
 
-DataFrame(Y).convert_dtypes().to_csv('patents.csv', index=False)
+
+Y = DataFrame(Y)
+Y['lang'] = Y['lang'].str.upper()
+Y['country'] = Y['country'].str.upper()
+Y = Y.convert_dtypes()
+Y.to_csv('patents.csv', index=False)
