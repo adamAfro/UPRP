@@ -22,7 +22,7 @@ def API(j:str, N:list, t='puttokenhere'):
   return json.loads(y.text)
 
 # Do pobrania patentów wystarczajace są ich same kody.
-X = read_csv("../patent.csv", dtype=str)[["country", "number", "sufix"]]\
+X = read_csv("../../raport/extract/patent.csv", dtype=str)[["country", "number", "sufix"]]\
  .drop_duplicates(subset=["country", "number"]).dropna()
 
 # Pominięcie patentów USA
