@@ -183,9 +183,10 @@ Series([X.shape[0], U.shape[0], D.shape[0], M.shape[0]],
 P = U.progress_apply(lambda u:
   [{ "start": u['start'], "end": u['end'], "docs": u['docs'], "text": u['text'],
     **m.groupdict(), "codestart": m.start(), "codeend": m.end()} for m in re.finditer(
-    r'(?P<country>' + '|'.join(['(?<![^\W\d])' + r'[\W\s]*'.join(k) for k in Co.keys()]) + ')' + \
-    r'[\W\s]*(?P<number>(?:\d\W?\s?){5,})(?!\d)' + \
-    r'[\W\s]{,3}(?P<sufix>[^\w\s]*[0123abuABUXY][^\w\s\)\}\]]*[0123a-zA-Z]?[^\w\s]*)?', u['text'])], axis=1)
+    r'(?P<country>' + '|'.join(['(?<![^\W\d])' + r'[\W\s]*'.join(k) for k in Co.keys()]) + '(?![^\W\d]))' + \
+    r'(?P<prefix>(?:[^\W\d]|[\.\s]){,5})?' + \
+    r'(?P<number>(?:\d\W?\s?){5,})(?!\d)' + \
+    r'(?P<suffix>[\W\s]{,3}[^\w\s]*[0123abuABUXY][^\w\s\)\}\]]*[0123a-zA-Z]?[^\w\s]*)?', u['text'])], axis=1)
 P = DataFrame(P.explode().dropna().tolist()).convert_dtypes()
 P['start'], P['end'] = P['start'] + P['codestart'], P['start'] + P['codeend']
 
