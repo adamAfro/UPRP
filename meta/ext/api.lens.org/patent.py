@@ -26,13 +26,6 @@ def API(j:str, N:list, t=t):
 X = read_csv("../../../raport/extract/patent.csv", dtype=str)[["country", "number", "suffix"]]\
  .drop_duplicates(subset=["country", "number"]).dropna()
 
-# Pominięcie patentów USA
-# -----------------------
-# Urząd patentowy USA oferuje swoje dane od 2001 roku, oraz
-# całościowe w postaci ogólnodostępnych plików. Z tego powodu
-# są pomijane w zapytaniach.
-X = X.query('~country.str.startswith("US")')
-
 
 # Odfiltrowanie patentów polskich
 # --------------------------------
