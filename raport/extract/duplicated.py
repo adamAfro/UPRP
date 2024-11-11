@@ -19,8 +19,7 @@ Dl = Dl.value_counts(subset=['docsL', 'docsR'])\
        .to_frame().rename(columns={'count': "date"})\
        .convert_dtypes({"date": 'int'})
 
-P = concat([read_csv('patent.csv'),
-            read_csv('patent.p-.csv')])
+P = read_csv('patent.csv', dtype=str)
 P['code'] = P['country'].apply(lambda x: [l.upper() for l in x if l.isalpha()]).str.join('') + \
             P['number'].apply(lambda x: [l for l in x if l.isdigit()]).str.join('')
 
