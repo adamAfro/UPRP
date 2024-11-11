@@ -8,7 +8,8 @@ import requests, json, datetime, os, time
 # ustaloną jurysdykcja - oznaczana przez dwuliterowy kod.
 # Zapytania i dane są zapisywane w formacie JSON do późniejszych
 # analiz.
-def API(j:str, N:list, t='puttokenhere'):
+with open('key') as f: t = f.read().strip()
+def API(j:str, N:list, t=t):
   
   q = f'{{ "size": 100, "query": "(jurisdiction:{j}) AND ({" OR ".join(["(doc_number:"+n+")" for n in N])})" }}'
   h = {'Authorization': f'Bearer {t}', 'Content-Type': 'application/json'}
