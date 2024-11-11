@@ -1,25 +1,48 @@
 from pandas import read_csv, concat, to_datetime
 
-Y = []
-for f0, s0 in [("patents.csv", "api.uprp.gov.pl"),
-              ("ext/api.lens.org/patents.csv", "api.lens.org"),
-              ("ext/bulkdata.uspto.gov/patents.csv", "bulkdata.uspto.gov")]:
+P = concat([
+  read_csv("ext/api.lens.org/patents.csv", dtype=str)\
+    .assign(source="api.lens.org"),
+  read_csv("ext/bulkdata.uspto.gov/patents.csv", dtype=str)\
+    .assign(source="bulkdata.uspto.gov"),
+  read_csv("patents.csv", dtype=str)\
+    .assign(source="uprp.gov.pl") ])
 
-  X = read_csv(f0, dtype=str)
-  X['source'] = s0
+P['publ'] = to_datetime(P['publ'], 
+                        dayfirst=False, 
+                        format='mixed', 
+                        errors='coerce')
+P['appl'] = to_datetime(P['appl'], 
+                        dayfirst=False, 
+                        format='mixed', 
+                        errors='coerce')
 
-  X['publ'] = to_datetime(X['publ'], dayfirst=False, format='mixed', errors='coerce')
-  X['year'] = X['publ'].dt.year
-  X['month'] = X['publ'].dt.month
-  X['day'] = X['publ'].dt.day
+P['year'] = P['publ'].dt.year.astype('Int64')
+P['month'] = P['publ'].dt.month.astype('Int64')
+P['day'] = P['publ'].dt.day.astype('Int64')
+P['applyear'] = P['appl'].dt.year.astype('Int64')
+P['applmonth'] = P['appl'].dt.month.astype('Int64')
+P['applday'] = P['appl'].dt.day.astype('Int64')
+P = P.drop(columns=['publ', 'appl'])
 
-  X['appl'] = to_datetime(X['appl'], dayfirst=False, format='mixed', errors='coerce')
-  X['applyear'] = X['appl'].dt.year
-  X['applmonth'] = X['appl'].dt.month
-  X['applday'] = X['appl'].dt.day
-  X = X.drop(columns=['publ', 'appl'])
+N = concat([read_csv("ext/api.lens.org/names.csv", dtype=str)\
+              .assign(source="api.lens.org"),
+            read_csv("ext/bulkdata.uspto.gov/names.csv", dtype=str)\
+              .assign(source="bulkdata.uspto.gov"),
+            read_csv("names.csv", dtype=str)\
+              .assign(source="uprp.gov.pl")])
+N['name'] = N['name'].fillna(N['first'].fillna("") + " " + N['last'].fillna(""))
+N = N[["country", "number", "suffix", "name", "source"]]
 
-  Y.append(X)
+O = concat([read_csv("ext/bulkdata.uspto.gov/org.csv", dtype=str)\
+              .assign(source="bulkdata.uspto.gov")\
+              .rename(columns={"orgname": "name"}),
+            read_csv("org.csv", dtype=str)\
+              .assign(source="uprp.gov.pl")]).drop(columns=['namelang'])
 
-Y = concat(Y).convert_dtypes(str)
-Y.to_csv("union.csv", index=False)
+G = read_csv("cities.csv", dtype=str).assign(source="uprp.gov.pl")
+
+P.to_csv("data/patents.csv", index=False)
+N.to_csv("data/names.csv", index=False)
+O.to_csv("data/org.csv", index=False)
+G.to_csv("data/cities.csv", index=False)
