@@ -1,11 +1,13 @@
 import sys
 ipynb = hasattr(sys, 'ps1') or 'ipykernel' in sys.modules
 if not ipynb:
+  import os, json, subprocess, datetime
+  os.chdir(os.path.dirname(os.path.abspath(__file__)))
+  sys.stdout = open("profile.log", "a", buffering=1)
   if (len(sys.argv) >= 2) and (sys.argv[1] == "nohup"):
-    import os, json, subprocess
-    os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    subprocess.Popen(f'nohup python {__file__} > profile.log 2>&1 &', shell=True)
+    subprocess.Popen(f'nohup python {__file__} &', shell=True)
     exit()
+  print(f"started at {datetime.datetime.now()}")
 
 from pandas import DataFrame
 from tqdm import tqdm
@@ -84,17 +86,21 @@ def xmlbundleload(f0):
   F = ['<?xml version="1.0" encoding="UTF-8"?>\n'+d.strip() for d in F if d.strip()]
   return F
 
-def progress(x, **params):
+def progress(x, desc="", **params):
   global ipynb
-  if ipynb: return tqdm(x, **params)
+  if ipynb: return tqdm(x, desc=desc, **params)
   else:
     import time
     t0 = time.time()
+    N = len(x)
+    r = 10**(len(str(N))-2)
+    print(f"{desc} print {r}th")
     def g(x):
       for i, item in enumerate(x):
         t = time.time() - t0
-        eta = t / (i + 1) * (len(x) - (i + 1))
-        print(f"{i + 1}/{len(x)} t {t:.2f}s ETA {eta:.2f}s", end='\r')
+        eta = t / (i + 1) * (N - (i + 1))
+        if i / r == i // r:
+          print(f"{desc} {i + 1}/{N} t {t:.2f}s ETA {eta:.2f}s", end='\n')
         yield item
     return g(x)
 
