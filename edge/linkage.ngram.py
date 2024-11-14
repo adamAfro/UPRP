@@ -13,9 +13,9 @@ X['norm'] = X['text'].pipe(norm)
 X['n'] = X['norm'].str.split().apply(len)
 
 E = []
-for k, f0 in [("city", "../meta/data/cities.csv"),
-              ("names", "../meta/data/names.csv"),
-              ("orgs", "../meta/data/org.csv")]:
+for k, f0 in [("city", "../node/cities.csv"),
+              ("names", "../node/names.csv"),
+              ("orgs", "../node/org.csv")]:
 
   T = read_csv(f0).dropna(subset=['name'])
   T = T[["name", "country", "number"]]\

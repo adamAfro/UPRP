@@ -1,7 +1,7 @@
 from pandas import read_csv, DataFrame, merge, Series, concat
 from tqdm import tqdm as progress; progress.pandas()
 
-M0 = read_csv('../meta/data/patents.csv', dtype=str)
+M0 = read_csv('../node/patents.csv', dtype=str)
 M0['index'] = M0.index.astype(str)
 
 IM4U = M0.query('(~number.isna()) & (number.str.len() > 6)')\
