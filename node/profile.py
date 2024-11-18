@@ -1,131 +1,124 @@
-import sys
-ipynb = hasattr(sys, 'ps1') or 'ipykernel' in sys.modules
-if not ipynb:
-  import os, json, subprocess, datetime
-  os.chdir(os.path.dirname(os.path.abspath(__file__)))
-  sys.stdout = open("profile.log", "a", buffering=1)
-  if (len(sys.argv) >= 2) and (sys.argv[1] == "nohup"):
-    subprocess.Popen(f'nohup python {__file__} &', shell=True)
-    exit()
-  print(f"started at {datetime.datetime.now()}")
-
 from pandas import DataFrame
-from tqdm import tqdm
-import os, json, xmltodict
+import json, xmltodict, re, networkx as nx
+from tqdm import tqdm as progress
+from uuid import uuid1 as unique
+import pickle
 
 class Profile:
-  def __init__(self, Y:dict|None=None):
-    self.Y = Y if Y is not None else {}
 
-  def recursive(self, d:dict|list, path0:str='/'):
+  def __init__(self, raw:dict|None=None):
+    self.Q = raw if raw is not None else {}
+    self.Y = []
+
+  def update(self, d:dict|list, path0:str='/'):
     rep = set()
     for k, V in d.items():
+      path = path0+k+'/'
       for v in V if isinstance(V, list) else [V]:
-        path = path0+k+'/'
-        if path not in self.Y.keys(): 
-          self.Y[path] = dict()
-          self.Y[path]['short'] = path.replace('/', '   ')[-32:]
-          self.Y[path]['dict'] = False
-          self.Y[path]['None'] = False
-          self.Y[path]['int'] = False
-          self.Y[path]['float'] = False
-          self.Y[path]['str'] = False
-          self.Y[path]['repeat'] = False
-          self.Y[path]['attr'] = "@" in path.split('/')[-2]
-
-        if k in rep:
-          self.Y[path]['repeat'] = True
+        if path not in self.Q.keys():
+          self.Q[path] = dict()
+          self.Q[path]['repeat'] = False
+        if k in rep: self.Q[path]['repeat'] = True
         else: rep.add(k)
-        
-        if isinstance(v, dict):
-          self.Y[path]['dict'] = True
-          for k0, v0 in v.items(): self.recursive(v, path)
-          continue
+        if isinstance(v, dict): self.update(v, path)
+        elif v is None: self.Q[path]['None'] = True
+    return self
 
-        if v is None:
-          self.Y[path]['None'] = True
-          continue
-        
-        if isinstance(v, int):
-          self.Y[path]['int'] = True
-          continue
-        
-        if isinstance(v, float):
-          self.Y[path]['float'] = True
-          continue
+  def apply(self, d:dict|list, path0:str='/', y:dict|None=None):
+    if (y is None) or self.Q[path0]["repeat"]:
+      y0 = y if y is not None else None
+      y = { "id": str(unique()), "path": path0 }
+      if y0 is not None: y[ "&" + y0['path'] ] = y0['id']
+      self.Y.append(y)
+    for k, V in d.items():
+      path = path0+k+'/'
+      for i, v in enumerate(V if isinstance(V, list) else [V]):
+        if isinstance(v, dict): self.apply(v, path, y)
+        else: y[path] = v
+    return self
 
-        v = v.strip()
-        if (not v.startswith('0')) or v.replace(" ", "").startswith('0.'):
-          try: 
-            self.Y[path]['int'] = True
-            continue
-          except: pass
-          try: 
-            self.Y[path]['float'] = True
-            continue
-          except: pass
+  def JSONl(self, dir:str, listname:str):
+    import os
+    F = [os.path.join(dir, f) for f in os.listdir(dir) if f.lower().endswith('.json')]
+    for f0 in progress(F, desc=dir):
+      with open(f0) as f: D = json.load(f)[listname]
+      for d in D: self.update(d, dir)
+    for i, f0 in progress(enumerate(F), desc=dir, total=len(F)):
+      with open(f0) as f: D = json.load(f)[listname]
+      for d in D: self.apply(d, dir)
+    return self
 
-        self.Y[path]['str'] = True
-
+  def XML(self, dir:str):
+    import os
+    F = [os.path.join(dir, f) for f in os.listdir(dir) if f.lower().endswith('.xml')]
+    for f0 in progress(F, desc=dir):
+      with open(f0) as f: d = f.read()
+      self.update(xmltodict.parse(d), dir)
+    for i, f0 in progress(enumerate(F), desc=dir, total=len(F)):
+      with open(f0) as f: d = f.read()
+      self.apply(xmltodict.parse(d), dir)
     return self
   
-  def to_csv(self, path:str, emoji=True):
-    Y = DataFrame(self.Y).T.reset_index()
-    I = [c for c in Y.columns if c not in ["short", "index"]]
-    Y['short'] = Y['short'].str.pad(Y['short'].str.len().max(), side='left')
-    if emoji:
-      Y[I] = Y[I].apply(lambda x: x.replace({True: '✅', False: '❌'}))
-      Y[I] = Y[I].apply(lambda x: x.str.pad(5, side='left'))
-    Y[["short", *[c for c in Y.columns if c not in ["short", "index"]], "index"]]\
-      .to_csv(path, index=False)
+  def XMLb(self, dir:str):
+    import os
+    F = [os.path.join(dir, f) for f in os.listdir(dir) if f.lower().endswith('.xml')]
+    for f0 in progress(F, desc=dir):
+      B = Profile.xmlbundleload(f0)
+      for b in B: self.update(xmltodict.parse(b), dir)
+    for i, f0 in progress(enumerate(F), desc=dir, total=len(F)):
+      B = Profile.xmlbundleload(f0)
+      for b in B: self.apply(xmltodict.parse(b), dir)
+    return self
 
-def xmlbundleload(f0):
-  with open(f0) as f: F = f.read()
-  F = F.replace("&", "?").split('<?xml version="1.0" encoding="UTF-8"?>')
-  F = [d for d0 in F for d in d0.split('<?xml version="1.0"?>')]
-  F = ['<?xml version="1.0" encoding="UTF-8"?>\n'+d.strip() for d in F if d.strip()]
-  return F
+  @staticmethod
+  def xmlbundleload(f0):
+    with open(f0) as f: F = f.read()
+    F = F.replace("&", "?").split('<?xml version="1.0" encoding="UTF-8"?>')
+    F = [d for d0 in F for d in d0.split('<?xml version="1.0"?>')]
+    F = ['<?xml version="1.0" encoding="UTF-8"?>\n'+d.strip() for d in F if d.strip()]
+    return F
 
-def progress(x, desc="", **params):
-  global ipynb
-  if ipynb: return tqdm(x, desc=desc, **params)
-  else:
-    import time
-    t0 = time.time()
-    N = len(x)
-    r = 10**(len(str(N))-2)
-    print(f"{desc} print {r}th")
-    def g(x):
-      for i, item in enumerate(x):
-        t = time.time() - t0
-        eta = t / (i + 1) * (N - (i + 1))
-        if i / r == i // r:
-          print(f"{desc} {i + 1}/{N} t {t:.2f}s ETA {eta:.2f}s", end='\n')
-        yield item
-    return g(x)
+def branches(r:str):
+  G = nx.DiGraph()
+  for n0, n in E: G.add_edge(n0, n)
+  y = []
+  for l in [node for node in G.nodes if G.in_degree(node) == 0]:
+    paths = list(nx.all_simple_paths(G, source=l, target=r))
+    y.extend(paths)
+  return y
 
-lens = Profile()
-lensF = [f for f in os.listdir('api.lens.org/res') if f.endswith(".json")]
-for f0 in progress(lensF, desc="🌍"):
-  with open(f'api.lens.org/res/{f0}') as f: D = json.load(f)['data']
-  for d in D:
-    try: lens.recursive(d)
-    except: print(f"💥{f0}")
-lens.to_csv("api.lens.org/profile.csv")
+class Mermaid:
+  def entity(n, Q):
+    return f'"{n}"' + '{\n'+ '\n'.join([f'  raw {q.strip("/").split("/")[-1]} "{q}"' for q in Q]) +" }\n"
+  def relation(m, s):
+    return f'"{s}"' + " ||--o{ " + f'"{m}" : "{s}"\n'
+  def retype(x:str):return x.replace("  raw id ", "  key id ")\
+                            .replace("  raw @", "  attr ")\
+                            .replace("  raw #", "  val ")
 
-US = Profile()
-USF = [f for f in os.listdir('bulkdata.uspto.gov') if f.endswith(".xml")]
-for i, B in enumerate(USF):
-  for f in progress(xmlbundleload(f'bulkdata.uspto.gov/{B}'), desc="🇺🇸",
-                    postfix={"i": i, "n": len(USF)}):
-    try: US.recursive(xmltodict.parse(f))
-    except: print(f"💥{B}")
-US.to_csv("api.lens.org/profile.csv")
+p = Profile()
+p.JSONl("api.lens.org/res/", "data")
+p.XML("api.uprp.gov.pl/raw/")
 
-UPRP = Profile()
-UPRPF = [f for f in os.listdir('api.uprp.gov.pl/raw') if f.endswith(".xml")]
-for f0 in progress(UPRPF, desc="🇵🇱"):
-  with open(f"api.uprp.gov.pl/raw/{f0}") as x: f = x.read()
-  try: UPRP.recursive(xmltodict.parse(f))
-  except: print(f"💥{f0}")
-UPRP.to_csv("api.uprp.gov.pl/profile.csv")
+H = { n: X.drop(columns=['path']).dropna(axis=1, how='all')
+                for n, X in DataFrame(p.Y).groupby('path') }
+
+E = [ (n, r[1:]) for n, X in H.items() for r in X.columns if r.startswith('&') ]
+MMD = []
+for b0 in ['api.lens.org/res/', 'api.uprp.gov.pl/raw/']:
+  MMD += [Mermaid.entity(b0, H[b0])]
+  for b in branches(b0):
+    MMD += [""]
+    for i, n in enumerate(b[:-1]):
+      MMD[-1] += Mermaid.entity(n, H[n])
+    for i, n in enumerate(b[:-1]):
+      MMD[-1] += Mermaid.relation(b[i], b[i+1])
+
+with open('readme.md', 'r') as f: M = f.read()
+r = re.compile(r'<!-- gen:profile.py -->.*?<!-- end:profile.py -->', re.DOTALL)
+MMD = ['\n```mermaid\nerDiagram\n\n' + Mermaid.retype(m) + '\n```\n' for m in MMD]
+MMD = '\n'.join(MMD)
+M = re.sub(r, f'<!-- gen:profile.py -->\n{MMD}\n<!-- end:profile.py -->', M)
+with open('readme.md', 'w', encoding='utf-8') as f: f.write(M)
+
+with open('profile.pkl', 'wb') as f: pickle.dump(H, f)
