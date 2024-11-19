@@ -104,9 +104,9 @@ H = { n: X.drop(columns=['path']).dropna(axis=1, how='all')
                 for n, X in DataFrame(p.Y).groupby('path') }
 
 E = [ (n, r[1:]) for n, X in H.items() for r in X.columns if r.startswith('&') ]
-MMD = []
-for b0 in ['api.lens.org/res/', 'api.uprp.gov.pl/raw/']:
-  MMD += [Mermaid.entity(b0, H[b0])]
+for b0, o in [('api.lens.org/res/', 'api.lens.org/readme.md'), 
+              ('api.uprp.gov.pl/raw/', 'api.uprp.gov.pl/readme.md')]:
+  MMD = [Mermaid.entity(b0, H[b0])]
   for b in branches(b0):
     MMD += [""]
     for i, n in enumerate(b[:-1]):
@@ -114,11 +114,11 @@ for b0 in ['api.lens.org/res/', 'api.uprp.gov.pl/raw/']:
     for i, n in enumerate(b[:-1]):
       MMD[-1] += Mermaid.relation(b[i], b[i+1])
 
-with open('readme.md', 'r') as f: M = f.read()
-r = re.compile(r'<!-- gen:profile.py -->.*?<!-- end:profile.py -->', re.DOTALL)
-MMD = ['\n```mermaid\nerDiagram\n\n' + Mermaid.retype(m) + '\n```\n' for m in MMD]
-MMD = '\n'.join(MMD)
-M = re.sub(r, f'<!-- gen:profile.py -->\n{MMD}\n<!-- end:profile.py -->', M)
-with open('readme.md', 'w', encoding='utf-8') as f: f.write(M)
+  with open(o, 'r') as f: M = f.read()
+  r = re.compile(r'<!-- gen:profile.py -->.*?<!-- end:profile.py -->', re.DOTALL)
+  MMD = ['\n```mermaid\nerDiagram\n\n' + Mermaid.retype(m) + '\n```\n' for m in MMD]
+  MMD = '\n'.join(MMD)
+  M = re.sub(r, f'<!-- gen:profile.py -->\n{MMD}\n<!-- end:profile.py -->', M)
+  with open(o, 'w', encoding='utf-8') as f: f.write(M)
 
 with open('profile.pkl', 'wb') as f: pickle.dump(H, f)
