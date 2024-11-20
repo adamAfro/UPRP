@@ -127,6 +127,9 @@ def schema(profile, mdfile, rootname):
   M = re.sub(r, f'<!-- gen:profile.py -->\n{MMD}\n<!-- end:profile.py -->', M)
   with open(o, 'w', encoding='utf-8') as f: f.write(M)
 
+p = Profile(exclude=["abstract_inverted_index"]).JSON("api.openalex.org/res/")
+schema(p, "api.openalex.org/readme.md", "api.openalex.org/res/")
+
 p = Profile().JSONl("api.lens.org/res/", listname="data")
 schema(p, "api.lens.org/readme.md", "api.lens.org/res/")
 
