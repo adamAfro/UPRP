@@ -2,7 +2,7 @@ from pandas import DataFrame
 import json, xmltodict, re, networkx as nx
 from tqdm import tqdm as progress
 from uuid import uuid1 as unique
-import os, re
+import os, re, pickle
 
 class Profile:
 
@@ -88,6 +88,10 @@ class Profile:
     F = ['<?xml version="1.0" encoding="UTF-8"?>\n'+d.strip() for d in F if d.strip()]
     return F
 
+  def dataframes(self):
+    return { n: X.drop(columns=['path']).dropna(axis=1, how='all')
+                for n, X in DataFrame(self.Y).groupby('path') }
+
 def branches(r:str, E):
   G = nx.DiGraph()
   for n0, n in E: G.add_edge(n0, n)
@@ -105,33 +109,32 @@ class Mermaid:
   def retype(x:str):return x.replace("  raw id ", "  key id ")\
                             .replace("  raw @", "  attr ")\
                             .replace("  raw #", "  val ")
+  def schema(frames, mdfile, rootname):
+    H, o, R = frames, mdfile, rootname
+    E = [ (n, r[1:]) for n, X in H.items() for r in X.columns if r.startswith('&') ]
+    Y0 = [Mermaid.entity(R, H[R])]
+    for b in branches(R, E):
+      Y0 += [""]
+      for i, n in enumerate(b[:-1]):
+        Y0[-1] += Mermaid.entity(n, H[n])
+      for i, n in enumerate(b[:-1]):
+        Y0[-1] += Mermaid.relation(b[i], b[i+1])
 
-def schema(profile, mdfile, rootname):
-  p, o, R = profile, mdfile, rootname
-  H = { n: X.drop(columns=['path']).dropna(axis=1, how='all')
-                  for n, X in DataFrame(p.Y).groupby('path') }
+    with open(o, 'r') as f: M = f.read()
+    r = re.compile(r'<!-- gen:profile.py -->.*?<!-- end:profile.py -->', re.DOTALL)
+    Y0 = ['\n```mermaid\nerDiagram\n\n' + Mermaid.retype(m) + '\n```\n' for m in Y0]
+    y = '\n'.join(Y0)
+    M = re.sub(r, f'<!-- gen:profile.py -->\n{y}\n<!-- end:profile.py -->', M)
+    with open(o, 'w', encoding='utf-8') as f: f.write(M)
 
-  E = [ (n, r[1:]) for n, X in H.items() for r in X.columns if r.startswith('&') ]
-  MMD = [Mermaid.entity(R, H[R])]
-  for b in branches(R, E):
-    MMD += [""]
-    for i, n in enumerate(b[:-1]):
-      MMD[-1] += Mermaid.entity(n, H[n])
-    for i, n in enumerate(b[:-1]):
-      MMD[-1] += Mermaid.relation(b[i], b[i+1])
+pyalex = Profile(exclude=["abstract_inverted_index"]).JSON("api.openalex.org/res/").dataframes()
+with open("api.openalex.org/data.pkl", 'wb') as f: pickle.dump(pyalex, f)
+Mermaid.schema(pyalex, "api.openalex.org/readme.md", "api.openalex.org/res/")
 
-  with open(o, 'r') as f: M = f.read()
-  r = re.compile(r'<!-- gen:profile.py -->.*?<!-- end:profile.py -->', re.DOTALL)
-  MMD = ['\n```mermaid\nerDiagram\n\n' + Mermaid.retype(m) + '\n```\n' for m in MMD]
-  MMD = '\n'.join(MMD)
-  M = re.sub(r, f'<!-- gen:profile.py -->\n{MMD}\n<!-- end:profile.py -->', M)
-  with open(o, 'w', encoding='utf-8') as f: f.write(M)
+lens = Profile().JSONl("api.lens.org/res/", listname="data").dataframes()
+with open("api.lens.org/data.pkl", 'wb') as f: pickle.dump(lens, f)
+Mermaid.schema(lens.frames(), "api.lens.org/readme.md", "api.lens.org/res/")
 
-p = Profile(exclude=["abstract_inverted_index"]).JSON("api.openalex.org/res/")
-schema(p, "api.openalex.org/readme.md", "api.openalex.org/res/")
-
-p = Profile().JSONl("api.lens.org/res/", listname="data")
-schema(p, "api.lens.org/readme.md", "api.lens.org/res/")
-
-p = Profile(exclude=["abstract_inverted_index"]).XML("api.uprp.gov.pl/raw/")
-schema(p, "api.uprp.gov.pl/readme.md", "api.openalex.org/res/")
+uprp = Profile().XML("api.uprp.gov.pl/raw/").dataframes()
+with open("api.uprp.gov.pl/data.pkl", 'wb') as f: pickle.dump(lens, f)
+Mermaid.schema(uprp.frames(), "api.uprp.gov.pl/readme.md", "api.openalex.org/res/")
