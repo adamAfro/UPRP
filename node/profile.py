@@ -12,10 +12,10 @@ class Profile:
     self.Y = []
 
   def update(self, d:dict|list, path0:str='/'):
-    if any(k in path0 for k in self.E): return self
     rep = set()
     for k, V in d.items():
       path = path0+k+'/'
+      if any(k in path for k in self.E): continue
       for v in V if isinstance(V, list) else [V]:
         if path not in self.Q.keys():
           self.Q[path] = dict()
@@ -27,7 +27,6 @@ class Profile:
     return self
 
   def apply(self, d:dict|list, path0:str='/', y:dict|None=None):
-    if any(k in path0 for k in self.E): return self
     if (y is None) or self.Q[path0]["repeat"]:
       y0 = y if y is not None else None
       y = { "id": str(unique()), "path": path0 }
@@ -35,6 +34,7 @@ class Profile:
       self.Y.append(y)
     for k, V in d.items():
       path = path0+k+'/'
+      if any(k in path for k in self.E): continue
       for i, v in enumerate(V if isinstance(V, list) else [V]):
         if isinstance(v, dict): self.apply(v, path, y)
         else: y[path] = v
@@ -127,7 +127,8 @@ class Mermaid:
     M = re.sub(r, f'<!-- gen:profile.py -->\n{y}\n<!-- end:profile.py -->', M)
     with open(o, 'w', encoding='utf-8') as f: f.write(M)
 
-pyalex = Profile(exclude=["abstract_inverted_index"]).JSON("api.openalex.org/res/").dataframes()
+pyalex = Profile(exclude=["abstract_inverted_index", "updated_date", "created_date"])\
+        .JSON("api.openalex.org/res/").dataframes()
 with open("api.openalex.org/data.pkl", 'wb') as f: pickle.dump(pyalex, f)
 Mermaid.schema(pyalex, "api.openalex.org/readme.md", "api.openalex.org/res/")
 
@@ -136,5 +137,5 @@ with open("api.lens.org/data.pkl", 'wb') as f: pickle.dump(lens, f)
 Mermaid.schema(lens, "api.lens.org/readme.md", "api.lens.org/res/")
 
 uprp = Profile().XML("api.uprp.gov.pl/raw/").dataframes()
-with open("api.uprp.gov.pl/data.pkl", 'wb') as f: pickle.dump(lens, f)
+with open("api.uprp.gov.pl/data.pkl", 'wb') as f: pickle.dump(uprp, f)
 Mermaid.schema(uprp, "api.uprp.gov.pl/readme.md", "api.uprp.gov.pl/raw/")
