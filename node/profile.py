@@ -3,6 +3,11 @@ import json, xmltodict, re, networkx as nx
 from tqdm import tqdm as progress
 from uuid import uuid1 as unique
 import os, re, pickle
+from log import log, notify
+
+import os, sys
+if not (hasattr(sys, 'ps1') or 'ipykernel' in sys.modules):
+  os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 class Profile:
 
@@ -127,15 +132,23 @@ class Mermaid:
     M = re.sub(r, f'<!-- gen:profile.py -->\n{y}\n<!-- end:profile.py -->', M)
     with open(o, 'w', encoding='utf-8') as f: f.write(M)
 
+log("✨"); notify("✨")
+
 pyalex = Profile(exclude=["abstract_inverted_index", "updated_date", "created_date"])\
         .JSON("api.openalex.org/res/").dataframes()
 with open("api.openalex.org/data.pkl", 'wb') as f: pickle.dump(pyalex, f)
 Mermaid.schema(pyalex, "api.openalex.org/readme.md", "api.openalex.org/res/")
+log("📑", pyalex.keys())
+notify("📑 pyalex ✅")
 
 lens = Profile().JSONl("api.lens.org/res/", listname="data").dataframes()
 with open("api.lens.org/data.pkl", 'wb') as f: pickle.dump(lens, f)
 Mermaid.schema(lens, "api.lens.org/readme.md", "api.lens.org/res/")
+log("📑", lens.keys())
+notify("📑 lens ✅")
 
 uprp = Profile().XML("api.uprp.gov.pl/raw/").dataframes()
 with open("api.uprp.gov.pl/data.pkl", 'wb') as f: pickle.dump(uprp, f)
 Mermaid.schema(uprp, "api.uprp.gov.pl/readme.md", "api.uprp.gov.pl/raw/")
+log("📑", uprp.keys())
+notify("📑 uprp ✅")
