@@ -2,12 +2,14 @@ from pandas import DataFrame
 import json, xmltodict, re, networkx as nx
 from tqdm import tqdm as progress
 from uuid import uuid1 as unique
-import os, re, pickle
-from log import log, notify
+import sys, os, re, pickle
 
-import os, sys
-if not (hasattr(sys, 'ps1') or 'ipykernel' in sys.modules):
-  os.chdir(os.path.dirname(os.path.abspath(__file__)))
+DIR = os.path.dirname(__file__)
+ROOT = os.path.abspath(os.path.join(DIR, '..'))
+sys.path.append(ROOT) # dodanie lib
+os.chdir(DIR) # zmiana katalogu dla procesów
+
+from lib.log import log, notify
 
 class Profile:
 

@@ -2,12 +2,14 @@ from whoosh.fields import Schema, TEXT, ID, DATETIME, STORED
 from whoosh.filedb.filestore import FileStorage
 from pandas import DataFrame, isna
 from tqdm import tqdm as progress; progress.pandas()
-import re, pickle, datetime
-from log import log, notify
+import re, pickle, datetime, os, sys
 
-import os, sys
-if not (hasattr(sys, 'ps1') or 'ipykernel' in sys.modules):
-  os.chdir(os.path.dirname(os.path.abspath(__file__)))
+DIR = os.path.dirname(__file__)
+ROOT = os.path.abspath(os.path.join(DIR, '..'))
+sys.path.append(ROOT) # dodanie lib
+os.chdir(DIR) # zmiana katalogu dla procesów
+
+from lib.log import log, notify
 
 def pklload(path:str):
   with open(path, 'rb') as f: return pickle.load(f)

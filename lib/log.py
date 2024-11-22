@@ -8,9 +8,6 @@ def ntoogle(state:bool|None=None):
   if state is not None: NOTIFY = state
   else: NOTIFY = not NOTIFY
 
-with open(os.path.dirname(os.path.abspath(__file__))+"/ntfy", "r") as f: 
-  NTFY = f.read().strip()
-
 N0 = 0.0
 def notify(*message, sep=" "):
   global N0, NOTIFY
@@ -21,7 +18,7 @@ def notify(*message, sep=" "):
   message = sep.join(message)
   message =  f"{str(os.path.abspath(__file__))}:{sep}{message}"
   D = dict(data=message.encode(encoding='utf-8'))
-  requests.post( f"https://ntfy.sh/{NTFY}", **D )
+  requests.post( "https://ntfy.sh/uprp_dev", **D )
   print("notify", message)
 
 t0 = time.time()
