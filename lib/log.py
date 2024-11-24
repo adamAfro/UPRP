@@ -1,5 +1,6 @@
-import time, requests, os, sys
+import time, requests, os, sys, datetime, tqdm
 
+LOGGED = False
 IPYNB = hasattr(sys, 'ps1') or 'ipykernel' in sys.modules
 
 NOTIFY = False if IPYNB else True
@@ -23,10 +24,20 @@ def notify(*message, sep=" "):
 
 t0 = time.time()
 def log( *anything ):
-  global t0
+  global t0, LOGGED
   t = time.time() - t0
   t0 = time.time()
-  if t < 0.01:
-    print(f"{t*1000:.4f}ms", *anything)
+  if not LOGGED:
+    LOGGED = True
+    print(datetime.datetime.now(), *anything)
+  elif t < 0.01:
+    print(f"{t*1000:.1f}ms", *anything)
   else:
-    print(f"{t:.4f}s ", *anything)
+    t = '{:02}:{:02}'.format(int(t // 60), int(t % 60))
+    print(f"{t}", *anything)
+
+TQDMBAR = "{elapsed:>4} {desc} {n_fmt} {bar} {percentage:3.0f}%  {total_fmt} {remaining} {postfix}"
+def progress( *args, **kwargs ):
+  return tqdm.tqdm(*args, **kwargs, bar_format=TQDMBAR)
+
+tqdm.tqdm.pandas(desc="🐼", bar_format=TQDMBAR)
