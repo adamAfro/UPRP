@@ -1,130 +1,74 @@
 from whoosh.fields import Schema, TEXT, ID, DATETIME, STORED
 from whoosh.filedb.filestore import FileStorage
-from pandas import DataFrame, isna
-from tqdm import tqdm as progress; progress.pandas()
-import re, pickle, datetime, os, sys
+from pandas import DataFrame, isna, Series, concat
+import re, pickle, yaml, os, sys, networkx as nx
 
 DIR = os.path.dirname(__file__)
 ROOT = os.path.abspath(os.path.join(DIR, '..'))
 sys.path.append(ROOT) # dodanie lib
 os.chdir(DIR) # zmiana katalogu dla procesów
 
-from lib.log import log, notify
+from lib.log import log, notify, progress
 
-def pklload(path:str):
-  with open(path, 'rb') as f: return pickle.load(f)
+K0 = ['doc_number', 'text', 'kind', 'lang', 
+      'jurisdiction', 'country', 'residence', 
+      'address', 'city', 'state', 'title', 'name']
 
-def norm(path:str):
-  y = path
-  y = re.sub(r"[^\w/]", "", y)
-  y = re.sub(r"/", "_", y)
-  return y
+def pivot(frames:dict[str, DataFrame],
+          colfilter=lambda v: any(k0 in v.name for k0 in K0),
+          how=dict(ignore_index=False, var_name='col', value_name='value'),
+          table=dict(index='doc', columns=['frame', 'col'], values='value')):
 
-def datealike(k:str): return any(q in k for q in ["date"])
-def valdate(k:str):
-  try: 
-    datetime.datetime.fromisoformat(k)
-    return k
-  except: return None
+  H0 = frames
+  Q = colfilter
+  H = dict()
+  Y = []
 
-def typeguess(path:str):
+  for h, X in H0.items():
+    X = X.set_index("doc")
+    d = [k for k in X.columns if not Q( X[k] )]
+    H[h] = X.drop(columns=d)
 
-  k0 = path
+  for h, X in progress(H.items(), total=len(H), desc="🔬"):
+    X = X.melt( **how ).dropna(subset=['value']).reset_index()
+    X['frame'] = h
+    Y.append(X.set_index(['doc', 'frame', 'col']))
 
-  if k0 == "id": return STORED()
-  k = k0.strip("_").split("_")[-1]
-  k1 = None
-  if k in ["value", "text"]:
-    k1 = k
-    k = k0.strip("_").split("_")[-2]
+  T = concat([X for X in Y if X.shape[0] > 0])\
+     .pivot_table( **table, aggfunc=set )
 
-  if datealike(k):
-    if k1 == "text": return TEXT()
-    return DATETIME()
-  
-  if any(q in k for q in ["docnumber"]):
-    return TEXT()
-  
-  if any(q in k for q in ["kind"]):
-    return TEXT(field_boost=0.1)
-  
-  if any(q in k for q in ["lang", "jurisdiction", "country", "residence"]):
-    return TEXT(field_boost=0.2)
-  
-  if any(q in k for q in ["address", "city", "state"]):
-    return TEXT(field_boost=1.0)
+  return T
 
-  if any(q in k for q in ["title"]):
-    return TEXT(field_boost=1.0)
+log("✨")
 
-  if any(q in k for q in ["name"]):
-    return TEXT(field_boost=1.5)
+U = pickle.load(open("api.uprp.gov.pl/data.pkl", "rb"))
+U = { h: X for h, X in U.items() if h not in ["comment", "citation",
+                                              "priority_claim",
+                                              "gazette_reference",
+                                              "publication_reference",
+                                              "classification_ipcr"] }; log("📂", U.keys())
 
-  return None
+#func
+T = pivot(U).drop(columns=("raw", "dates_of_public_availability_doc_number")); log("📦")
+T = T.progress_map(lambda s: ' '.join(s) if isinstance(s, set) else s).replace("-", None)
+T.columns = [':'.join(c) for c in T.columns]; log("🔠")
 
-def scheme(entity:DataFrame) -> Schema:
+F = FileStorage("index"); log("🗂", F)
+S = Schema(doc=STORED, **{k: TEXT() for k in T.columns} ); log("📑", S)
+I = F.create_index(S, indexname="api.uprp.gov.pl"); log("🔖", I)
+W = I.writer()
 
-  X = entity
+ne = 0
+for i, x in progress(T.iterrows(), total=len(T), desc="💾"):
+  try:
+    d = x.to_dict()
+    d = { k: v for k, v in d.items() if not isna(v) }
+    W.add_document(doc=i, **d )
+  except Exception as E:
+    log("💥", d, E)
+    if ne > 100: raise E
+    else: ne += 1
+    W.commit()
+    W = I.writer()
 
-  T = { k: typeguess(k) for k in X.columns }
-  T = { k: t for k, t in T.items() if t is not None }
-
-  return Schema( **T )
-
-def idxpkl(path:str, storage:FileStorage):
-
-  f0 = path
-  F = storage
-
-  H = pklload(f0); log("💾", f0)
-
-  l = 0
-  for k, X in H.items():
-    X.columns = [norm(c) for c in X.columns]
-    idxframe(X, norm(k), F)
-    l += 1
-    notify(f"📑 {l}/{len(H)} ✅ ({k})")
-
-def idxframe(frame:DataFrame, name:str, storage:FileStorage):
-
-  k = name
-  F = storage
-  S = scheme(frame); log("📑", S)
-
-  X = frame[S.names()]
-  I = F.create_index(S, indexname=k); log("📁", k)
-
-  ne = 0
-  Q = I.writer()
-  m = dict(desc="📄", postfix={'index':k})
-  for i, x in progress(X.iterrows(), total=len(X), **m):
-    try:
-      i = x.to_dict()
-      d = { k: valdate(v) for k, v in i.items() if datealike(k) }
-      d = { k: v for k, v in d.items() if (v is not None) and (not isna(v)) }
-      d = { k: v for k, v in d.items() if len(re.sub("\W", "", v)) > 0 }
-      Q.add_document( **d )
-    except Exception as E:
-      log("💥", d, E)
-      if ne > 100: raise E
-      else: ne += 1
-      Q.commit()
-      Q = I.writer()
-
-  Q.commit()
-
-try:
-  log("✨"); notify("✨")
-
-  F = FileStorage("index"); log("📂", F)
-
-  idxpkl("api.uprp.gov.pl/data.pkl", F)
-  idxpkl("api.openalex.org/data.pkl", F)
-  idxpkl("api.lens.org/data.pkl", F)
-
-except Exception as E:
-  log("❌", E)
-  notify("❌")
-  exit()
-
-notify("✅")
+W.commit()

@@ -41,17 +41,19 @@ class Profiler:
         elif v is None: self.Q[path]['None'] = True
     return self
 
-  def apply(self, d:dict|list, path0:str='/', y:dict|None=None):
+  def apply(self, d:dict|list, path0:str='/', y:dict|None=None, U=None):
     if (y is None) or self.Q[path0]["repeat"]:
       y0 = y if y is not None else None
-      y = { "id": str(unique()), "path": path0 }
+      i = str(unique())
+      if U is None: U = i
+      y = { "id": i, "path": path0, "doc": U }
       if y0 is not None: y[ "&" + y0['path'] ] = y0['id']
       self.Y.append(y)
     for k, V in d.items():
       path = path0+k+'/'
       if any(k in path for k in self.E): continue
       for i, v in enumerate(V if isinstance(V, list) else [V]):
-        if isinstance(v, dict): self.apply(v, path, y)
+        if isinstance(v, dict): self.apply(v, path, y, U)
         else: y[path] = v
     return self
 
@@ -154,9 +156,9 @@ class Pathalias:
     """
     A = self.short
     r = dict()    #odwrotne map. aliasów
-    for k0, k in A.items():
+    for k0, k in A.items() + [('id', 'id'), ('doc', 'doc')]:
       r[k] = r[k] + [k0] if k in r.keys() else [k0]
-      
+
     u = dict()    #unikalne aliasy
     for k, K0 in r.items():
       if len(K0) == 1: continue
@@ -184,7 +186,7 @@ class Pathalias:
         p = self.norm(N[-1]["chunk"])
         N = sorted(N[:-1], key=lambda x: len(x['paths']))
         for i in range(0, min( len(N), M ) - 1):
-          if p not in A0: break
+          if (p not in A0) and (p not in ['id', 'doc']): break
           p = self.norm(f"{N[i]['chunk']}{self.sep}" + p)
         self.short[self.paths[q]] = p
 
