@@ -1,2 +1,2 @@
 from .log import notify, log, ntoogle
-from .profile import Profiler
+from .profile import Profiler, Pathalias, simplify
