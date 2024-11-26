@@ -1,4 +1,5 @@
 import time, requests, os, sys, datetime, tqdm
+from tqdm.asyncio import tqdm as tqdm_async
 
 LOGGED = False
 IPYNB = hasattr(sys, 'ps1') or 'ipykernel' in sys.modules
@@ -17,7 +18,6 @@ def notify(*message, sep=" "):
   if t < 1.0: return
   if not NOTIFY: return
   message = sep.join(message)
-  message =  f"{str(os.path.abspath(__file__))}:{sep}{message}"
   D = dict(data=message.encode(encoding='utf-8'))
   requests.post( "https://ntfy.sh/uprp_dev", **D )
   print("notify", message)
@@ -39,5 +39,7 @@ def log( *anything ):
 TQDMBAR = "{elapsed:>4} {desc} {n_fmt} {bar} {percentage:3.0f}%  {total_fmt} {remaining} {postfix}"
 def progress( *args, **kwargs ):
   return tqdm.tqdm(*args, **kwargs, bar_format=TQDMBAR)
+def progress_async( *args, **kwargs ):
+  return tqdm_async(*args, **kwargs, bar_format=TQDMBAR)
 
 tqdm.tqdm.pandas(desc="🐼", bar_format=TQDMBAR)
