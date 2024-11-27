@@ -1,14 +1,9 @@
 import re, sys, os, re, pickle, yaml
 from pandas import DataFrame, to_datetime
 from tqdm import tqdm as progress
-
-DIR = os.path.dirname(__file__)
-ROOT = os.path.abspath(os.path.join(DIR, '..'))
-sys.path.append(ROOT) # dodanie lib
-os.chdir(DIR) # zmiana katalogu dla procesów
-
 from lib.log import log, notify
-from lib.profile import Profiler, simplify
+from lib.profile import Profiler
+from lib.alias import simplify
 
 def norm(x:str):
   x = re.sub(r'[^\w\.\-/\_]|\d', '', x)
@@ -43,6 +38,11 @@ def finalize(frames, dirname=""):
   qH['frames'] = { v: k for k, v in qH['frames'].items() }
   with open(f"{dirname}/alias.yaml", 'w') as f:
     yaml.dump(qH, f, indent=2)
+
+  qA = qH['columns']
+  qA = { h: { k: None} for h, K in qA.items() for k in K.keys() }
+  with open(f"{dirname}/assignement.null.yaml", 'w') as f:
+    yaml.dump(qA, f, indent=2)
 
 try:
 

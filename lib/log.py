@@ -36,10 +36,11 @@ def log( *anything ):
     t = '{:02}:{:02}'.format(int(t // 60), int(t % 60))
     print(f"{t}", *anything)
 
+TQDMINTERVAL = dict() if IPYNB else dict(mininterval=60, maxinterval=3600)
 TQDMBAR = "{elapsed:>4} {desc} {n_fmt} {bar} {percentage:3.0f}%  {total_fmt} {remaining} {postfix}"
-def progress( *args, **kwargs ):
-  return tqdm.tqdm(*args, **kwargs, bar_format=TQDMBAR)
-def progress_async( *args, **kwargs ):
-  return tqdm_async(*args, **kwargs, bar_format=TQDMBAR)
+def progress(*args, asyncio=False, **kwargs):
+  if asyncio:
+    return tqdm_async(*args, bar_format=TQDMBAR, **TQDMINTERVAL, **kwargs)
+  return tqdm.tqdm(*args, bar_format=TQDMBAR, **TQDMINTERVAL, **kwargs)
 
-tqdm.tqdm.pandas(desc="🐼", bar_format=TQDMBAR)
+tqdm.tqdm.pandas(desc="🐼", bar_format=TQDMBAR, **TQDMINTERVAL)

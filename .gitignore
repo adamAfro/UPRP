@@ -1,0 +1,17 @@
+api.lens.org/*
+!api.lens.org/*.py
+
+api.uprp.gov.pl/*
+!api.uprp.gov.pl/*.py
+
+api.openalex.org/*
+!api.openalex.org/*.py
+
+__pycache__
+
+log
+.log
+*.log
+
+*.csv
+*.pkl
