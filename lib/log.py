@@ -20,7 +20,7 @@ def notify(*message, sep=" "):
   message = sep.join(message)
   D = dict(data=message.encode(encoding='utf-8'))
   requests.post( "https://ntfy.sh/uprp_dev", **D )
-  print("notify", message)
+  print("notify", message, flush=True)
 
 t0 = time.time()
 def log( *anything ):
@@ -31,10 +31,10 @@ def log( *anything ):
     LOGGED = True
     print(datetime.datetime.now(), *anything)
   elif t < 0.01:
-    print(f"{t*1000:.1f}ms", *anything)
+    print(f"{t*1000:.1f}ms", *anything, flush=True)
   else:
     t = '{:02}:{:02}'.format(int(t // 60), int(t % 60))
-    print(f"{t}", *anything)
+    print(f"{t}", *anything, flush=True)
 
 TQDMINTERVAL = dict() if IPYNB else dict(mininterval=60, maxinterval=3600)
 TQDMBAR = "{elapsed:>4} {desc} {n_fmt} {bar} {percentage:3.0f}%  {total_fmt} {remaining} {postfix}"
