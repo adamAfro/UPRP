@@ -1,7 +1,9 @@
 import pickle, yaml, os
-from pandas import DataFrame, concat, to_datetime, Series
+from pandas import DataFrame, concat, to_datetime
 from lib.log import log, notify
-from numpy import ndarray
+from multiprocessing import Pool
+
+def deleg(n:int): return min(n, os.cpu_count())
 
 def melt(frame:DataFrame, dataname:str, framename:str):
   "`X:pandas.DataFrame; X.pipe(melt, 'generated', 'values')`"
@@ -20,11 +22,7 @@ def ngramstr(x:str|float, n:int):
   if len(x) < n: return []
   return [ x[i:i+n] for i in range(len(x)-n+1) ]
 
-def typogramstr(x:str, repl:str):
-  "zwraca n-kopii, gdzie kolejne litery są zamienione na `repl`"
-  return [ f"{x[:i]}{repl}{x[i+1:]}" for i in range(len(x)) ]
-
-def ngram(frame:DataFrame, column:str, length:int, typo:str|None=None):
+def ngram(frame:DataFrame, column:str, length:int):
 
   X = frame
   n = length
@@ -33,14 +31,51 @@ def ngram(frame:DataFrame, column:str, length:int, typo:str|None=None):
   Y = X.apply(lambda x: [{ **x, k: g } for g in ngramstr(x[k], n)], axis=1)\
      .explode().dropna().pipe(lambda S: DataFrame.from_records(S.tolist()))
 
-  if typo is None: return Y
+  return Y
 
-  t = typo
+def typostr(x:str, repl:str):
+  "zwraca n-kopii, gdzie kolejne litery są zamienione na `repl`"
+  return [ f"{x[:i]}{repl}{x[i+1:]}" for i in range(len(x)) ]
 
-  Y = Y.apply(lambda x: [{ **x, k: g } for g in typogramstr(x[k], t)], axis=1)\
+def typo(frame:DataFrame, column:str, repl:str):
+
+  X = frame
+  r = repl
+  k = column
+
+  Y = X.apply(lambda x: [{ **x, k: g } for g in typostr(x[k], r)], axis=1)\
      .explode().pipe(lambda S: DataFrame.from_records(S.tolist()))
 
   return Y
+
+def batch(frame: DataFrame, batches:int, call:callable, *args) -> DataFrame:
+
+    X0 = frame
+    b0 = batches
+    n = X0.shape[0]
+    b = n // b0 + (n % b0 > 0)
+    B = [X0.iloc[i*b:(i+1)*b] for i in range(b0)]
+    Y = []
+
+    with Pool(processes=b0) as pool:
+      Y = list(pool.starmap(call, [(X, *args) for X in B]))
+
+    return concat(Y)
+
+def batchjoin(batched:DataFrame, batches:int, target:DataFrame, *args) -> DataFrame:
+
+  Q0 = batched
+  X0 = target
+  b0 = batches
+  n = X0.shape[0]
+  b = n // b0 + (n % b0 > 0)
+  B = [X0.iloc[i*b:(i+1)*b] for i in range(b0)]
+  Y = []
+
+  with Pool(processes=b0) as pool:
+    Y = list(pool.starmap(Q0.join, [(X, *args) for X in B]))
+
+  return concat(Y)
 
 try:
 
@@ -51,7 +86,7 @@ try:
   with open('queries.pkl', 'rb') as f:
     Q0 = pickle.load(f)
 
-  log('🥒', 'queries.pkl')
+  log('📂', 'queries.pkl')
 
   Z = { 'api.lens.org': None, 'api.openalex.org': None, 'api.uprp.gov.pl': None }
   Z: dict[ str, dict[ str, DataFrame ] ]
@@ -61,7 +96,7 @@ try:
       for k, X in Z[z].items():
         X.set_index('doc', inplace=True)
 
-    log('🥒', f'{z}/data.pkl')
+    log('📂', f'{z}/data.pkl')
 
   A = { z: None for z in Z.keys() }
   A: dict[str, dict[str, dict[str, str]]]
@@ -77,71 +112,49 @@ try:
       A[z] = yaml.load(f, Loader=yaml.FullLoader)
       log('🗒', f'{z}/assignement.yaml')
 
-
-  P0 = concat([Z[z][h][k].pipe(melt, z, h) for z, h, k in assigned('number')])\
-     .set_index('value')
-  log('🔖', 'number', P0.shape[0])
-
-  QP0 = Q0['codes'][['entry', 'number']]\
+  L, K0 = None, ['target', 'dataset', 'frame', 'col']
+  PQ = Q0['codes'][['entry', 'number']]\
       .assign(number=lambda x: x['number'].str.replace(r"\D", "", regex=True))\
+      .query('number.str.len() >= 5')\
       .set_index('number')
-  log('👇', 'number', QP0.shape[0])
-
-  p0 = QP0.join(P0, how='inner').drop_duplicates(subset=['entry', 'doc'])
-  log('🔎', 'number', p0.shape[0])
-
-
-  P5 = P0.reset_index(drop=False).pipe(ngram, 'value', 5)\
-      .set_index("value").drop_duplicates()
-  log('🔖', 'number 5-gram', P5.shape[0])
-
-  QP5 = QP0.reset_index(drop=False).pipe(ngram, 'number', 5)\
-      .set_index("number").drop_duplicates()
-  log('👇', 'number 5-gram', QP5.shape[0])
-
-  p5 = QP5.join(P5, how='inner').drop_duplicates(subset=['entry', 'doc'])
-  log('🔎', 'number 5-gram', p5.shape[0])
-
-
-  P5t = P0.reset_index(drop=False).pipe(ngram, 'value', 5, typo='_')\
-      .set_index("value").drop_duplicates()
-  log('🔖', 'number 5-gram-typo', P5t.shape[0])
-
-  QP5t = QP0.reset_index(drop=False).pipe(ngram, 'number', 5, typo='_')\
-      .set_index("number").drop_duplicates()
-  log('👇', 'number 5-gram-typo', QP5t.shape[0])
-
-  p5t = QP5t.join(P5t, how='inner').drop_duplicates(subset=['entry', 'doc'])
-  log('🔎', 'number 5-gram', p5t.shape[0])
-
-
-  D0 = concat([Z[z][h][k].pipe(melt, z, h) 
-              for z, H in A.items() for h, X in H.items() for k, v in X.items() 
-              if v == 'date']).set_index('value')
-  log('🔖', 'date', D0.shape[0])
-
-  D0 = concat([Z[z][h][k].pipe(melt, z, h) for z, h, k in assigned('date')])\
-     .eval('value = @to_datetime(value, errors="coerce")')\
-     .assign(year=lambda x: x['value'].dt.year)\
-     .assign(month=lambda x: x['value'].dt.month)\
-     .assign(day=lambda x: x['value'].dt.day)\
-     .drop(columns=['value'])\
-     .set_index(['year', 'month', 'day'])
-  QD0 = Q0['dates'][['entry', 'year', 'month', 'day']]\
+  QD = Q0['dates'][['entry', 'year', 'month', 'day']]\
       .dropna().set_index(['year', 'month', 'day'])
-  log('👇', 'date', QD0.shape[0])
 
-  d0 = QD0.join(D0, how='inner').drop_duplicates(subset=['entry', 'doc'])
-  log('🔎', 'date', d0.shape[0])
+  P = concat((Z[z][h][k].pipe(melt, z, h) for z, h, k in assigned('number')))\
+      .assign(value=lambda x: x['value'].str.replace(r"\D", "", regex=True))\
+      .drop_duplicates(subset=['value', 'doc'])\
+      .query('value.str.len() >= 5')\
+      .set_index('value')
+  L = PQ.join(P, how='inner')\
+     .drop_duplicates(subset=['entry', 'doc'])\
+     .assign(target="number")\
+     .pivot_table(index=['entry', 'doc'], columns=K0, aggfunc='size', fill_value=0)
+  log('🔢')
+
+  D = concat((Z[z][h][k].pipe(melt, z, h) for z, h, k in assigned('number')))\
+      .eval('value = @to_datetime(value, errors="coerce")')\
+      .assign(year=lambda x: x['value'].dt.year)\
+      .assign(month=lambda x: x['value'].dt.month)\
+      .assign(day=lambda x: x['value'].dt.day)\
+      .drop(columns=['value'])\
+      .set_index(['year', 'month', 'day'])
+  L = QD.join(D, how='inner')\
+     .drop_duplicates(subset=['entry', 'doc'])\
+     .assign(target="date")\
+     .pivot_table(index=['entry', 'doc'], columns=K0, aggfunc='size', fill_value=0)\
+     .pipe(lambda X: concat([X, L], axis=0))
+  log('📅')
+
+  N = concat((Z[z][h][k].pipe(melt, z, h) for z, h, k in assigned('name')))
+  log('🪪')
+
+  T = concat((Z[z][h][k].pipe(melt, z, h) for z, h, k in assigned('title')))
+  log('📜')
 
 
   with open('matches.pkl', 'wb') as f:
-    pickle.dump({
-      'number': p0,
-      'number_5_gram': p5,
-      'number_5_gram_typo': p5t,
-      'date': d0 }, f)
-    log('🥒', 'matches.pkl', os.path.getsize('matches.pkl'))
+    pickle.dump(L, f)
+    log('💾', 'matches.pkl', os.path.getsize('matches.pkl'))
 
 
 except Exception as e:
