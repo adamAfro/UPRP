@@ -1,4 +1,5 @@
-import pickle, yaml, re
+import pickle, yaml, re, os, time
+from multiprocessing import Pool
 from pandas import DataFrame, Index, concat, to_datetime
 from lib.expr import Marker
 from lib.datestr import num as datenum, month
@@ -36,17 +37,31 @@ class Loader:
 
     return Loader(k, H, A)
 
-  def melt(self, assignement:str):
+  def melt(self, name:str):
 
     """
     dane w formacie długim dla przyporządkowanych kolumn, kolumny:'repo', 'frame', 'col', 'doc', 'value'`
     """
 
-    A = assignement
+    a = name
+    H0 = [self.data[h][k].to_frame().pipe(Loader._melt, self.name, h) for h, k in self._assigned(a)]
+    if not H0: return DataFrame(columns=['repo', 'frame', 'col', 'doc', 'value'])
 
-    return concat((self.data[h][k].to_frame().pipe(Loader._melt, self.name, h)
-      for h, k in self._assigned(A)))
+    H = concat(H0)
 
+    if a == 'date': 
+      H = H.eval('value = @to_datetime(value, errors="coerce")')\
+      .assign(year=lambda x: x['value'].dt.year)\
+      .assign(month=lambda x: x['value'].dt.month)\
+      .assign(day=lambda x: x['value'].dt.day)\
+      .drop(columns=['value'])
+    elif a == 'number': 
+      H = H.assign(value=lambda x: x['value'].str.replace(r"\D", "", regex=True))\
+      .drop_duplicates(subset=['value', 'doc'])
+
+    return H
+
+  @staticmethod
   def _melt(frame:DataFrame, repo:str, name:str):
 
     "funk. wewn. do tworzenia ramki danych w formacie długim"
@@ -54,9 +69,9 @@ class Loader:
     X = frame
 
     Y = X.reset_index(drop=False)\
-        .melt(id_vars='doc', var_name='col')\
-        .assign(repo=repo, frame=name)\
-        .dropna(subset=['value'])
+    .melt(id_vars='doc', var_name='col')\
+    .assign(repo=repo, frame=name)\
+    .dropna(subset=['value'])
 
     return Y[['repo', 'frame', 'col', 'doc', 'value']]
 
@@ -69,26 +84,6 @@ class Loader:
       for k, v in X.items()
       if v == target)
 
-  def __getitem__(self, name:str):
-
-    "zwraca ramkę danych dla przyporządkowanego celu"
-
-    k = name
-
-    X = self.melt(name)
-
-    if k == 'date': X = X\
-    .eval('value = @to_datetime(value, errors="coerce")')\
-    .assign(year=lambda x: x['value'].dt.year)\
-    .assign(month=lambda x: x['value'].dt.month)\
-    .assign(day=lambda x: x['value'].dt.day)\
-    .drop(columns=['value'])
-    elif k == 'number': X = X\
-    .assign(value=lambda x: x['value'].str.replace(r"\D", "", regex=True))\
-    .drop_duplicates(subset=['value', 'doc'])
-
-    return X
-
 class Searcher:
 
   "klasa do wyszukiwania danych w repozytorium"
@@ -97,7 +92,7 @@ class Searcher:
   codealike, marktarget = ['alnum', 'num', 'series'], {
     "month":  MREGEX,
     "alnum":  r"(?<!\w)(?:[^\W\d]+\d|\d+[^\W\d])\w*(?!\w)",
-    "series": "(?:" + '|'.join([rf"(?:\d+\s*{s}+\s*)+" for s in ['\.', '\-', '/', '\\', '\s']]) + ")\s*\d+",
+    "series": r"(?:" + r'|'.join([rf"(?:\d+\s*{s}+\s*)+" for s in [r'\.', r'\-', r'/', r'\\', r'\s']]) + r")\s*\d+",
     "num":    r"(?<!\w)\d+(?!\w)", "space":  r"[\s\-\/\\\.]+",
     "braced": '|'.join([rf"\{a}\w{{1,4}}\{b}" for a,b in ['()','{}','[]', '""', '<>']]),
     "abbr":   r"(?<!\w)[^\W\d]{1,4}\.?(?!\w)",
@@ -112,26 +107,81 @@ class Searcher:
 
   def __init__(self):
 
-    self.number = DataFrame(index=Index([], name='value'))
-    self.dates = DataFrame(index=Index([], name=('year', 'month', 'day')))
+    self.data: dict[str, DataFrame] = { k: DataFrame() for k in ['date', 'number', 'title', 'name', 'city'] }
+    self.ngramdata: dict[str, DataFrame] = { k: DataFrame() for k in ['number', 'title', 'name', 'city'] }
 
   @staticmethod
   def basic_score(results:DataFrame):
     return results.value_counts(['doc', 'repo'])
 
-  def add(self, loader:Loader):
+  def load(self, loader:Loader):
 
     L = loader
 
-    if not self.dates.empty:
-      self.dates = concat([self.dates.reset_index(), L['date']]).set_index(['year', 'month', 'day'])
-    else:
-      self.dates = L['date'].set_index(['year', 'month', 'day'])
+    self.add(L.melt('date'), 'date')
+    self.add(L.melt('number'), 'number')
+    for h in ['title', 'name', 'city']:
+      self.add(L.melt(h), h)
 
-    if not self.number.empty:
-      self.number = concat([self.number.reset_index(), L['number']]).set_index('value')
-    else:
-      self.number = L['number'].set_index('value')
+  def add(self, frame:DataFrame, name:str):
+
+    k = name
+
+    if k == 'date': return self.adddt(frame, name)
+    if k == 'number': return self.addnum(frame, name)
+
+    X = frame
+
+    if X.empty: return
+
+    X['value'] = X['value'].astype('str')\
+    .str.replace(r"[^\w\s]|\d", "", regex=True)\
+    .str.upper()
+
+    X = X.pipe(Word().pandas, 'value')
+
+    D = self.data
+    D[k] = concat([D[k].reset_index(), X]) if not D[k].empty else X.copy()
+    D[k] = D[k].set_index('value')
+
+    X = Ngram(3, prefix=True, suffix=True).pandas(X, 'value')
+
+    N = self.ngramdata
+    N[k] = concat([N[k].reset_index(), X]) if not N[k].empty else X
+    N[k] = N[k].set_index('value')
+
+  def adddt(self, frame:DataFrame, name='date'):
+
+    k = name
+    X = frame
+    D = self.data
+
+    if X.empty: return
+
+    if D[k].empty: D[k] = X
+    else: D[k] = concat([D[k].reset_index(), X])
+    D[k] = D[k].set_index(['year', 'month', 'day'])
+
+  def addnum(self, frame:DataFrame, name='number'):
+
+    k = name
+    X = frame
+
+    if X.empty: return
+
+
+    X['value'] = X['value'].astype('str')\
+    .str.replace(r"\D", "", regex=True)
+
+    D = self.data
+    D[k] = concat([D[k].reset_index(), X]) if not D[k].empty else X.copy()
+    D[k] = D[k].set_index('value')
+
+    X = Ngram(3, prefix=True, suffix=False).pandas(X, 'value')
+
+    N = self.ngramdata
+    N[k] = concat([N[k].reset_index(), X]) if not N[k].empty else X
+    N[k] = N[k].set_index('value')
 
   def search(self, query:str):
 
@@ -140,13 +190,11 @@ class Searcher:
     X = [(x) for x, _, _, m in self.codemarker.union(q) if m == True]
 
     C = [m.groupdict() for v in X for m in re.finditer(Searcher.patentalike, v)]
-
-    P0 = [(c['number']) for c in C]
-    P = self.number.loc[self.number.index.intersection(P0)]
+    P = self.match('number', [(c['number']) for c in C])
 
     D0 = [(y, m, d) for x in X for _, _, x, d, m, y in datenum(x)] + \
          [(y, m, d) for x in X for _, _, x, d, m, y in month(x)]
-    D = self.dates.loc[self.dates.index.intersection(D0)]
+    D = self.match('date', D0)
 
     Y0 = [U for U in [P, D] if not U.empty]
     if not Y0: return None
@@ -160,3 +208,132 @@ class Searcher:
     .pivot_table(index=['doc'], columns=['repo', 'frame', 'col'], aggfunc='size', fill_value=0)
 
     return T if not T.empty else None
+
+  def match(self, kind:str, data:list):
+    X = data
+    I = self.data[kind].index.intersection(X)
+    Y = self.data[kind].loc[I]
+    return Y
+
+class Polyproc:
+
+  """
+  Stosuje wiele procesorów do zmniejszenia czasu wykonywania zadania.
+  Implementacja stosuje estymację na podstawie średniego czasu wykonania
+  próbki, próbuje dostosować liczbę procesorów do optymalnego czasu `time`.
+  Optymalny czas nie powinien być minimalny, bo wiąże się z uruchamianiem 
+  procesów co nakłada czasochłonne działania systemu.
+  """
+
+  def __init__(self, optimal=5, sample=10000, limit=None):
+    self.optimal = optimal
+    self.sample = sample
+    if limit is None:
+      self.limit = os.cpu_count()
+
+  def calc(self, frame:DataFrame, column:str, callname:str):
+
+    "Oblicza `N`-procesorów do osiągnięcia `time` npdst. `sample`-próbek"
+
+    f = self.__getattribute__(callname)
+
+    X = frame
+    k = column
+    n0 = X.shape[0]
+    n = min(self.sample, n0)
+    S = X.sample(n)
+    y = self.optimal
+    N0 = self.limit
+
+    t0 = time.time()
+    f(S, k)
+    t = time.time() - t0
+
+    m = t/n
+    N = min(int(n0*m/y), N0)
+
+    return N
+
+  def batch(self, frame:DataFrame, column:str, callname:str, batches:int) -> DataFrame:
+
+    f = self.__getattribute__(callname)
+
+    X0 = frame
+    N = batches
+    n0 = X0.shape[0]
+    n = n0 // N + (n0 % N > 0)
+    B = [X0.iloc[i*n:(i+1)*n] for i in range(N)]
+    Y = []
+    with Pool(processes=N) as pool:
+      Y = list(pool.starmap(f, [(X, column) for X in B]))
+
+    return concat(Y)
+
+
+  def pandas(self, frame:DataFrame, column:str):
+
+    "Procesuje ramkę danych `frame` w kolumnie `column`"
+
+    N = self.calc(frame, column, '_pandas')
+    if N < 2: return self._pandas(frame, column)
+    return self.batch(frame, column, '_pandas', N)
+
+
+class Word(Polyproc):
+
+  def _pandas(self, frame:DataFrame, column:str):
+
+    X = frame
+    k = column
+
+    def wordrepl(x):
+      return [{ **x, k: y } for y in x[k].split(' ')]
+
+    i = X.index.name
+    Y = X.dropna(subset=[k]).reset_index()\
+    .apply(wordrepl, axis=1).explode().dropna()\
+    .pipe(lambda S: DataFrame.from_records(S.tolist()))
+    if i is not None:
+      Y = Y.set_index(i)
+
+    return Y
+
+class Ngram(Polyproc):
+
+  def __init__(self, n:int,
+               prefix:bool=True, suffix:bool=True,
+               repl:str='_', strprocargs:dict={}):
+
+    super().__init__( **strprocargs )
+
+    self.n = n
+    self.prefix = prefix
+    self.suffix = suffix
+    self.repl = repl
+
+  def _string(self, x:str):
+
+    p = 1 if self.prefix else 0
+    s = 1 if self.suffix else 0
+    r = self.repl
+    n = self.n
+
+    return [(p*i)*r + x[i:i+n] + (s*max(0,(len(x)-3-i)))*r
+      for i in range(len(x)-n+1) ]
+
+  def _pandas(self, frame:DataFrame, column:str):
+
+    X = frame
+    k = column
+
+    def gramrepl(x):
+      return [{ **x, k: y } for y in self._string(x[k])]
+
+    i = X.index.name
+    Y = X.dropna(subset=[k]).reset_index()\
+    .apply(gramrepl, axis=1).explode().dropna()\
+    .pipe(lambda S: DataFrame.from_records(S.tolist()))
+    if i is not None:
+      Y = Y.set_index(i)
+
+    return Y

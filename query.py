@@ -9,9 +9,9 @@ try:
   notify('🔴')
 
   S = Searcher()
-  S.add(Loader.Within("api.uprp.gov.pl"))
-  S.add(Loader.Within("api.lens.org"))
-  # S.add(Loader.Within("api.openalex.org"))
+  S.load(Loader.Within("api.uprp.gov.pl"))
+  S.load(Loader.Within("api.lens.org"))
+  # S.load(Loader.Within("api.openalex.org"))
   log('📑')
   notify('🟡')
 
