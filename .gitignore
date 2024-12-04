@@ -15,3 +15,5 @@ log
 
 *.csv
 *.pkl
+
+.vscode
