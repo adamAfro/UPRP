@@ -88,6 +88,11 @@ class Searcher:
 
   "klasa do wyszukiwania danych w repozytorium"
 
+  class TODO:
+    Keysearch = True
+    Ngramsearch = True
+    Datedsearch = True
+
   URLalike=r'(?:http[s]?://(?:\w|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+)'
   codealike, marktarget = ['alnum', 'num', 'series'], {
     "month":  MREGEX,
@@ -186,28 +191,27 @@ class Searcher:
   def search(self, query:str):
 
     q = query
+    q = re.sub(Searcher.URLalike, '', q)
 
     X = [(x) for x, _, _, m in self.codemarker.union(q) if m == True]
+    P = [m.groupdict() for v in X for m in re.finditer(Searcher.patentalike, v)]
+    P = [re.sub(r'\D', '', d['number']) for d in P]
+    D = [(y, m, d) for x in X for _, _, x, d, m, y in datenum(x)] + \
+        [(y, m, d) for x in X for _, _, x, d, m, y in month(x)]
 
-    C = [m.groupdict() for v in X for m in re.finditer(Searcher.patentalike, v)]
-    P = self.match('number', [(c['number']) for c in C])
+    M = [self.match('date', D), self.match('number', P)]
+    M = [U for U in M if not U.empty]
+    if not M: return None
+    Y0 = concat(M)
 
-    D0 = [(y, m, d) for x in X for _, _, x, d, m, y in datenum(x)] + \
-         [(y, m, d) for x in X for _, _, x, d, m, y in month(x)]
-    D = self.match('date', D0)
-
-    Y0 = [U for U in [P, D] if not U.empty]
-    if not Y0: return None
-
-    Y = concat(Y0)
-    s = Searcher.basic_score(Y)
+    s = Searcher.basic_score(Y0)
     s = s[s > 0]
     if s.empty: return None
     i, r = s.sort_values(ascending=False).head(1).index[0]
-    T = Y.query('doc == @i and repo == @r')\
+    Y = Y0.query('doc == @i and repo == @r')\
     .pivot_table(index=['doc'], columns=['repo', 'frame', 'col'], aggfunc='size', fill_value=0)
 
-    return T if not T.empty else None
+    return Y if not Y.empty else None
 
   def match(self, kind:str, data:list):
     X = data
