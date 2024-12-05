@@ -1,4 +1,4 @@
-from repo import test_searcher
+from repo import test_search_success
 import pandas, cProfile, re, os
 
 DIR = os.path.dirname(os.path.abspath(__file__))
@@ -6,7 +6,7 @@ ROOT = os.path.join(DIR, '..')
 ROOT = os.path.abspath(ROOT)
 
 with cProfile.Profile() as pr:
-  test_searcher(10_000, 10_000)
+  test_search_success(10_000, 10_000)
 
 X = pandas.DataFrame(pr.getstats(),
   columns=['func', 'ncalls', 'ccalls', 'tottime', 'cumtime', 'callers'])

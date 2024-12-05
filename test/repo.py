@@ -1,4 +1,4 @@
-import sys, os
+import sys, os, pytest
 from pandas import DataFrame, date_range
 from numpy.random import randint, choice, seed
 from uuid import uuid1
@@ -51,23 +51,26 @@ def mockup(entities:int):
 
   return H, A
 
-def test_searcher(entities=1000, searches=1000):
-
-  n0 = entities
-  n = searches
-
-  H, A = mockup(entities=n0)
-
+@pytest.fixture(scope="module")
+def searcher_loader():
+  entities = 1000
+  H, A = mockup(entities=entities)
   S = Searcher()
   L = Loader('mockup', H, A)
-
   S.load(L)
+  return S, H
+
+def test_initialization(searcher_loader: tuple[Searcher, dict[str, DataFrame]]):
+  S, H = searcher_loader
   assert not S.data['date'].empty
   assert not S.data['number'].empty
   assert not S.data['title'].empty
   assert not S.data['name'].empty
   assert not S.data['city'].empty
 
+def test_number_search(searcher_loader: tuple[Searcher, dict[str, DataFrame]], searches=1000):
+  S, H = searcher_loader
+  n = searches
   for _ in range(n):
     h = choice([h for h in (H.keys() if not Searcher.TODO.Keysearch else ['A', 'C'])])
     k = choice([k for k in H[h].columns if k != 'doc' and k.endswith('number')])
@@ -75,6 +78,9 @@ def test_searcher(entities=1000, searches=1000):
     r = S.search('PL'+q)
     assert r is not None
 
+def test_external_search(searcher_loader: tuple[Searcher, dict[str, DataFrame]], searches=1000):
+  S, H = searcher_loader
+  n = searches
   for _ in range(n):
     r = S.search(randstr(alphabet=' XYZ'))
     assert r is None
