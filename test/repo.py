@@ -51,9 +51,12 @@ def mockup(entities:int):
 
   return H, A
 
-def test_searcher():
+def test_searcher(entities=1000, searches=1000):
 
-  H, A = mockup(entities=1000)
+  n0 = entities
+  n = searches
+
+  H, A = mockup(entities=n0)
 
   S = Searcher()
   L = Loader('mockup', H, A)
@@ -65,13 +68,13 @@ def test_searcher():
   assert not S.data['name'].empty
   assert not S.data['city'].empty
 
-  for _ in range(100):
+  for _ in range(n):
     h = choice([h for h in (H.keys() if not Searcher.TODO.Keysearch else ['A', 'C'])])
     k = choice([k for k in H[h].columns if k != 'doc' and k.endswith('number')])
     q = H[h][k].sample().values[0]
     r = S.search('PL'+q)
     assert r is not None
 
-  for _ in range(100):
+  for _ in range(n):
     r = S.search(randstr(alphabet=' XYZ'))
     assert r is None

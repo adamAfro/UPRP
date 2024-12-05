@@ -115,6 +115,9 @@ class Searcher:
     self.data: dict[str, DataFrame] = { k: DataFrame() for k in ['date', 'number', 'title', 'name', 'city'] }
     self.ngramdata: dict[str, DataFrame] = { k: DataFrame() for k in ['number', 'title', 'name', 'city'] }
 
+    self.index = dict[str, set]()
+    self.ngramindex = dict[str, set]()
+
   @staticmethod
   def basic_score(results:DataFrame):
     return results.value_counts(['doc', 'repo'])
@@ -127,6 +130,12 @@ class Searcher:
     self.add(L.melt('number'), 'number')
     for h in ['title', 'name', 'city']:
       self.add(L.melt(h), h)
+
+    H = ['number', 'title', 'name', 'city']
+    for h in H + ['date']:
+      self.index[h] = set(self.data[h].index)
+    for h in H:
+      self.ngramindex[h] = set(self.ngramdata[h].index)
 
   def add(self, frame:DataFrame, name:str):
 
@@ -147,13 +156,13 @@ class Searcher:
 
     D = self.data
     D[k] = concat([D[k].reset_index(), X]) if not D[k].empty else X.copy()
-    D[k] = D[k].set_index('value')
+    D[k] = D[k].set_index('value').sort_index()
 
     X = Ngram(3, prefix=True, suffix=True).pandas(X, 'value')
 
     N = self.ngramdata
     N[k] = concat([N[k].reset_index(), X]) if not N[k].empty else X
-    N[k] = N[k].set_index('value')
+    N[k] = N[k].set_index('value').sort_index()
 
   def adddt(self, frame:DataFrame, name='date'):
 
@@ -165,7 +174,7 @@ class Searcher:
 
     if D[k].empty: D[k] = X
     else: D[k] = concat([D[k].reset_index(), X])
-    D[k] = D[k].set_index(['year', 'month', 'day'])
+    D[k] = D[k].set_index(['year', 'month', 'day']).sort_index()
 
   def addnum(self, frame:DataFrame, name='number'):
 
@@ -180,18 +189,21 @@ class Searcher:
 
     D = self.data
     D[k] = concat([D[k].reset_index(), X]) if not D[k].empty else X.copy()
-    D[k] = D[k].set_index('value')
+    D[k] = D[k].set_index('value').sort_index()
 
     X = Ngram(3, prefix=True, suffix=False).pandas(X, 'value')
 
     N = self.ngramdata
     N[k] = concat([N[k].reset_index(), X]) if not N[k].empty else X
-    N[k] = N[k].set_index('value')
+    N[k] = N[k].set_index('value').sort_index()
 
   def search(self, query:str):
 
     q = query
-    q = re.sub(Searcher.URLalike, '', q)
+    q = re.sub(Searcher.URLalike, '', q).upper()
+
+    W = q.split(' ')
+    W = [w for w in W if len(w) >= 3]
 
     X = [(x) for x, _, _, m in self.codemarker.union(q) if m == True]
     P = [m.groupdict() for v in X for m in re.finditer(Searcher.patentalike, v)]
@@ -199,7 +211,11 @@ class Searcher:
     D = [(y, m, d) for x in X for _, _, x, d, m, y in datenum(x)] + \
         [(y, m, d) for x in X for _, _, x, d, m, y in month(x)]
 
-    M = [self.match('date', D), self.match('number', P)]
+    M = [ self.match('date', D),
+          self.match('number', P),
+          self.match('title', W),
+          self.match('name', W),
+          self.match('city', W)]
     M = [U for U in M if not U.empty]
     if not M: return None
     Y0 = concat(M)
@@ -214,8 +230,8 @@ class Searcher:
     return Y if not Y.empty else None
 
   def match(self, kind:str, data:list):
-    X = data
-    I = self.data[kind].index.intersection(X)
+    X = set(data)
+    I = list(self.index[kind] & X)
     Y = self.data[kind].loc[I]
     return Y
 

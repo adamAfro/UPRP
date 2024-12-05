@@ -1,7 +1,6 @@
-import pandas, pickle
-from lib.log import log, notify
+import pandas, pickle, os
+from lib.log import log, notify, progress
 from lib.repo import Loader, Searcher
-from lib.parallel import listed
 
 try:
 
@@ -21,7 +20,7 @@ try:
   log('🗳')
 
   notify('🟢')
-  y = listed(Q['query'].tolist(), S.search, tqdmkwargs=dict(desc='🔎'))
+  y = [S.search(q) for q in progress(Q['query'].tolist(), desc='🔎')]
   with open('matches.pkl', 'wb') as f:
     pickle.dump(y, f)
 
