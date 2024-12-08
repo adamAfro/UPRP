@@ -1,6 +1,13 @@
-import pandas, pickle, os
+import pandas, pickle, traceback, sys
 from lib.log import log, notify, progress
 from lib.repo import Loader, Searcher
+
+U = 1.0
+if len(sys.argv) > 1:
+  try:
+    frac = sys.argv[1]
+    U = float(frac)
+  except: pass
 
 try:
 
@@ -16,8 +23,9 @@ try:
 
   Q = pandas.read_csv('raport.uprp.gov.pl.csv').reset_index()\
   .rename(columns={'docs':'query', 'index':'entry'})[['entry', 'query']]\
-  .query('~ query.duplicated(keep="first")')
-  log('🗳')
+  .drop_duplicates(subset=['query'], keep='first')
+  if U != 1.0: Q = Q.sample(frac=U, random_state=0)
+  log('🗳', U)
 
   notify('🟢')
   Y = S.multisearch(progress(Q.itertuples(index=False), desc='🔎', total=Q.shape[0]))
@@ -29,4 +37,5 @@ try:
 
 except Exception as e:
   log('❌', e)
+  log(traceback.format_exc())
   notify("❌")
