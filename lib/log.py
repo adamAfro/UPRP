@@ -15,7 +15,6 @@ def notify(*message, sep=" "):
   global N0, NOTIFY
   t = time.time() - N0
   N0 = time.time()
-  if t < 1.0: return
   if not NOTIFY: return
   message = sep.join(message)
   D = dict(data=message.encode(encoding='utf-8'))
