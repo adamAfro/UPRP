@@ -20,9 +20,9 @@ try:
   log('🗳')
 
   notify('🟢')
-  y = [S.search(q) for q in progress(Q['query'].tolist(), desc='🔎')]
-  with open('matches.pkl', 'wb') as f:
-    pickle.dump(y, f)
+  Y = S.multisearch(progress(Q.itertuples(index=False), desc='🔎', total=Q.shape[0]))
+  with open(f'matches{U if U != 1.0 else ""}.pkl', 'wb') as f:
+    pickle.dump(Y, f)
 
   log('✅')
   notify('🏁')

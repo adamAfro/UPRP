@@ -86,7 +86,7 @@ def test_ngram_search(searcher_loader: tuple[Searcher, dict[str, DataFrame]], se
     q = H[h][k].sample().values[0].split(' ')[0][:3]
     if 'number' in k: q = 'PL'+q+'123' #min
     r = S.search(q)
-    assert r is not None
+    assert not r.empty
 
 def test_search(searcher_loader: tuple[Searcher, dict[str, DataFrame]], searches=1000):
   S, H = searcher_loader
@@ -97,7 +97,7 @@ def test_search(searcher_loader: tuple[Searcher, dict[str, DataFrame]], searches
     q = H[h][k].sample().values[0]
     if 'number' in k: q = 'PL'+q
     r = S.search(q)
-    assert r is not None
+    assert not r.empty
 
 def test_number_search(searcher_loader: tuple[Searcher, dict[str, DataFrame]], searches=1000):
   S, H = searcher_loader
@@ -107,11 +107,11 @@ def test_number_search(searcher_loader: tuple[Searcher, dict[str, DataFrame]], s
     k = choice([k for k in H[h].columns if k != 'doc' and k.endswith('number')])
     q = H[h][k].sample().values[0]
     r = S.search('PL'+q)
-    assert r is not None
+    assert not r.empty
 
 def test_external_search(searcher_loader: tuple[Searcher, dict[str, DataFrame]], searches=1000):
   S, H = searcher_loader
   n = searches
   for _ in range(n):
     r = S.search(randstr(alphabet=' XYZ'))
-    assert r is None
+    assert r.empty

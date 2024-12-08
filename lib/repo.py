@@ -1,6 +1,6 @@
 import pickle, yaml, re, os, time
 from multiprocessing import Pool
-from pandas import DataFrame, Index, concat, to_datetime
+from pandas import DataFrame, Index, Series, concat, to_datetime
 from lib.expr import Marker
 from lib.datestr import num as datenum, month
 from lib.datestr import MREGEX
@@ -40,7 +40,17 @@ class Loader:
   def melt(self, name:str):
 
     """
-    dane w formacie długim dla przyporządkowanych kolumn, kolumny:'repo', 'frame', 'col', 'doc', 'value'`
+    dane w formacie długim dla przyporządkowanych kolumn, 
+    kolumny: `'repo', 'frame', 'col', 'doc', 'value'`
+
+    Uwaga
+    -----
+
+    Rozw. tymczasowe (patrz: `search`) zakłada unikalność 
+    dokumentów kolumny `doc` po między repozytoriami,
+
+    - przykładowy konfilkt: 2 repozytoria mają identyfikatory iterowane 
+    od `0:n1` oraz od `0:n2`, wtedy znajdy `0:min(n1,n2)` są dwuznaczne.
     """
 
     a = name
@@ -117,7 +127,7 @@ class Searcher:
 
   @staticmethod
   def basic_score(results:DataFrame):
-    return results.value_counts(['doc', 'repo'])
+    return results.value_counts('doc')
 
   def load(self, loader:Loader):
 
@@ -196,6 +206,13 @@ class Searcher:
     N[k] = concat([N[k].reset_index(), X]) if not N[k].empty else X
     N[k] = N[k].set_index('value').sort_index()
 
+  def multisearch(self, idxqueries:list[tuple]):
+    Q = idxqueries
+    Y = [(i, self.search(q)) for i, q in Q]
+    Y = concat([y for i, y in Y], keys=[k for i, y in Y for k in [i]*len(y)])
+    Y = Y.fillna(0)
+    return Y
+
   def search(self, query:str):
 
     q = query
@@ -221,18 +238,18 @@ class Searcher:
           self.ngrammatch('city', Ngram(3, prefix=True, suffix=True).flat(W)),
                                      ]
     M = [U for U in M if not U.empty]
-    if not M: return None
+    if not M: return DataFrame()
     Y0 = concat(M)
 
     s = Searcher.basic_score(Y0)
     s = s[s > 0]
-    if s.empty: return None
-    i, r = s.sort_values(ascending=False).head(self.limit).index[0]
-    Y = Y0.query('doc == @i and repo == @r')\
+    if s.empty: return DataFrame()
+    I = s.sort_values().tail(self.limit).index
+    Y = Y0[Y0['doc'].isin(I) ]\
     .pivot_table(index=['doc'], columns=['repo', 'frame', 'col'], 
                  aggfunc='sum', values='ratio', fill_value=0)
 
-    return Y if not Y.empty else None
+    return Y
 
   def match(self, kind:str, data:list):
     X = set(data)
@@ -247,7 +264,7 @@ class Searcher:
     Y = self.ngramdata[kind].loc[I]
     if Y.empty: return Y
     Y = Y.groupby(['repo', 'frame', 'col', 'doc'])\
-    .agg({'ratio': 'sum'})
+    .agg({'ratio': 'sum'}).reset_index()
     return Y
 
 class Polyproc:
