@@ -60,8 +60,8 @@ class Loader:
     H = concat(H0)
 
     if a == 'date': 
-      H = H.eval('value = @to_datetime(value, errors="coerce")')\
-      .assign(year=lambda x: x['value'].dt.year)\
+      H['value'] = to_datetime(H['value'], errors='coerce')
+      H = H.assign(year=lambda x: x['value'].dt.year)\
       .assign(month=lambda x: x['value'].dt.month)\
       .assign(day=lambda x: x['value'].dt.day)\
       .drop(columns=['value'])
