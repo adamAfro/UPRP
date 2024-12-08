@@ -41,7 +41,7 @@ class Loader:
 
     """
     dane w formacie długim dla przyporządkowanych kolumn, 
-    kolumny: `'repo', 'frame', 'col', 'doc', 'value'`
+    kolumny: `'repo', 'frame', 'col', 'assignement', 'doc', 'value'`
 
     Uwaga
     -----
@@ -55,9 +55,10 @@ class Loader:
 
     a = name
     H0 = [self.data[h][k].to_frame().pipe(Loader._melt, self.name, h) for h, k in self._assigned(a)]
-    if not H0: return DataFrame(columns=['repo', 'frame', 'col', 'doc', 'value'])
+    if not H0: return DataFrame(columns=['repo', 'frame', 'col', 'assignement', 'doc', 'value'])
 
     H = concat(H0)
+    H['assignement'] = a
 
     if a == 'date': 
       H['value'] = to_datetime(H['value'], errors='coerce')
@@ -209,8 +210,10 @@ class Searcher:
   def multisearch(self, idxqueries:list[tuple]):
     Q = idxqueries
     Y = [(i, self.search(q)) for i, q in Q]
-    Y = concat([y for i, y in Y], keys=[k for i, y in Y for k in [i]*len(y)])
+    Y = concat([y for i, y in Y if not y.empty], 
+               keys=[k for i, y in Y for k in [i]*len(y)])
     Y = Y.fillna(0)
+    Y.columns = Y.columns.set_names(['repo', 'frame', 'col', 'assignement'])
     return Y
 
   def search(self, query:str):
@@ -246,7 +249,7 @@ class Searcher:
     if s.empty: return DataFrame()
     I = s.sort_values().tail(self.limit).index
     Y = Y0[Y0['doc'].isin(I) ]\
-    .pivot_table(index=['doc'], columns=['repo', 'frame', 'col'], 
+    .pivot_table(index=['doc'], columns=['repo', 'frame', 'col', 'assignement'], 
                  aggfunc='sum', values='ratio', fill_value=0)
 
     return Y
@@ -263,7 +266,7 @@ class Searcher:
     I = list(self.ngramindex[kind] & X)
     Y = self.ngramdata[kind].loc[I]
     if Y.empty: return Y
-    Y = Y.groupby(['repo', 'frame', 'col', 'doc'])\
+    Y = Y.groupby(['repo', 'frame', 'col', 'assignement', 'doc'])\
     .agg({'ratio': 'sum'}).reset_index()
     return Y
 
