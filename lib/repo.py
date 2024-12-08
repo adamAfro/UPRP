@@ -88,11 +88,6 @@ class Searcher:
 
   "klasa do wyszukiwania danych w repozytorium"
 
-  class TODO:
-    Keysearch = True
-    Ngramsearch = True
-    Datedsearch = True
-
   URLalike=r'(?:http[s]?://(?:\w|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+)'
   codealike, marktarget = ['alnum', 'num', 'series'], {
     "month":  MREGEX,
@@ -110,7 +105,9 @@ class Searcher:
 
   codemarker = Marker(marktarget, codealike)
 
-  def __init__(self):
+  def __init__(self, limit:int=10):
+
+    self.limit = limit
 
     self.data: dict[str, DataFrame] = { k: DataFrame() for k in ['date', 'number', 'title', 'name', 'city'] }
     self.ngramdata: dict[str, DataFrame] = { k: DataFrame() for k in ['number', 'title', 'name', 'city'] }
@@ -149,10 +146,11 @@ class Searcher:
     if X.empty: return
 
     X['value'] = X['value'].astype('str')\
-    .str.replace(r"[^\w\s]|\d", "", regex=True)\
+    .str.replace(r"[\W\d\s]+", " ", regex=True)\
     .str.upper()
 
-    X = X.pipe(Word().pandas, 'value')
+    X = X.pipe(Word().pandas, 'value')\
+    .query('value.str.len() >= 3')
 
     D = self.data
     D[k] = concat([D[k].reset_index(), X]) if not D[k].empty else X.copy()
@@ -163,6 +161,8 @@ class Searcher:
     N = self.ngramdata
     N[k] = concat([N[k].reset_index(), X]) if not N[k].empty else X
     N[k] = N[k].set_index('value').sort_index()
+
+    return
 
   def adddt(self, frame:DataFrame, name='date'):
 
@@ -183,7 +183,6 @@ class Searcher:
 
     if X.empty: return
 
-
     X['value'] = X['value'].astype('str')\
     .str.replace(r"\D", "", regex=True)
 
@@ -200,10 +199,9 @@ class Searcher:
   def search(self, query:str):
 
     q = query
-    q = re.sub(Searcher.URLalike, '', q).upper()
+    q = re.sub(Searcher.URLalike, '', q)
 
-    W = q.split(' ')
-    W = [w for w in W if len(w) >= 3]
+    W = [w for w in re.sub(r"[\W\d\s]+", " ", q).strip().upper().split(' ') if len(w) >= 3]
 
     X = [(x) for x, _, _, m in self.codemarker.union(q) if m == True]
     P = [m.groupdict() for v in X for m in re.finditer(Searcher.patentalike, v)]
@@ -211,11 +209,17 @@ class Searcher:
     D = [(y, m, d) for x in X for _, _, x, d, m, y in datenum(x)] + \
         [(y, m, d) for x in X for _, _, x, d, m, y in month(x)]
 
-    M = [ self.match('date', D),
+    M = [
+          self.match('date', D),
           self.match('number', P),
           self.match('title', W),
           self.match('name', W),
-          self.match('city', W)]
+          self.match('city', W),
+          self.ngrammatch('number', Ngram(3, prefix=True, suffix=False).flat(P)),
+          self.ngrammatch('title', Ngram(3, prefix=True, suffix=True).flat(W)),
+          self.ngrammatch('name', Ngram(3, prefix=True, suffix=True).flat(W)),
+          self.ngrammatch('city', Ngram(3, prefix=True, suffix=True).flat(W)),
+                                     ]
     M = [U for U in M if not U.empty]
     if not M: return None
     Y0 = concat(M)
@@ -223,9 +227,10 @@ class Searcher:
     s = Searcher.basic_score(Y0)
     s = s[s > 0]
     if s.empty: return None
-    i, r = s.sort_values(ascending=False).head(1).index[0]
+    i, r = s.sort_values(ascending=False).head(self.limit).index[0]
     Y = Y0.query('doc == @i and repo == @r')\
-    .pivot_table(index=['doc'], columns=['repo', 'frame', 'col'], aggfunc='size', fill_value=0)
+    .pivot_table(index=['doc'], columns=['repo', 'frame', 'col'], 
+                 aggfunc='sum', values='ratio', fill_value=0)
 
     return Y if not Y.empty else None
 
@@ -233,6 +238,16 @@ class Searcher:
     X = set(data)
     I = list(self.index[kind] & X)
     Y = self.data[kind].loc[I]
+    Y['ratio'] = 1
+    return Y
+
+  def ngrammatch(self, kind:str, data:list):
+    X = set(data)
+    I = list(self.ngramindex[kind] & X)
+    Y = self.ngramdata[kind].loc[I]
+    if Y.empty: return Y
+    Y = Y.groupby(['repo', 'frame', 'col', 'doc'])\
+    .agg({'ratio': 'sum'})
     return Y
 
 class Polyproc:
@@ -309,12 +324,9 @@ class Word(Polyproc):
     def wordrepl(x):
       return [{ **x, k: y } for y in x[k].split(' ')]
 
-    i = X.index.name
-    Y = X.dropna(subset=[k]).reset_index()\
+    Y = X.dropna(subset=[k])\
     .apply(wordrepl, axis=1).explode().dropna()\
     .pipe(lambda S: DataFrame.from_records(S.tolist()))
-    if i is not None:
-      Y = Y.set_index(i)
 
     return Y
 
@@ -341,19 +353,19 @@ class Ngram(Polyproc):
     return [(p*i)*r + x[i:i+n] + (s*max(0,(len(x)-3-i)))*r
       for i in range(len(x)-n+1) ]
 
+  def flat(self, x:list[str]):
+    return [k for y in x for k in self._string(y)]
+
   def _pandas(self, frame:DataFrame, column:str):
 
     X = frame
     k = column
 
     def gramrepl(x):
-      return [{ **x, k: y } for y in self._string(x[k])]
+      return [{ **x, k: y, 'ratio': self.n/len(x[k]) } for y in self._string(x[k])]
 
-    i = X.index.name
-    Y = X.dropna(subset=[k]).reset_index()\
+    Y = X.dropna(subset=[k])\
     .apply(gramrepl, axis=1).explode().dropna()\
     .pipe(lambda S: DataFrame.from_records(S.tolist()))
-    if i is not None:
-      Y = Y.set_index(i)
 
     return Y

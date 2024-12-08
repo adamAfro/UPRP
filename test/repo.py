@@ -10,9 +10,18 @@ from lib.repo import Loader, Searcher
 
 seed(42)
 
-def randstr(min:int=5, max:int=64, alphabet:str=' 123abcABC') -> str:
+def randinsert(x:str, char:str, min:int, max:int):
   n = randint(min, max) if min != max else min
-  return ''.join(choice(list(alphabet), n))
+  for i in range(n):
+    k = randint(0, len(x))
+    x = x[:k] + char + x[k:]
+  return x
+
+def randstr(min:int=5, max:int=64, alphabet:str='abcABC') -> str:
+  n = randint(min, max) if min != max else min
+  x = ''.join(choice(list(alphabet), n))
+  if len(x) > 16: x = x[:3] + randinsert(x[:3], ' ', 2, 4)
+  return x
 
 def randnum(min:int=5, max:int=10):
   return randstr(min, max, alphabet='123')
@@ -68,11 +77,33 @@ def test_initialization(searcher_loader: tuple[Searcher, dict[str, DataFrame]]):
   assert not S.data['name'].empty
   assert not S.data['city'].empty
 
+def test_ngram_search(searcher_loader: tuple[Searcher, dict[str, DataFrame]], searches=1000):
+  S, H = searcher_loader
+  n = searches
+  for _ in range(n):
+    h = choice([h for h in (H.keys())])
+    k = choice([k for k in H[h].columns if k != 'doc' and 'date' not in k])
+    q = H[h][k].sample().values[0].split(' ')[0][:3]
+    if 'number' in k: q = 'PL'+q+'123' #min
+    r = S.search(q)
+    assert r is not None
+
+def test_search(searcher_loader: tuple[Searcher, dict[str, DataFrame]], searches=1000):
+  S, H = searcher_loader
+  n = searches
+  for _ in range(n):
+    h = choice([h for h in (H.keys())])
+    k = choice([k for k in H[h].columns if k != 'doc' and 'date' not in k])
+    q = H[h][k].sample().values[0]
+    if 'number' in k: q = 'PL'+q
+    r = S.search(q)
+    assert r is not None
+
 def test_number_search(searcher_loader: tuple[Searcher, dict[str, DataFrame]], searches=1000):
   S, H = searcher_loader
   n = searches
   for _ in range(n):
-    h = choice([h for h in (H.keys() if not Searcher.TODO.Keysearch else ['A', 'C'])])
+    h = choice(['A', 'C'])
     k = choice([k for k in H[h].columns if k != 'doc' and k.endswith('number')])
     q = H[h][k].sample().values[0]
     r = S.search('PL'+q)
