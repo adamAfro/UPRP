@@ -252,7 +252,7 @@ class Searcher:
           self.match('title', W),
           self.match('name', W),
           self.match('city', W),
-          self.ngrammatch('number', Ngram(3, prefix=True, suffix=False).flat(P)),
+          self.ngrammatch('number', Ngram(3, prefix=True, suffix=False).flat(P), treshold=0.33),
           self.ngrammatch('title', Ngram(3, prefix=True, suffix=True).flat(W)),
           self.ngrammatch('name', Ngram(3, prefix=True, suffix=True).flat(W)),
           self.ngrammatch('city', Ngram(3, prefix=True, suffix=True).flat(W)),
@@ -278,12 +278,16 @@ class Searcher:
     Y['ratio'] = 1
     return Y
 
-  def ngrammatch(self, kind:str, data:list):
-    X = set(data)
-    I = list(self.ngramindex[kind] & X)
+  def ngrammatch(self, kind:str, ngrams:Series, treshold=0.5):
+    X = ngrams
+    X.name = 'full'
+    I = list(self.ngramindex[kind] & set(X.index))
     Y = self.ngramdata[kind].loc[I]
     if Y.empty: return Y
-    Y = Y.groupby(['repo', 'frame', 'col', 'assignement', 'doc'])\
+    Y = Y.join(X)
+    Y = Y.groupby(['repo', 'frame', 'col', 'assignement', 'doc', 'full'])\
+    .agg({'ratio': 'sum'}).reset_index().query('ratio >= @treshold')\
+    .groupby(['repo', 'frame', 'col', 'assignement', 'doc'])\
     .agg({'ratio': 'sum'}).reset_index()
     return Y
 
@@ -390,8 +394,10 @@ class Ngram(Polyproc):
     return [(p*i)*r + x[i:i+n] + (s*max(0,(len(x)-3-i)))*r
       for i in range(len(x)-n+1) ]
 
-  def flat(self, x:list[str]):
-    return [k for y in x for k in self._string(y)]
+  def flat(self, X:list[str]):
+    if len(X) == 0: return Series()
+    I, Y = zip(*[(i, y) for i, x in enumerate(X) for y in self._string(x)])
+    return Series(I, index=Y)
 
   def _pandas(self, frame:DataFrame, column:str):
 
