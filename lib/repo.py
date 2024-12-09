@@ -130,6 +130,17 @@ class Searcher:
   def basic_score(results:DataFrame):
     return results.value_counts('doc')
 
+  def iterload(self, idxmelted:list[tuple[str, DataFrame]]):
+
+    for h, X in idxmelted:
+      self.add(X, h)
+
+    H = ['number', 'title', 'name', 'city']
+    for h in H + ['date']:
+      self.index[h] = set(self.data[h].index)
+    for h in H:
+      self.ngramindex[h] = set(self.ngramdata[h].index)
+
   def load(self, loader:Loader):
 
     L = loader

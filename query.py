@@ -17,18 +17,23 @@ try:
   notify('🔴')
 
   if r:
+
     S = Searcher()
-    S.load(Loader.Within("api.uprp.gov.pl"))
-    S.load(Loader.Within("api.lens.org"))
-    S.load(Loader.Within("api.openalex.org"))
-    log('📑')
+    M = [(k, L.melt(k)) for L in [
+      Loader.Within("api.uprp.gov.pl"),
+      Loader.Within("api.lens.org"),
+      Loader.Within("api.openalex.org")
+    ] for k in ['date', 'number', 'name', 'city', 'title']]
+
+    S.iterload(progress(M, desc='📑'))
     with open('searcher.pkl', 'wb') as f:
       pickle.dump(S, f)
-    log('💾')
+      log('💾')
+
   else:
     with open('searcher.pkl', 'rb') as f:
       S = pickle.load(f)
-    log('📂')
+      log('📂')
 
   notify('🟡')
 
