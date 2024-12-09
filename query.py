@@ -2,23 +2,34 @@ import pandas, pickle, traceback, sys
 from lib.log import log, notify, progress
 from lib.repo import Loader, Searcher
 
-U = 1.0
-if len(sys.argv) > 1:
-  try:
-    frac = sys.argv[1]
-    U = float(frac)
-  except: pass
+r, U = False, 1.0
+for A in sys.argv[1:]:
+  A = A.lower().strip()
+
+  if A == 'reindex': r = True
+  if A.startswith('frac='):
+    try: U = float(A[5:])
+    except: pass
 
 try:
 
-  log('✨')
+  log('✨', U, r)
   notify('🔴')
 
-  S = Searcher()
-  S.load(Loader.Within("api.uprp.gov.pl"))
-  S.load(Loader.Within("api.lens.org"))
-  S.load(Loader.Within("api.openalex.org"))
-  log('📑')
+  if r:
+    S = Searcher()
+    S.load(Loader.Within("api.uprp.gov.pl"))
+    S.load(Loader.Within("api.lens.org"))
+    S.load(Loader.Within("api.openalex.org"))
+    log('📑')
+    with open('searcher.pkl', 'wb') as f:
+      pickle.dump(S, f)
+    log('💾')
+  else:
+    with open('searcher.pkl', 'rb') as f:
+      S = pickle.load(f)
+    log('📂')
+
   notify('🟡')
 
   Q = pandas.read_csv('raport.uprp.gov.pl.csv').reset_index()\
