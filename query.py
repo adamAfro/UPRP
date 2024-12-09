@@ -16,9 +16,9 @@ try:
   log('✨', U, r)
   notify('🔴')
 
+  S = Searcher()
   if r:
 
-    S = Searcher()
     M = [(k, L.melt(k)) for L in [
       Loader.Within("api.uprp.gov.pl"),
       Loader.Within("api.lens.org"),
@@ -27,12 +27,12 @@ try:
 
     S.iterload(progress(M, desc='📑'))
     with open('searcher.pkl', 'wb') as f:
-      pickle.dump(S, f)
+      pickle.dump(S.snapshot, f)
       log('💾')
 
   else:
     with open('searcher.pkl', 'rb') as f:
-      S = pickle.load(f)
+      S.snapload(pickle.load(f))
       log('📂')
 
   notify('🟡')

@@ -126,6 +126,20 @@ class Searcher:
     self.index = dict[str, set]()
     self.ngramindex = dict[str, set]()
 
+  @property
+  def snapshot(self): return {
+    "data": self.data,
+    "ngramdata": self.ngramdata,
+    "index": self.index,
+    "ngramindex": self.ngramindex
+  }
+
+  def snapload(self, snapshot:dict):
+    self.data = snapshot['data']
+    self.ngramdata = snapshot['ngramdata']
+    self.index = snapshot['index']
+    self.ngramindex = snapshot['ngramindex']
+
   @staticmethod
   def basic_score(results:DataFrame):
     return results.value_counts('doc')
