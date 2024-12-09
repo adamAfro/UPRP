@@ -209,9 +209,15 @@ class Searcher:
 
   def multisearch(self, idxqueries:list[tuple]):
     Q = idxqueries
-    Y = [(i, self.search(q)) for i, q in Q]
-    Y = concat([y for i, y in Y if not y.empty], 
-               keys=[k for i, y in Y for k in [i]*len(y)])
+    Y0 = []
+    for i, q in Q:
+      y = self.search(q)
+      y['entry'] = i
+      y = y.reset_index()\
+      .rename(columns={ 'index': 'doc' })\
+      .set_index(['entry', 'doc'])
+      Y0.append(y)
+    Y = concat(Y0)
     Y = Y.fillna(0)
     Y.columns = Y.columns.set_names(['repo', 'frame', 'col', 'assignement'])
     return Y
