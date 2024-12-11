@@ -1,19 +1,14 @@
 import pandas, cProfile, re, os
-from repo import init, test_initialization, \
-  test_quant_external_search, test_quant_ngram_search, \
-  test_quant_number_search, test_quant_search
+from repo import mockup, test_initialization, test_search
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.join(DIR, '..')
 ROOT = os.path.abspath(ROOT)
 
 with cProfile.Profile() as pr:
-  inited = init(1000)
+  inited = mockup(1000)
   test_initialization(inited)
-  test_quant_external_search(inited, 10_000)
-  test_quant_ngram_search(inited, 10_000)
-  test_quant_number_search(inited, 10_000)
-  test_quant_search(inited, 10_000)
+  test_search(inited, 10_000)
 
 X = pandas.DataFrame(pr.getstats(),
   columns=['func', 'ncalls', 'ccalls', 'tottime', 'cumtime', 'callers'])

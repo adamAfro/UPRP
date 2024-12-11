@@ -18,6 +18,18 @@ class Loader:
     self.data = data
     self.assignment = assignment
 
+    self.unique = concat([X.index.to_series()
+      for X in self.data.values()]).drop_duplicates()\
+      .reset_index(drop=True)
+
+  def get(self, docs:list):
+
+    Y = dict()
+    for h, X in self.data.items():
+      try: Y[h] = X.loc[docs, :]
+      except KeyError: continue
+    return Y
+
   def Within(path:str, name:str|None=None):
 
     "wczytuje dane z katalogu (pliki `data.pkl` i `assignement.yaml`)"
