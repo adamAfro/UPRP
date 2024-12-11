@@ -1,4 +1,4 @@
-import pandas, pickle, traceback, sys
+import pandas, pickle, traceback, sys, random
 from lib.log import log, notify, progress
 from lib.repo import Loader, Searcher
 
@@ -19,20 +19,29 @@ try:
   S = Searcher()
   if r:
 
-    M = [(k, L.melt(k)) for L in [
+    M = [(k, L.melt(k)) for L in progress([
       Loader.Within("api.uprp.gov.pl"),
       Loader.Within("api.lens.org"),
       Loader.Within("api.openalex.org")
-    ] for k in ['date', 'number', 'name', 'city', 'title']]
+    ], desc='📂') for k in ['date', 'number', 'name', 'city', 'title']]
 
-    S.iterload(progress(M, desc='📑'))
+    M = [(k0, pandas.concat([X for k, X in M if k == k0 if not X.empty]))
+         for k0 in progress(['date', 'number', 'name', 'city', 'title'], desc='🧱')]
+    log('📏', { k0: X.shape[0] for k0, X in M })
+    M = [(k, X.iloc[(i*250_000):((i+1)*250_000)])
+         for k, X in progress(M, desc='🔨')
+         for i in range(X.shape[0] // 250_000 + 1)]
+
+    random.shuffle(M)
+
+    S.add(progress(M, desc='📑'))
     with open('searcher.pkl', 'wb') as f:
-      pickle.dump(S.snapshot, f)
+      pickle.dump(S.dump(), f)
       log('💾')
 
   else:
     with open('searcher.pkl', 'rb') as f:
-      S.snapload(pickle.load(f))
+      S.load(pickle.load(f))
       log('📂')
 
   notify('🟡')

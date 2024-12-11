@@ -1,6 +1,7 @@
-import pickle, yaml, re, os, time
-from multiprocessing import Pool
-from pandas import DataFrame, Index, Series, concat, to_datetime
+from .index import Base as Exact, Digital, Words, Ngrams
+import pickle, yaml, re
+from datetime import date
+from pandas import DataFrame, MultiIndex, Series, concat, to_datetime
 from lib.expr import Marker
 from lib.datestr import num as datenum, month
 from lib.datestr import MREGEX
@@ -60,15 +61,8 @@ class Loader:
     H = concat(H0)
     H['assignement'] = a
 
-    if a == 'date': 
+    if a == 'date':
       H['value'] = to_datetime(H['value'], errors='coerce')
-      H = H.assign(year=lambda x: x['value'].dt.year)\
-      .assign(month=lambda x: x['value'].dt.month)\
-      .assign(day=lambda x: x['value'].dt.day)\
-      .drop(columns=['value'])
-    elif a == 'number': 
-      H = H.assign(value=lambda x: x['value'].str.replace(r"\D", "", regex=True))\
-      .drop_duplicates(subset=['value', 'doc'])
 
     return H
 
@@ -116,121 +110,57 @@ class Searcher:
 
   codemarker = Marker(marktarget, codealike)
 
-  def __init__(self, limit:int=10):
+  def __init__(self):
 
-    self.limit = limit
+    self.indexes = {
+      'dates': Exact('value'),
+      'numbers': Digital('value'),
+      'numprefix': Ngrams('value', n=3, suffix=False),
+      'words':  Words('value', case='upper'),
+      'ngrams': Ngrams('value', n=3),
+    }
 
-    self.data: dict[str, DataFrame] = { k: DataFrame() for k in ['date', 'number', 'title', 'name', 'city'] }
-    self.ngramdata: dict[str, DataFrame] = { k: DataFrame() for k in ['number', 'title', 'name', 'city'] }
+  def dump(self):
+    return { h: V.dump() for h, V in self.indexes.items() }
 
-    self.index = dict[str, set]()
-    self.ngramindex = dict[str, set]()
-
-  @property
-  def snapshot(self): return {
-    "data": self.data,
-    "ngramdata": self.ngramdata,
-    "index": self.index,
-    "ngramindex": self.ngramindex
-  }
-
-  def snapload(self, snapshot:dict):
-    self.data = snapshot['data']
-    self.ngramdata = snapshot['ngramdata']
-    self.index = snapshot['index']
-    self.ngramindex = snapshot['ngramindex']
+  def load(self, dump:dict):
+    for h, V in self.indexes.items(): V.load(*dump[h])
 
   @staticmethod
-  def basic_score(results:DataFrame):
-    return results.value_counts('doc')
+  def score(results: DataFrame, limit=100, minimal:float=0.0, least:int=0):
 
-  def iterload(self, idxmelted:list[tuple[str, DataFrame]]):
+    X: DataFrame = results.copy()
+    N = X.value_counts(subset=['doc', 'assignement'])\
+    .reset_index().value_counts('doc')
+    for d, w in [('date', 10), ('number', 10), ('city', 2), ('name', 2), ('title', 1)]:
+      I = (X['assignement'] == d)
+      X.loc[I, 'count'] = X.loc[I, 'count'] * w
+
+    Y = X.groupby('doc').agg({'count': 'sum'})['count'].sort_values()
+    Y[N.index] = N*Y[N.index]
+
+    n = min(max(least, Y.shape[0] - Y.searchsorted(minimal, side='left')), limit)
+
+    return Y.tail(n)
+
+  def add(self, idxmelted:list[tuple[str, DataFrame]]):
 
     for h, X in idxmelted:
-      self.add(X, h)
+      if h == 'date':
+        X['value'] = to_datetime(X['value'], errors='coerce').dt.date
+        self.indexes['dates'].add(X, reindex=False)
+      elif h == 'number':
+        X = self.indexes['numbers'].add(X, reindex=False)
+        X = self.indexes['numprefix'].add(X, reindex=False)
+      elif h in ['title', 'name', 'city']:
+        X = self.indexes['words'].add(X, reindex=False)
+        X = self.indexes['ngrams'].add(X, reindex=False)
 
-    H = ['number', 'title', 'name', 'city']
-    for h in H + ['date']:
-      self.index[h] = set(self.data[h].index)
-    for h in H:
-      self.ngramindex[h] = set(self.ngramdata[h].index)
-
-  def load(self, loader:Loader):
-
-    L = loader
-
-    self.add(L.melt('date'), 'date')
-    self.add(L.melt('number'), 'number')
-    for h in ['title', 'name', 'city']:
-      self.add(L.melt(h), h)
-
-    H = ['number', 'title', 'name', 'city']
-    for h in H + ['date']:
-      self.index[h] = set(self.data[h].index)
-    for h in H:
-      self.ngramindex[h] = set(self.ngramdata[h].index)
-
-  def add(self, frame:DataFrame, name:str):
-
-    k = name
-
-    if k == 'date': return self.adddt(frame, name)
-    if k == 'number': return self.addnum(frame, name)
-
-    X = frame
-
-    if X.empty: return
-
-    X['value'] = X['value'].astype('str')\
-    .str.replace(r"[\W\d\s]+", " ", regex=True)\
-    .str.upper()
-
-    X = X.pipe(Word().pandas, 'value')\
-    .query('value.str.len() >= 3')
-
-    D = self.data
-    D[k] = concat([D[k].reset_index(), X]) if not D[k].empty else X.copy()
-    D[k] = D[k].set_index('value').sort_index()
-
-    X = Ngram(3, prefix=True, suffix=True).pandas(X, 'value')
-
-    N = self.ngramdata
-    N[k] = concat([N[k].reset_index(), X]) if not N[k].empty else X
-    N[k] = N[k].set_index('value').sort_index()
-
-    return
-
-  def adddt(self, frame:DataFrame, name='date'):
-
-    k = name
-    X = frame
-    D = self.data
-
-    if X.empty: return
-
-    if D[k].empty: D[k] = X
-    else: D[k] = concat([D[k].reset_index(), X])
-    D[k] = D[k].set_index(['year', 'month', 'day']).sort_index()
-
-  def addnum(self, frame:DataFrame, name='number'):
-
-    k = name
-    X = frame
-
-    if X.empty: return
-
-    X['value'] = X['value'].astype('str')\
-    .str.replace(r"\D", "", regex=True)
-
-    D = self.data
-    D[k] = concat([D[k].reset_index(), X]) if not D[k].empty else X.copy()
-    D[k] = D[k].set_index('value').sort_index()
-
-    X = Ngram(3, prefix=True, suffix=False).pandas(X, 'value')
-
-    N = self.ngramdata
-    N[k] = concat([N[k].reset_index(), X]) if not N[k].empty else X
-    N[k] = N[k].set_index('value').sort_index()
+    self.indexes['dates'].reindex()
+    self.indexes['numbers'].reindex()
+    self.indexes['numprefix'].reindex()
+    self.indexes['words'].reindex()
+    self.indexes['ngrams'].reindex()
 
   def multisearch(self, idxqueries:list[tuple]):
     Q = idxqueries
@@ -257,172 +187,30 @@ class Searcher:
     X = [(x) for x, _, _, m in self.codemarker.union(q) if m == True]
     P = [m.groupdict() for v in X for m in re.finditer(Searcher.patentalike, v)]
     P = [re.sub(r'\D', '', d['number']) for d in P]
-    D = [(y, m, d) for x in X for _, _, x, d, m, y in datenum(x)] + \
-        [(y, m, d) for x in X for _, _, x, d, m, y in month(x)]
+    D0 = [(y, m, d) for x in X for _, _, x, d, m, y in datenum(x)] + \
+         [(y, m, d) for x in X for _, _, x, d, m, y in month(x)]
+    D = [date(y, m, d) for y, m, d in D0 if y is not None and
+                                            m is not None and
+                                            d is not None]
 
     M = [
-          self.match('date', D),
-          self.match('number', P),
-          self.match('title', W),
-          self.match('name', W),
-          self.match('city', W),
-          self.ngrammatch('number', Ngram(3, prefix=True, suffix=False).flat(P), treshold=0.33),
-          self.ngrammatch('title', Ngram(3, prefix=True, suffix=True).flat(W)),
-          self.ngrammatch('name', Ngram(3, prefix=True, suffix=True).flat(W)),
-          self.ngrammatch('city', Ngram(3, prefix=True, suffix=True).flat(W)),
-                                     ]
+          self.indexes['dates'].match(D),
+          self.indexes['numbers'].match(P, aggregation='max'),
+          self.indexes['numprefix'].match(P, aggregation='max'),
+          self.indexes['words'].match(W),
+          self.indexes['ngrams'].match(W),
+                                          ]
     M = [U for U in M if not U.empty]
+    for U in M: U.name = 'count'
+    M = [U.reset_index() for U in M]
     if not M: return DataFrame()
     Y0 = concat(M)
-
-    s = Searcher.basic_score(Y0)
-    s = s[s > 0]
-    if s.empty: return DataFrame()
-    I = s.sort_values().tail(self.limit).index
-    Y = Y0[Y0['doc'].isin(I) ]\
+    s: Series = Searcher.score(Y0)
+    Y = Y0[Y0['doc'].isin(s.index) ]\
     .pivot_table(index=['doc'], columns=['repo', 'frame', 'col', 'assignement'], 
-                 aggfunc='sum', values='ratio', fill_value=0)
+                 aggfunc='sum', values='count', fill_value=0)
 
-    return Y
+    s = s.to_frame()
+    s.columns = MultiIndex.from_tuples([('', '', '', 'score')])
 
-  def match(self, kind:str, data:list):
-    X = set(data)
-    I = list(self.index[kind] & X)
-    Y = self.data[kind].loc[I]
-    Y['ratio'] = 1
-    return Y
-
-  def ngrammatch(self, kind:str, ngrams:Series, treshold=0.5):
-    X = ngrams
-    X.name = 'full'
-    I = list(self.ngramindex[kind] & set(X.index))
-    Y = self.ngramdata[kind].loc[I]
-    if Y.empty: return Y
-    Y = Y.join(X)
-    Y = Y.groupby(['repo', 'frame', 'col', 'assignement', 'doc', 'full'])\
-    .agg({'ratio': 'sum'}).reset_index().query('ratio >= @treshold')\
-    .groupby(['repo', 'frame', 'col', 'assignement', 'doc'])\
-    .agg({'ratio': 'sum'}).reset_index()
-    return Y
-
-class Polyproc:
-
-  """
-  Stosuje wiele procesorów do zmniejszenia czasu wykonywania zadania.
-  Implementacja stosuje estymację na podstawie średniego czasu wykonania
-  próbki, próbuje dostosować liczbę procesorów do optymalnego czasu `time`.
-  Optymalny czas nie powinien być minimalny, bo wiąże się z uruchamianiem 
-  procesów co nakłada czasochłonne działania systemu.
-  """
-
-  def __init__(self, optimal=5, sample=10000, limit=None):
-    self.optimal = optimal
-    self.sample = sample
-    if limit is None:
-      self.limit = os.cpu_count()
-
-  def calc(self, frame:DataFrame, column:str, callname:str):
-
-    "Oblicza `N`-procesorów do osiągnięcia `time` npdst. `sample`-próbek"
-
-    f = self.__getattribute__(callname)
-
-    X = frame
-    k = column
-    n0 = X.shape[0]
-    n = min(self.sample, n0)
-    S = X.sample(n)
-    y = self.optimal
-    N0 = self.limit
-
-    t0 = time.time()
-    f(S, k)
-    t = time.time() - t0
-
-    m = t/n
-    N = min(int(n0*m/y), N0)
-
-    return N
-
-  def batch(self, frame:DataFrame, column:str, callname:str, batches:int) -> DataFrame:
-
-    f = self.__getattribute__(callname)
-
-    X0 = frame
-    N = batches
-    n0 = X0.shape[0]
-    n = n0 // N + (n0 % N > 0)
-    B = [X0.iloc[i*n:(i+1)*n] for i in range(N)]
-    Y = []
-    with Pool(processes=N) as pool:
-      Y = list(pool.starmap(f, [(X, column) for X in B]))
-
-    return concat(Y)
-
-
-  def pandas(self, frame:DataFrame, column:str):
-
-    "Procesuje ramkę danych `frame` w kolumnie `column`"
-
-    N = self.calc(frame, column, '_pandas')
-    if N < 2: return self._pandas(frame, column)
-    return self.batch(frame, column, '_pandas', N)
-
-
-class Word(Polyproc):
-
-  def _pandas(self, frame:DataFrame, column:str):
-
-    X = frame
-    k = column
-
-    def wordrepl(x):
-      return [{ **x, k: y } for y in x[k].split(' ')]
-
-    Y = X.dropna(subset=[k])\
-    .apply(wordrepl, axis=1).explode().dropna()\
-    .pipe(lambda S: DataFrame.from_records(S.tolist()))
-
-    return Y
-
-class Ngram(Polyproc):
-
-  def __init__(self, n:int,
-               prefix:bool=True, suffix:bool=True,
-               repl:str='_', strprocargs:dict={}):
-
-    super().__init__( **strprocargs )
-
-    self.n = n
-    self.prefix = prefix
-    self.suffix = suffix
-    self.repl = repl
-
-  def _string(self, x:str):
-
-    p = 1 if self.prefix else 0
-    s = 1 if self.suffix else 0
-    r = self.repl
-    n = self.n
-
-    return [(p*i)*r + x[i:i+n] + (s*max(0,(len(x)-3-i)))*r
-      for i in range(len(x)-n+1) ]
-
-  def flat(self, X:list[str]):
-    if len(X) == 0: return Series()
-    I, Y = zip(*[(i, y) for i, x in enumerate(X) for y in self._string(x)])
-    return Series(I, index=Y)
-
-  def _pandas(self, frame:DataFrame, column:str):
-
-    X = frame
-    k = column
-
-    def gramrepl(x):
-      return [{ **x, k: y, 'ratio': self.n/len(x[k]) } for y in self._string(x[k])]
-
-    Y = X.dropna(subset=[k])\
-    .apply(gramrepl, axis=1).explode().dropna()\
-    .pipe(lambda S: DataFrame.from_records(S.tolist()))
-
-    return Y
+    return Y.join(s)

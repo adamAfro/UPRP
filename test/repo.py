@@ -7,6 +7,7 @@ DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.join(DIR, '..')
 sys.path.append(ROOT)
 from lib.repo import Loader, Searcher
+from lib.log import progress
 
 def randinsert(x:str, char:str, min:int, max:int):
   n = randint(min, max) if min != max else min
@@ -60,28 +61,32 @@ def quantmockup(entities:int, alphabet:str, digits:str):
 
   return H, A
 
-@pytest.fixture(scope="module")
-def searcher_loader(entities = 1000):
+def init(entities = 1000):
 
   H, A = quantmockup(entities, 'abcABC', '123')
 
   S = Searcher()
   L = Loader('mockup', H, A)
-  S.load(L)
+
+  S.add([(h, L.melt(h)) for h in ['date', 'number', 'name', 'city', 'title']])
   return S, H
 
-def test_initialization(searcher_loader: tuple[Searcher, dict[str, DataFrame]]):
-  S, H = searcher_loader
-  assert not S.data['date'].empty
-  assert not S.data['number'].empty
-  assert not S.data['title'].empty
-  assert not S.data['name'].empty
-  assert not S.data['city'].empty
+@pytest.fixture(scope="module")
+def initpytest(entities = 100):
+  return init(entities)
 
-def test_quant_ngram_search(searcher_loader: tuple[Searcher, dict[str, DataFrame]], searches=1000):
-  S, H = searcher_loader
+def test_initialization(initpytest: tuple[Searcher, dict[str, DataFrame]]):
+  S, H = initpytest
+  assert not S.indexes['dates'].indexed.empty
+  assert not S.indexes['numbers'].indexed.empty
+  assert not S.indexes['numprefix'].indexed.empty
+  assert not S.indexes['words'].indexed.empty
+  assert not S.indexes['ngrams'].indexed.empty
+
+def test_quant_ngram_search(initpytest: tuple[Searcher, dict[str, DataFrame]], searches=1000):
+  S, H = initpytest
   n = searches
-  for _ in range(n):
+  for _ in progress(range(n), desc='ngram search'):
     h = choice([h for h in (H.keys())])
     k = choice([k for k in H[h].columns if k != 'doc' and 'date' not in k])
     q = H[h][k].sample().values[0].split(' ')[0][:3]
@@ -89,10 +94,10 @@ def test_quant_ngram_search(searcher_loader: tuple[Searcher, dict[str, DataFrame
     r = S.search(q)
     assert not r.empty
 
-def test_quant_search(searcher_loader: tuple[Searcher, dict[str, DataFrame]], searches=1000):
-  S, H = searcher_loader
+def test_quant_search(initpytest: tuple[Searcher, dict[str, DataFrame]], searches=1000):
+  S, H = initpytest
   n = searches
-  for _ in range(n):
+  for _ in progress(range(n), desc='quant search'):
     h = choice([h for h in (H.keys())])
     k = choice([k for k in H[h].columns if k != 'doc' and 'date' not in k])
     q = H[h][k].sample().values[0]
@@ -100,19 +105,19 @@ def test_quant_search(searcher_loader: tuple[Searcher, dict[str, DataFrame]], se
     r = S.search(q)
     assert not r.empty
 
-def test_quant_number_search(searcher_loader: tuple[Searcher, dict[str, DataFrame]], searches=1000):
-  S, H = searcher_loader
+def test_quant_number_search(initpytest: tuple[Searcher, dict[str, DataFrame]], searches=1000):
+  S, H = initpytest
   n = searches
-  for _ in range(n):
+  for _ in progress(range(n), desc='number search'):
     h = choice(['A', 'C'])
     k = choice([k for k in H[h].columns if k != 'doc' and k.endswith('number')])
     q = H[h][k].sample().values[0]
     r = S.search('PL'+q)
     assert not r.empty
 
-def test_quant_external_search(searcher_loader: tuple[Searcher, dict[str, DataFrame]], searches=1000):
-  S, H = searcher_loader
+def test_quant_external_search(initpytest: tuple[Searcher, dict[str, DataFrame]], searches=1000):
+  S, H = initpytest
   n = searches
-  for _ in range(n):
+  for _ in progress(range(n), desc='external search'):
     r = S.search(anystr(charset=' XYZ'))
     assert r.empty
