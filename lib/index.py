@@ -290,7 +290,7 @@ class Ngrams(Base):
     n = self.n
 
     def gramrepl(x):
-      return [{ **x, k: y, h: 1/(len(x)-n+1) } for y in self._string(x[k])]
+      return [{ **x, k: y, h: 1/(len(x[k])-n+1) } for y in self._string(x[k])]
 
     Y = X.dropna(subset=[k])\
     .apply(gramrepl, axis=1).explode().dropna()\
