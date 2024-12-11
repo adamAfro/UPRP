@@ -1,7 +1,7 @@
 from .index import Base as Exact, Digital, Words, Ngrams
 import pickle, yaml, re
 from datetime import date
-from pandas import DataFrame, MultiIndex, Series, concat, to_datetime
+from pandas import DataFrame, MultiIndex, Series, concat, to_datetime, CategoricalDtype
 from lib.expr import Marker
 from lib.datestr import num as datenum, month
 from lib.datestr import MREGEX
@@ -138,20 +138,53 @@ class Searcher:
   def load(self, dump:dict):
     for h, V in self.indexes.items(): V.load(*dump[h])
 
+  Levels = CategoricalDtype(reversed([
+    "exact-dated-supported",
+    "exact-dated",
+    "exact-supported",
+    "partial-dated-supported",
+    "partial-dated",
+    "dated-supported",
+    "exact",
+    "partial-supported",
+    "supported",
+    "partial",
+    "dated",
+    ""
+  ]), ordered=True)
+
   @staticmethod
-  def score(results: DataFrame, limit=100, minimal:float=0.0, least:int=0):
+  def levelcal(assignements:Series):
+
+    Q = assignements
+
+    N = ('exact' if Q['number'] >= 1 else 'partial' if Q['number'] > 0 else None)
+    D = 'dated' if Q['date'] >= 1 else None
+    X = 'supported' if Q['title'] + Q['name'] + Q['city'] >= 1 else None
+
+    return '-'.join((x for x in [N, D, X] if x is not None))
+
+  @staticmethod
+  def levelscore(results: DataFrame, limit=100):
 
     X: DataFrame = results.copy()
-    N = X.value_counts(subset=['doc', 'assignement'])\
-    .reset_index().value_counts('doc')
+
+    A = X.groupby(['doc', 'assignement'])
+    A = A.agg({'count': 'max'}).unstack(fill_value=0)
+    A.columns = A.columns.droplevel(0)
+    A = A.reindex(columns=['number', 'date', 'city', 'name', 'title'], fill_value=0)
+    L = A.apply(Searcher.levelcal, axis=1).astype(Searcher.Levels)
+    L.name = 'level'
+
     for d, w in [('date', 10), ('number', 10), ('city', 2), ('name', 2), ('title', 1)]:
       I = (X['assignement'] == d)
       X.loc[I, 'count'] = X.loc[I, 'count'] * w
 
-    Y = X.groupby('doc').agg({'count': 'sum'})['count'].sort_values()
-    Y[N.index] = N*Y[N.index]
+    Y = X.groupby('doc').agg({'count': 'sum'})['count'].to_frame()
+    Y = Y.join(L).sort_values(['count', 'level'])
+    Y['level'] = Y['level'].astype(Searcher.Levels)
 
-    n = min(max(least, Y.shape[0] - Y.searchsorted(minimal, side='left')), limit)
+    n = min(limit, Y.shape[0])
 
     return Y.tail(n)
 
@@ -185,7 +218,8 @@ class Searcher:
       .set_index(['entry', 'doc'])
       Y0.append(y)
     Y = concat(Y0)
-    Y = Y.fillna(0)
+    u = Y.select_dtypes(include='number').columns
+    Y[u] = Y[u].fillna(0)
     Y.columns = Y.columns.set_names(['repo', 'frame', 'col', 'assignement'])
     return Y
 
@@ -217,12 +251,10 @@ class Searcher:
     M = [U.reset_index() for U in M]
     if not M: return DataFrame()
     Y0 = concat(M)
-    s: Series = Searcher.score(Y0)
+    s: Series = Searcher.levelscore(Y0)
     Y = Y0[Y0['doc'].isin(s.index) ]\
     .pivot_table(index=['doc'], columns=['repo', 'frame', 'col', 'assignement'], 
                  aggfunc='sum', values='count', fill_value=0)
-
-    s = s.to_frame()
-    s.columns = MultiIndex.from_tuples([('', '', '', 'score')])
+    s.columns = MultiIndex.from_tuples([('', '', '', 'score'), ('', '', '', 'level')])
 
     return Y.join(s)
