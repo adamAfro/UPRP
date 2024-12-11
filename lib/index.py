@@ -17,14 +17,17 @@ class Multiprocessor:
   ```
   """
 
-  def __init__(self, name:str, timing=5, tsample=10000, CPUlimit=None):
+  def __init__(self, name:str, timing=5, tsample=10000, CPUlimit=128, forcecalc=True):
+
     self.name = name
     self.timing = timing
     self.tsample = tsample
-    if CPUlimit is None:
-      self.CPUlimit = os.cpu_count()
+    self.CPUlimit = CPUlimit if CPUlimit is not None else os.cpu_count()
 
-  def _tcalc(self, frame:DataFrame):
+    self.forcecalc = forcecalc
+    self.tmean = None
+
+  def _calctmean(self, frame:DataFrame):
 
     "Oblicza `N`-procesorów do osiągnięcia `timing` npdst. `tsample`-próbek"
 
@@ -32,17 +35,12 @@ class Multiprocessor:
     n0 = X.shape[0]
     n = min(self.tsample, n0)
     S = X.sample(n)
-    y = self.timing
-    N0 = self.CPUlimit
 
     t0 = time.time()
     self._batched(S)
     t = time.time() - t0
 
-    m = t/n
-    N = min(int(n0*m/y), N0)
-
-    return N
+    return t/n
 
   def _batched(self, frame:DataFrame): return frame
   def _batch(self, frame:DataFrame, batches:int) -> DataFrame:
@@ -60,9 +58,18 @@ class Multiprocessor:
 
   def batch(self, frame:DataFrame):
 
-    N = self._tcalc(frame)
-    if N < 2: return self._batched(frame)
-    return self._batch(frame, N)
+    if (self.tmean is None) or self.forcecalc:
+      self.tmean = self._calctmean(frame)
+
+    X = frame
+    n = X.shape[0]
+    t = self.timing
+    m = self.tmean
+    N0 = self.CPUlimit
+    N = min(int(n*m/t), N0)
+
+    if N < 2: return self._batched(X)
+    return self._batch(X, N)
 
 
 

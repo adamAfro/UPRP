@@ -191,15 +191,24 @@ class Searcher:
   def add(self, idxmelted:list[tuple[str, DataFrame]]):
 
     for h, X in idxmelted:
+
       if h == 'date':
+
         X['value'] = to_datetime(X['value'], errors='coerce').dt.date
-        self.indexes['dates'].add(X, reindex=False)
+
+        X = self.indexes['dates'].add(X.copy(), reindex=False)
+
       elif h == 'number':
-        X = self.indexes['numbers'].add(X, reindex=False)
-        X = self.indexes['numprefix'].add(X, reindex=False)
+
+        X = self.indexes['numbers'].add(X.copy(), reindex=False)
+
+        X = self.indexes['numprefix'].add(X.copy(), reindex=False)
+
       elif h in ['title', 'name', 'city']:
-        X = self.indexes['words'].add(X, reindex=False)
-        X = self.indexes['ngrams'].add(X, reindex=False)
+
+        X = self.indexes['words'].add(X.copy(), reindex=False)
+
+        X = self.indexes['ngrams'].add(X.copy(), reindex=False)
 
     self.indexes['dates'].reindex()
     self.indexes['numbers'].reindex()
