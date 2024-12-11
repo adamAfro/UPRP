@@ -74,7 +74,7 @@ class Loader:
     H['assignement'] = a
 
     if a == 'date':
-      H['value'] = to_datetime(H['value'], errors='coerce')
+      H['value'] = to_datetime(H['value'], errors='coerce').dt.date
 
     return H
 
