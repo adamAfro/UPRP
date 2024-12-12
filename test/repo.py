@@ -1,4 +1,4 @@
-import sys, os, unittest
+import sys, os, unittest, cProfile, re
 from pandas import Series, DataFrame, date_range, to_datetime
 from numpy.random import randint, choice, seed
 from numpy import datetime64
@@ -161,4 +161,28 @@ class TestSearch(unittest.TestCase):
         with self.subTest(query=q):
           self.check(i, q, K)
 
-unittest.main(argv=[''], exit=False)
+T = unittest.TestSuite()
+T.addTest(TestSearch('test_search'))
+
+with cProfile.Profile() as pr:
+  unittest.TextTestRunner().run(T)
+
+X = DataFrame(pr.getstats(),
+  columns=['func', 'ncalls', 'ccalls', 'tottime', 'cumtime', 'callers'])
+
+X['file'] = X['func'].apply(lambda x: re.search(r'file "([^"]+)"', str(x)))
+X['file'] = X['file'].apply(lambda x: x.group(1) if x else None)
+X['local'] = X['file'].apply(lambda x: x.replace(ROOT, '') if x else None)
+
+X['line'] = X['func'].apply(lambda x: re.search(r'line (\d+)', str(x)))
+X['line'] = X['line'].apply(lambda x: x.group(1) if x else None)
+
+X['code'] = X['func'].apply(lambda x: re.search(r'<code object \<?(\w+)\>?', str(x)))
+X['code'] = X['code'].apply(lambda x: x.group(1) if x else None)
+
+X['percall'] = X['tottime'] / X['ncalls']
+
+K = ['percall', 'local', 'line', 'code', 'tottime']
+X = X[K+ [k for k in X.columns if k not in K]]
+X = X.sort_values('tottime', ascending=False)
+X.head(24)
