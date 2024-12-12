@@ -18,15 +18,15 @@ class Loader:
     self.data = data
     self.assignment = assignment
 
-    self.unique = concat([X.index.to_series()
+    self.docs = concat([X.index.get_level_values('doc').to_series()
       for X in self.data.values()]).drop_duplicates()\
       .reset_index(drop=True)
 
-  def get(self, docs:list):
+  def getdocs(self, docs:list):
 
     Y = dict()
     for h, X in self.data.items():
-      try: Y[h] = X.loc[docs, :]
+      try: Y[h] = X.loc[ X.index.get_level_values('doc').isin(docs) ]
       except KeyError: continue
     return Y
 
@@ -46,7 +46,7 @@ class Loader:
       H = pickle.load(f)
 
     for h, X in H.items():
-      X.set_index('doc', inplace=True)
+      X.set_index(['doc', X.index], inplace=True)
 
     return Loader(k, H, A)
 
@@ -68,7 +68,7 @@ class Loader:
 
     a = name
     H0 = [self.data[h][k].to_frame().pipe(Loader._melt, self.name, h) for h, k in self._assigned(a)]
-    if not H0: return DataFrame(columns=['repo', 'frame', 'col', 'assignement', 'doc', 'value'])
+    if not H0: return DataFrame(columns=['repo', 'frame', 'col', 'assignement', 'doc', 'id', 'value'])
 
     H = concat(H0)
     H['assignement'] = a
@@ -86,11 +86,11 @@ class Loader:
     X = frame
 
     Y = X.reset_index(drop=False)\
-    .melt(id_vars='doc', var_name='col')\
+    .melt(id_vars=['doc', 'id'], var_name='col')\
     .assign(repo=repo, frame=name)\
     .dropna(subset=['value'])
 
-    return Y[['repo', 'frame', 'col', 'doc', 'value']]
+    return Y[['repo', 'frame', 'col', 'doc', 'id', 'value']]
 
   def _assigned(self, target:str):
 

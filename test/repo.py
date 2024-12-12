@@ -25,10 +25,10 @@ def anystr(charset:str, min:int=5, max:int=64) -> str:
   return x
 
 UNIQ = 0
-def unique():
+def unique(fix:str):
   global UNIQ
   UNIQ += 1
-  return f'U{UNIQ}'
+  return f'{fix}{UNIQ}'
 
 def profmockup(entities:int, alphabet:str, digits:str, dates:tuple[int, int]):
 
@@ -36,7 +36,7 @@ def profmockup(entities:int, alphabet:str, digits:str, dates:tuple[int, int]):
   d = digits
 
   N = entities
-  I = [unique() for _ in range(N)]
+  I = [unique('D') for _ in range(N)]
   D0 = date_range(f'{dates[0]}-01-01', f'{dates[1]}-12-31', freq='D')
 
   nA = randint(1, N + randint(1, N))
@@ -45,18 +45,21 @@ def profmockup(entities:int, alphabet:str, digits:str, dates:tuple[int, int]):
 
   H = {
 
-    'A': DataFrame({'doc': [choice(I) for _ in range(nA)],
+    'A': DataFrame({'id': [unique('I') for _ in range(nA)],
+                    'doc': [choice(I) for _ in range(nA)],
                     'a-date': choice(D0, nA),
                     'a-number': [anystr(d, 5, 16) for _ in range(nA)],
-                    'a-title': [anystr(a) for _ in range(nA)] }).set_index('doc'),
+                    'a-title': [anystr(a) for _ in range(nA)] }).set_index(['id', 'doc']),
 
-    'B': DataFrame({'doc': [choice(I) for _ in range(nB)],
+    'B': DataFrame({'id': [unique('I') for _ in range(nB)],
+                    'doc': [choice(I) for _ in range(nB)],
                     'b-name': [anystr(a) for _ in range(nB)],
-                    'b-city': [anystr(a) for _ in range(nB)] }).set_index('doc'),
+                    'b-city': [anystr(a) for _ in range(nB)] }).set_index(['id', 'doc']),
 
-    'C': DataFrame({'doc': [choice(I) for _ in range(nC)],
+    'C': DataFrame({'id': [unique('I') for _ in range(nC)],
+                    'doc': [choice(I) for _ in range(nC)],
                     'c-number': [anystr(d, 5, 16) for _ in range(nC)],
-                    'c-city': [anystr(a) for _ in range(nC)] }).set_index('doc'),
+                    'c-city': [anystr(a) for _ in range(nC)] }).set_index(['id', 'doc']),
   }
 
   A = {
@@ -88,13 +91,13 @@ def mockup(entities:int):
 def genqueries(loader:Loader, dating=False):
 
   L = loader
-  n = L.unique.shape[0]
-  I = L.unique.sample(n)
+  n = L.docs.shape[0]
+  I = L.docs.sample(n)
   Y = []
 
   for i in I.values:
 
-    Q0 = L.get([i])
+    Q0 = L.getdocs([i])
     Q = [v if not k.endswith('number') else "PL"+v
           for X in Q0.values()
           for k in X.columns for v in X[k].values ]
@@ -139,12 +142,12 @@ class TestSearch(unittest.TestCase):
     for j in y.index:
 
       for k in [k for k in M.keys() if k not in K]:
-          self.assertNotIn(j, M[k].unique.values, 'wrong domain')
+          self.assertNotIn(j, M[k].docs.values, 'wrong domain')
 
-      self.assertTrue(any(j in M[k].unique.values for k in K), 'out of domain')
+      self.assertTrue(any(j in M[k].docs.values for k in K), 'out of domain')
 
     for k in [k for k in y.columns if k[3] == "number"]:
-        self.assertLessEqual(y[k].max(), 1.0, f'counted multiple numbers:\n{y.loc[y[k].idxmax()]}')
+      self.assertLessEqual(y[k].max(), 1.0, f'counted multiple numbers:\n{y.loc[y[k].idxmax()]}')
 
   def test_search(self):
 
