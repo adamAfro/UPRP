@@ -128,6 +128,7 @@ class Searcher:
 
     self.indexes = {
       'dates': Exact(),
+      'years': Exact(factor=0.5),
       'numbers': Digital(),
       'numprefix': Ngrams(n=3, suffix=False),
       'words':  Words(case='upper', factor=0.4),
@@ -144,16 +145,22 @@ class Searcher:
 
   Levels = CategoricalDtype(reversed([
     "exact-dated-supported",
+    "exact-yearly-supported",
     "exact-dated",
+    "exact-yearly",
     "exact-supported",
     "partial-dated-supported",
+    "partial-yearly-supported",
     "partial-dated",
     "dated-supported",
     "exact",
+    "partial-yearly",
     "partial-supported",
+    "yearly-supported",
     "supported",
     "partial",
     "dated",
+    "yearly",
     ""
   ]), ordered=True)
 
@@ -163,7 +170,7 @@ class Searcher:
     Q = assignements
 
     N = ('exact' if Q['number'] >= 1 else 'partial' if Q['number'] > 0 else None)
-    D = 'dated' if Q['date'] >= 1 else None
+    D = 'dated' if Q['date'] >= 1 else 'yearly' if Q['date'] > 0 else None
     X = 'supported' if Q['title'] + Q['name'] + Q['city'] >= 1 else None
 
     return '-'.join((x for x in [N, D, X] if x is not None))
@@ -199,7 +206,8 @@ class Searcher:
         X['value'] = D.dt.date
         self.indexes['dates'].add(X.copy(), reindex=False)
 
-        X = self.indexes['dates'].add(X.copy(), reindex=False)
+        X['value'] = D.dt.year
+        self.indexes['years'].add(X.copy(), reindex=False)
 
       elif h == 'number':
 
@@ -214,6 +222,7 @@ class Searcher:
         self.indexes['ngrams'].add(X.copy(), reindex=False)
 
     self.indexes['dates'].reindex()
+    self.indexes['years'].reindex()
     self.indexes['numbers'].reindex()
     self.indexes['numprefix'].reindex()
     self.indexes['words'].reindex()
@@ -253,6 +262,7 @@ class Searcher:
 
     M = [
           self.indexes['dates'].match(D),
+          self.indexes['years'].match(list(set([d.year for d in D]))),
           self.indexes['numbers'].match(P, aggregation='max'),
           self.indexes['numprefix'].match(P, aggregation='max'),
           self.indexes['words'].match(W),
