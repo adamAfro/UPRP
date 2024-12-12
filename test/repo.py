@@ -3,6 +3,8 @@ from pandas import Series, DataFrame, date_range, to_datetime
 from numpy.random import randint, choice, seed
 from numpy import datetime64
 
+seed(42)
+
 DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.join(DIR, '..')
 sys.path.append(ROOT)
@@ -29,8 +31,6 @@ def unique():
   return f'U{UNIQ}'
 
 def profmockup(entities:int, alphabet:str, digits:str, dates:tuple[int, int]):
-
-  seed(42)
 
   a = alphabet
   d = digits
@@ -158,14 +158,28 @@ class TestSearch(unittest.TestCase):
       K = K0[k]
 
       for i, q in progress(Q.items(), desc='🔎', total=Q.shape[0]):
-        with self.subTest(query=q):
+        with self.subTest(index=i, query=q, domain=K):
           self.check(i, q, K)
+
+class AssertionOnlyTestResult(unittest.TextTestResult):
+  def addError(self, test, err):
+    exc_type, exc_value, exc_traceback = err
+    if exc_type is AssertionError:
+      self.failures.append((test, self._exc_info_to_string(err, test)))
+    else:
+      try: raise err
+      except: raise Exception(exc_type, exc_value).with_traceback(exc_traceback)
+
+class AssertionOnlyTestRunner(unittest.TextTestRunner):
+  def _makeResult(self):
+    return AssertionOnlyTestResult(self.stream, self.descriptions, self.verbosity)
+
 
 T = unittest.TestSuite()
 T.addTest(TestSearch('test_search'))
 
 with cProfile.Profile() as pr:
-  unittest.TextTestRunner().run(T)
+  AssertionOnlyTestRunner().run(T)
 
 X = DataFrame(pr.getstats(),
   columns=['func', 'ncalls', 'ccalls', 'tottime', 'cumtime', 'callers'])
