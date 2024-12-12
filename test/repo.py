@@ -1,4 +1,4 @@
-import sys, os, pytest
+import sys, os, unittest
 from pandas import Series, DataFrame, date_range, to_datetime
 from numpy.random import randint, choice, seed
 from numpy import datetime64
@@ -85,22 +85,10 @@ def mockup(entities:int):
 
   return S, M
 
-@pytest.fixture(scope="module")
-def init(entities=100):
-  return mockup(entities)
-
-def test_initialization(init: tuple[Searcher, dict[str, Loader]]):
-  S, _ = init
-  assert not S.indexes['dates'].indexed.empty
-  assert not S.indexes['numbers'].indexed.empty
-  assert not S.indexes['numprefix'].indexed.empty
-  assert not S.indexes['words'].indexed.empty
-  assert not S.indexes['ngrams'].indexed.empty
-
-def genqueries(loader:Loader, nmax=1, dating=False):
+def genqueries(loader:Loader, dating=False):
 
   L = loader
-  n = min(nmax, L.unique.shape[0])
+  n = L.unique.shape[0]
   I = L.unique.sample(n)
   Y = []
 
@@ -123,35 +111,54 @@ def genqueries(loader:Loader, nmax=1, dating=False):
 
   G = Series(Y, index=I.values)
   G = G[G != '']
+
   return G
 
-def test_search(init: tuple[Searcher, dict[str, Loader]], maxsearches=100):
+class TestSearch(unittest.TestCase):
 
-  S, M = init
-  n0 = maxsearches
-  n = n0 // len(M)
+  @classmethod
+  def setUpClass(cls):
 
-  for k0, K in [('X', ['X', 'XY']),
-                ('XY',['X', 'Y', 'XY']),
-                ('Y', ['Y', 'XY']),
-                ('Z', ['Z'])]:
+    S, M = mockup(entities=1000)
 
-    Q = genqueries(M[k0], n)
-    for i, q in progress(Q.items(), desc=f'🔎 {k0}', total=Q.shape[0]):
+    cls.searcher = S
+    cls.mockup = M
+    cls.queries: dict[str, Series] = { k0: genqueries(M[k0]) for k0 in M.keys() }
 
-      y = S.search(q)
-      assert not y.empty, 'no matches'
-      assert i in y.index, 'not found'
+  def check(self, index, query:str, domain:list[str]):
 
-      for j in y.index:
+    S = self.searcher
+    M = self.mockup
+    i = index
+    q = query
+    K = domain
 
-        for k in [k for k in M.keys() if k not in K]:
-          assert j not in M[k].unique.values, 'wrong domain'
+    y = S.search(q)
+    self.assertFalse(y.empty, 'no matches')
+    self.assertIn(i, y.index, 'not found')
+    for j in y.index:
 
-        assert any(j in M[k].unique.values for k in K), 'out of domain'
+      for k in [k for k in M.keys() if k not in K]:
+          self.assertNotIn(j, M[k].unique.values, 'wrong domain')
 
-      TODO = True
-      if TODO: continue
+      self.assertTrue(any(j in M[k].unique.values for k in K), 'out of domain')
 
-      for k in [k for k in y.columns if k[3] == "number"]:
-        assert y[k].max() <= 1.0, f'counted multiple numbers: {y.loc[y[k].idxmax()]}'
+    for k in [k for k in y.columns if k[3] == "number"]:
+        self.assertLessEqual(y[k].max(), 1.0, f'counted multiple numbers:\n{y.loc[y[k].idxmax()]}')
+
+  def test_search(self):
+
+    K0 = { 'X': ['X', 'XY'],
+           'XY': ['X', 'Y', 'XY'],
+           'Y': ['Y', 'XY'],
+           'Z': ['Z'] }
+
+    for k, Q in self.queries.items():
+
+      K = K0[k]
+
+      for i, q in progress(Q.items(), desc='🔎', total=Q.shape[0]):
+        with self.subTest(query=q):
+          self.check(i, q, K)
+
+unittest.main(argv=[''], exit=False)
