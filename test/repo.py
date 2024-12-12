@@ -128,7 +128,7 @@ class TestSearch(unittest.TestCase):
     cls.mockup = M
     cls.queries: dict[str, Series] = { k0: genqueries(M[k0]) for k0 in M.keys() }
 
-  def check(self, index, query:str, domain:list[str]):
+  def search(self, index, query:str, domain:list[str], top=None):
 
     S = self.searcher
     M = self.mockup
@@ -136,7 +136,9 @@ class TestSearch(unittest.TestCase):
     q = query
     K = domain
 
-    y = S.search(q)
+    y = S.search(q).sort_values([('', '', '', 'level'),
+                                 ('', '', '', 'score')], ascending=False)
+
     self.assertFalse(y.empty, 'no matches')
     self.assertIn(i, y.index, 'not found')
     for j in y.index:
@@ -148,6 +150,9 @@ class TestSearch(unittest.TestCase):
 
     for k in [k for k in y.columns if k[3] == "number"]:
       self.assertLessEqual(y[k].max(), 1.0, f'counted multiple numbers:\n{y.loc[y[k].idxmax()]}')
+
+    if top is not None:
+      self.assertIn(i, y.head(top).index, f'not a top result')
 
   def test_search(self):
 
@@ -162,7 +167,7 @@ class TestSearch(unittest.TestCase):
 
       for i, q in progress(Q.items(), desc='🔎', total=Q.shape[0]):
         with self.subTest(index=i, query=q, domain=K):
-          self.check(i, q, K)
+          self.search(i, q, K, top=10)
 
 class AssertionOnlyTestResult(unittest.TextTestResult):
   def addError(self, test, err):
