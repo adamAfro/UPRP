@@ -105,7 +105,7 @@ class Searcher:
 
   "klasa do wyszukiwania danych w repozytorium"
 
-  BUG = ["punktacja za numery może przekraczać 1.0 nie wiadomo czemu"]
+  BUG = []
 
   URLalike=r'(?:http[s]?://(?:\w|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+)'
   codealike, marktarget = ['alnum', 'num', 'series'], {
@@ -176,24 +176,45 @@ class Searcher:
     return '-'.join((x for x in [N, D, X] if x is not None))
 
   @staticmethod
-  def levelscore(results: DataFrame, limit=100):
+  def levelscore(results: DataFrame, limit=100,
+                 stacked=['date', 'city', 'name', 'title']):
 
-    X: DataFrame = results.copy()
+    S0 = stacked
+    X: DataFrame = results.copy().T
 
-    A = X.groupby(['doc', 'assignement'])
-    A = A.agg({'score': 'max'}).unstack(fill_value=0)
-    A.columns = A.columns.droplevel(0)
-    A = A.reindex(columns=['number', 'date', 'city', 'name', 'title'], fill_value=0)
+    s = X.index.get_level_values('assignement').isin(S0)
+    S = X.loc[ s ].groupby('assignement').agg('sum').T
+    U = X.loc[~s ].groupby('assignement').agg('max').T
+
+    A = concat([S, U], axis=1).fillna(0)\
+    .reindex(columns=['number', 'date', 'city', 'name', 'title'], fill_value=0)\
+
     L = A.apply(Searcher.levelcal, axis=1).astype(Searcher.Levels)
-    L.name = 'level'
+    Y = DataFrame({ 'score': A.sum(axis=1),
+                    'level': L.astype(Searcher.Levels) }, index=A.index)
 
-    Y = X.groupby('doc').agg({'score': 'sum'})['score'].to_frame()
-    Y = Y.join(L).sort_values(['score', 'level'])
-    Y['level'] = Y['level'].astype(Searcher.Levels)
-
+    Y = Y.sort_values(['score', 'level'])
     n = min(limit, Y.shape[0])
 
     return Y.tail(n)
+
+  @staticmethod
+  def basescore(count: DataFrame, stacked=['date', 'city', 'name', 'title']):
+
+    X = count.copy()
+
+    s = X['assignement'].isin(stacked)
+    S = X.loc[ s ].pivot_table(index='doc',
+      columns=['repo', 'frame', 'col', 'assignement'],
+      values='score', aggfunc='sum')
+
+    U = X.loc[~s ].pivot_table(index='doc',
+      columns=['repo', 'frame', 'col', 'assignement'],
+      values='score', aggfunc='max')
+
+    Y = S.combine_first(U)
+
+    return Y.fillna(0)
 
   def add(self, idxmelted:list[tuple[str, DataFrame]]):
 
@@ -272,11 +293,11 @@ class Searcher:
     for U in M: U.name = 'score'
     M = [U.reset_index() for U in M]
     if not M: return DataFrame()
-    Y0 = concat(M)
-    s: DataFrame = Searcher.levelscore(Y0)
-    Y = Y0[Y0['doc'].isin(s.index) ]\
-    .pivot_table(index=['doc'], columns=['repo', 'frame', 'col', 'assignement'], 
-                 aggfunc='sum', values='score', fill_value=0)
-    s.columns = MultiIndex.from_tuples([('', '', '', 'score'), ('', '', '', 'level')])
 
-    return Y.join(s)
+    Y0 = concat(M).pipe(Searcher.basescore)
+    L = Y0.pipe(Searcher.levelscore)
+    Y = Y0.query('doc in @L.index')
+
+    L.columns = MultiIndex.from_tuples([('', '', '', 'score'), ('', '', '', 'level')])
+
+    return Y.join(L)
