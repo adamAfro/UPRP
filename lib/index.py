@@ -19,7 +19,7 @@ class Multiprocessor:
 
   def __init__(self, name:str, timing=5, tsample=10000, CPUlimit=128, forcecalc=True):
 
-    self.name = name
+    self.value = name
     self.timing = timing
     self.tsample = tsample
     self.CPUlimit = CPUlimit if CPUlimit is not None else os.cpu_count()
@@ -77,19 +77,24 @@ class Base(Multiprocessor):
 
   "`Base('searched-values').add(X)`"
 
-  def __init__(self, name:str, *args, **kwargs):
+  def __init__(self, factor:float=1.0, value:str='value', count:str='count', *args, **kwargs):
 
-    super().__init__(name, *args, **kwargs)
+    super().__init__(value, *args, **kwargs)
 
-    self.name = name
+    self.factor = factor
+
+    self.value = value
+    self.count = count
     self.indexed = DataFrame()
     self.indices = set()
 
-  def match(self, values:list, minscore:int=1, aggregation='size') -> Series:
+  def match(self, values:list[str], minscore:float=0.5, aggregation:str='sum') -> Series:
 
     A = aggregation
 
     m = minscore
+    k0 = self.count
+
     I0 = self.indices
     Y0 = self.indexed
 
@@ -99,8 +104,8 @@ class Base(Multiprocessor):
     M = Y0.loc[I]
     if M.empty: return Series()
 
-    K = [k for k in M.columns]
-    N = M.groupby(K).agg(A)
+    K = [k for k in M.columns if k != k0]
+    N = M.groupby(K).agg(A)[k0]
     N = N[N >= m]
 
     return N
@@ -124,16 +129,30 @@ class Base(Multiprocessor):
     raise NotImplementedError('wymaga funkcji do wstępnego przetwarzania zapytań w `Base`')
 
   def _prep(self, frame:DataFrame): return frame
-  def add(self, frame:DataFrame, reindex=True):
+  def add(self, frame:DataFrame, reindex=True, cumulative=True):
 
     if frame.empty: return frame
-    k = self.name
+    k = self.value
     L = self.indexed
     I = self.indices
     X = self._prep(frame)
 
     I = I.union( set(X[k]) )
     self.indices = I
+
+    if self.count in X.columns:
+
+      X = X.drop(columns=[self.count])
+
+    if cumulative:
+
+      X = X.value_counts() * self.factor
+      X = X.reset_index(name=self.count)
+
+    else:
+
+      X = X.drop_duplicates()
+      X[self.count] = self.factor
 
     if L.index.name is not None: L = L.reset_index()
     L = X if L.empty else concat([L, X])
@@ -145,13 +164,13 @@ class Base(Multiprocessor):
     return X
 
   def reindex(self):
-    self.indexed = self.indexed.set_index(self.name).sort_index()
+    self.indexed = self.indexed.set_index(self.value).sort_index()
 
   def dump(self):
-    return self.name, self.indexed, self.indices
+    return self.value, self.indexed, self.indices
 
   def load(self, name:str, indexed:DataFrame, indices:set):
-    self.name = name
+    self.value = name
     self.indexed = indexed
     self.indices = indices
 
@@ -162,7 +181,7 @@ class Digital(Base):
   def _prep(self, frame):
 
     X = frame
-    X[self.name] = X[self.name].astype('str')\
+    X[self.value] = X[self.value].astype('str')\
     .str.replace(r"\D", "", regex=True)
 
     return X
@@ -179,7 +198,7 @@ class Slices(Base):
   def _batched(self, frame:DataFrame):
 
     X = frame
-    k = self.name
+    k = self.value
 
     def wordrepl(x):
       return [{ **x, k: y } for y in x[k].split(self.sep)]
@@ -202,7 +221,7 @@ class Words(Slices):
 
   def _prep(self, frame:DataFrame):
 
-    k = self.name
+    k = self.value
     c = self.case
     m = self.minl
     X = frame
@@ -231,17 +250,18 @@ class Ngrams(Base):
   def __init__(self, *args, n:int,
                prefix:bool=True, suffix:bool=True,
                repl:str='_',
-               shared:str='n',
-               orderkey:str='i',
+               count:str='count',
+               weight:str='weight',
+               owner:str='owner',
                **kwargs):
 
-    super().__init__(*args, **kwargs)
+    super().__init__(*args, count=count, **kwargs)
     self.n = n
     self.prefix = prefix
     self.suffix = suffix
     self.repl = repl
-    self.scorename = shared
-    self.orderkey = orderkey
+    self.weight = weight
+    self.owner = owner
 
   def match(self, values:list[str], minscore:float=0.5, aggregation:str='sum', 
             minshare:float=0.5) -> Series:
@@ -249,10 +269,10 @@ class Ngrams(Base):
     A = aggregation
     m2 = minscore
     m = minshare
-    k0 = self.scorename
+    k0 = self.weight
 
     X = self.flat(values)
-    X.name = self.orderkey
+    X.name = self.owner
 
     I0 = self.indices
     Y0 = self.indexed
@@ -285,8 +305,8 @@ class Ngrams(Base):
   def _batched(self, frame: DataFrame):
 
     X = frame
-    k = self.name
-    h = self.scorename
+    k = self.value
+    h = self.weight
     n = self.n
 
     def gramrepl(x):

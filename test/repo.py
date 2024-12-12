@@ -142,9 +142,16 @@ def test_search(init: tuple[Searcher, dict[str, Loader]], maxsearches=100):
       y = S.search(q)
       assert not y.empty, 'no matches'
       assert i in y.index, 'not found'
+
       for j in y.index:
 
         for k in [k for k in M.keys() if k not in K]:
           assert j not in M[k].unique.values, 'wrong domain'
 
         assert any(j in M[k].unique.values for k in K), 'out of domain'
+
+      TODO = True
+      if TODO: continue
+
+      for k in [k for k in y.columns if k[3] == "number"]:
+        assert y[k].max() <= 1.0, f'counted multiple numbers: {y.loc[y[k].idxmax()]}'
