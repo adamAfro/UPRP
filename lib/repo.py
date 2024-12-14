@@ -6,7 +6,7 @@ from lib.expr import Marker
 from lib.datestr import num as datenum, month
 from lib.datestr import MREGEX
 
-class Loader:
+class Storage:
 
   "klasa do wczytywania danych z repozytorium"
 
@@ -48,7 +48,7 @@ class Loader:
     for h, X in H.items():
       X.set_index(['doc', X.index], inplace=True)
 
-    return Loader(k, H, A)
+    return Storage(k, H, A)
 
   def melt(self, name:str):
 
@@ -67,7 +67,7 @@ class Loader:
     """
 
     a = name
-    H0 = [self.data[h][k].to_frame().pipe(Loader._melt, self.name, h) for h, k in self._assigned(a)]
+    H0 = [self.data[h][k].to_frame().pipe(Storage._melt, self.name, h) for h, k in self._assigned(a)]
     if not H0: return DataFrame(columns=['repo', 'frame', 'col', 'assignement', 'doc', 'id', 'value'])
 
     H = concat(H0)

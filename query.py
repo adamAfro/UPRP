@@ -1,6 +1,6 @@
 import pandas, pickle, traceback, sys, random
 from lib.log import log, notify, progress
-from lib.repo import Loader, Searcher
+from lib.repo import Storage, Searcher
 
 r, U = False, 1.0
 for A in sys.argv[1:]:
@@ -20,9 +20,9 @@ try:
   if r:
 
     M = [(k, L.melt(k)) for L in progress([
-      Loader.Within("api.uprp.gov.pl"),
-      Loader.Within("api.lens.org"),
-      Loader.Within("api.openalex.org")
+      Storage.Within("api.uprp.gov.pl"),
+      Storage.Within("api.lens.org"),
+      Storage.Within("api.openalex.org")
     ], desc='📂') for k in ['date', 'number', 'name', 'city', 'title']]
 
     M = [(k0, pandas.concat([X for k, X in M if k == k0 if not X.empty]))

@@ -8,7 +8,7 @@ seed(42)
 DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.join(DIR, '..')
 sys.path.append(ROOT)
-from lib.repo import Loader, Searcher
+from lib.repo import Storage, Searcher
 from lib.log import log, progress
 
 def randinsert(x:str, char:str, min:int, max:int):
@@ -82,13 +82,13 @@ def mockup(entities:int):
 
   n = n0 // len(M0)
 
-  M = { k: Loader('mockup', *profmockup(n, a, d, y)) for k, a, d, y in M0 }
+  M = { k: Storage('mockup', *profmockup(n, a, d, y)) for k, a, d, y in M0 }
   S.add([(h, L.melt(h)) for h0, L in M.items()
          for h in ['date', 'number', 'name', 'city', 'title']])
 
   return S, M
 
-def genqueries(loader:Loader, dating=False):
+def genqueries(loader:Storage, dating=False):
 
   L = loader
   n = L.docs.shape[0]
