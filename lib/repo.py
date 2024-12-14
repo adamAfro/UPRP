@@ -224,10 +224,10 @@ class Searcher:
 
         D = to_datetime(X['value'], errors='coerce')
 
-        X['value'] = D.dt.date
+        X.loc[:, 'value'] = D.dt.date
         self.indexes['dates'].add(X.copy(), reindex=False)
 
-        X['value'] = D.dt.year
+        X.loc[:, 'value'] = D.dt.year
         self.indexes['years'].add(X.copy(), reindex=False)
 
       elif h == 'number':
