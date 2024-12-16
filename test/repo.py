@@ -178,6 +178,15 @@ class AssertionOnlyTestResult(unittest.TextTestResult):
       try: raise err
       except: raise Exception(exc_type, exc_value).with_traceback(exc_traceback)
 
+  def addSubTest(self, test, subtest, err):
+    if err is not None:
+      exc_type, exc_value, exc_traceback = err
+      if exc_type is AssertionError:
+        self.failures.append((subtest, self._exc_info_to_string(err, test)))
+      else:
+        try: raise err
+        except: raise Exception(exc_type, exc_value).with_traceback(exc_traceback)
+
 class AssertionOnlyTestRunner(unittest.TextTestRunner):
   def _makeResult(self):
     return AssertionOnlyTestResult(self.stream, self.descriptions, self.verbosity)
