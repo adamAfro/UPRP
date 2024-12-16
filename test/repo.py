@@ -88,7 +88,7 @@ def mockup(entities:int):
 
   return S, M
 
-def genqueries(loader:Storage, dating=False):
+def genqueries(loader:Storage):
 
   L = loader
   n = L.docs.shape[0]
@@ -102,12 +102,11 @@ def genqueries(loader:Storage, dating=False):
           for X in Q0.values()
           for k in X.columns for v in X[k].values ]
 
-    if dating:
-      raise NotImplementedError('parser nie odróżnia niektórych dat od kodów, np.: PL 222222 2000-12-12')
-      D = [to_datetime(v).strftime("%Y-%m-%d") for v in Q if isinstance(v, datetime64)]
-
+    D = ["<DATED>"+to_datetime(v).strftime("%Y-%m-%d")+"</DATED>"
+         for v in Q if isinstance(v, datetime64)]
     Q = [v for v in Q if not isinstance(v, datetime64)]
     Q = [v for V in Q for v in V.split(' ') if len(v) > 3]
+    Q = Q + D
 
     q0 = randint(3, min(10, len(Q))) if len(Q) > 3 else len(Q)
     Y.append(' '.join(choice(Q, q0, replace=False)))
