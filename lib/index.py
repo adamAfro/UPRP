@@ -73,13 +73,12 @@ class Multiprocessor:
 
 
 
-class Base(Multiprocessor):
+class Base:
 
   "`Base('searched-values').add(X)`"
 
   def __init__(self, factor:float=1.0, value:str='value', count:str='count', *args, **kwargs):
 
-    super().__init__(value, *args, **kwargs)
 
     self.factor = factor
 
@@ -195,7 +194,7 @@ class Slices(Base):
     super().__init__(*args, **kwargs)
     self.sep = sep
 
-  def _batched(self, frame:DataFrame):
+  def _prep(self, frame:DataFrame):
 
     X = frame
     k = self.value
@@ -230,8 +229,8 @@ class Words(Slices):
     if c == 'lower': X[k] = X[k].str.lower()
     elif c == 'upper': X[k] = X[k].str.upper()
 
-    X = self.batch(X)
-    X = X.loc[X[k].str.len() >= m]
+    Y = super()._prep(X)
+    Y = Y.loc[Y[k].str.len() >= m]
 
     return X
 
@@ -302,7 +301,7 @@ class Ngrams(Base):
   def _prep(self, frame:DataFrame):
     return self.batch(frame)
 
-  def _batched(self, frame: DataFrame):
+  def _prep(self, frame: pandas.DataFrame):
 
     X = frame
     k = self.value
