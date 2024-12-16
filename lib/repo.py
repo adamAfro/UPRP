@@ -82,13 +82,15 @@ class Storage:
     "funk. wewn. do tworzenia ramki danych w formacie długim"
 
     X = frame
+    K = ['repo', 'frame', 'col', 'doc', 'id', 'value']
+    X.columns = [k if k not in K else k+'*' for k in X.columns]
 
     Y = X.reset_index(drop=False)\
     .melt(id_vars=['doc', 'id'], var_name='col')\
     .assign(repo=repo, frame=name)\
     .dropna(subset=['value'])
 
-    return Y[['repo', 'frame', 'col', 'doc', 'id', 'value']]
+    return Y[K]
 
   def _assigned(self, target:str):
 
