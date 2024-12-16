@@ -127,19 +127,18 @@ class TestSearch(unittest.TestCase):
     cls.mockup = M
     cls.queries: dict[str, Series] = { k0: genqueries(M[k0]) for k0 in M.keys() }
 
-  def search(self, index, query:str, domain:list[str], top=None):
+  def assertion(self, results:DataFrame, index, domain:list[str], top=None):
 
-    S = self.searcher
     M = self.mockup
-    i = index
-    q = query
-    K = domain
 
-    y = S.search(q).sort_values([('', '', '', 'level'),
-                                 ('', '', '', 'score')], ascending=False)
+    y = results
+    i = index
+    K = domain
 
     self.assertFalse(y.empty, 'no matches')
     self.assertIn(i, y.index, 'not found')
+
+    y = y.sort_values([('', '', '', 'level'), ('', '', '', 'score')], ascending=False)
     for j in y.index:
 
       for k in [k for k in M.keys() if k not in K]:
@@ -155,18 +154,24 @@ class TestSearch(unittest.TestCase):
 
   def test_search(self):
 
+    S = self.searcher
     K0 = { 'X': ['X', 'XY'],
            'XY': ['X', 'Y', 'XY'],
            'Y': ['Y', 'XY'],
            'Z': ['Z'] }
 
-    for k, Q in self.queries.items():
+    H = DataFrame([{ 'doc': i, 'query': q, 'domain': K0[k] }
+                  for k, Q in self.queries.items()
+                  for i, q in Q.items()]).set_index('doc')
 
-      K = K0[k]
+    Q = [(i, q) for i, q in H['query'].reset_index(drop=True).items()]
+    Y0 = S.search(Q, limit=100)
+    Y = Y0.reset_index().set_index(('doc', '', '', ''))
 
-      for i, q in progress(Q.items(), desc='🔎', total=Q.shape[0]):
-        with self.subTest(index=i, query=q, domain=K):
-          self.search(i, q, K, top=10)
+    for i, h in H.iterrows():
+      with self.subTest(index=i, query=h['query'], domain=h['domain']):
+        try: self.assertion(Y.loc[[i]], i, h['domain'])
+        except KeyError: self.fail(f'no match for {i}')
 
 class AssertionOnlyTestResult(unittest.TextTestResult):
   def addError(self, test, err):

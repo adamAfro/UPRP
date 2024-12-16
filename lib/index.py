@@ -1,5 +1,6 @@
-from pandas import concat, DataFrame, Series
+from cudf import concat, DataFrame
 import os, time, multiprocessing
+import pandas
 
 class Multiprocessor:
 
@@ -77,37 +78,35 @@ class Base:
 
   "`Base('searched-values').add(X)`"
 
-  def __init__(self, factor:float=1.0, value:str='value', count:str='count', *args, **kwargs):
+  def __init__(self, factor:float=1.0, value:str='value', score:str='score', *args, **kwargs):
 
 
     self.factor = factor
 
     self.value = value
-    self.count = count
+    self.score = score
     self.indexed = DataFrame()
-    self.indices = set()
 
-  def match(self, values:list[str], minscore:float=0.5, aggregation:str='sum') -> Series:
+  @staticmethod
+  def idxinv(X:pandas.Series):
+    v = X.name
+    Y = X.reset_index().set_index(v)
+    return DataFrame.from_pandas(Y)
+
+  def match(self, keys:pandas.Series, minscore:float=0.5, aggregation:str='sum'):
 
     A = aggregation
+    X = self.idxinv(keys)
+    M = self.indexed.join(X)
+
+    if M.empty: return DataFrame()
+
+    h = self.score
+    K = [k for k in M.columns if k != h]
+    Y = M.groupby(K).agg(A)
 
     m = minscore
-    k0 = self.count
-
-    I0 = self.indices
-    Y0 = self.indexed
-
-    X = values
-    I = list(I0 & set(X))
-
-    M = Y0.loc[I]
-    if M.empty: return Series()
-
-    K = [k for k in M.columns if k != k0]
-    N = M.groupby(K).agg(A)[k0]
-    N = N[N >= m]
-
-    return N
+    return Y.query(f"{h} >= {m}")
 
   @staticmethod
   def matchhier(values:list, hier:dict[tuple, dict]):
@@ -127,31 +126,28 @@ class Base:
     raise NotImplementedError('wymaga dodatkowej identyfikacji w `Base.indexed`')
     raise NotImplementedError('wymaga funkcji do wstępnego przetwarzania zapytań w `Base`')
 
-  def _prep(self, frame:DataFrame): return frame
-  def add(self, frame:DataFrame, reindex=True, cumulative=True):
+  def _prep(self, frame:DataFrame):
+    return DataFrame.from_pandas(frame)
+
+  def add(self, frame:pandas.DataFrame, reindex=True, cumulative=True):
 
     if frame.empty: return frame
-    k = self.value
     L = self.indexed
-    I = self.indices
     X = self._prep(frame)
 
-    I = I.union( set(X[k]) )
-    self.indices = I
+    if self.score in X.columns:
 
-    if self.count in X.columns:
-
-      X = X.drop(columns=[self.count])
+      X = X.drop(columns=[self.score])
 
     if cumulative:
 
       X = X.value_counts() * self.factor
-      X = X.reset_index(name=self.count)
+      X = X.reset_index(name=self.score)
 
     else:
 
       X = X.drop_duplicates()
-      X[self.count] = self.factor
+      X[self.score] = self.factor
 
     if L.index.name is not None: L = L.reset_index()
     L = X if L.empty else concat([L, X])
@@ -160,18 +156,18 @@ class Base:
     if reindex:
       self.reindex()
 
-    return X
+    return X.to_pandas()
 
   def reindex(self):
+    if self.indexed.empty: return
     self.indexed = self.indexed.set_index(self.value).sort_index()
 
   def dump(self):
-    return self.value, self.indexed, self.indices
+    return self.value, self.indexed
 
-  def load(self, name:str, indexed:DataFrame, indices:set):
+  def load(self, name:str, indexed:DataFrame):
     self.value = name
     self.indexed = indexed
-    self.indices = indices
 
 
 
@@ -183,7 +179,7 @@ class Digital(Base):
     X[self.value] = X[self.value].astype('str')\
     .str.replace(r"\D", "", regex=True)
 
-    return X
+    return DataFrame.from_pandas(X)
 
 
 
@@ -194,7 +190,7 @@ class Slices(Base):
     super().__init__(*args, **kwargs)
     self.sep = sep
 
-  def _prep(self, frame:DataFrame):
+  def _prep(self, frame:pandas.DataFrame):
 
     X = frame
     k = self.value
@@ -204,9 +200,9 @@ class Slices(Base):
 
     Y = X.dropna(subset=[k])\
     .apply(wordrepl, axis=1).explode().dropna()\
-    .pipe(lambda S: DataFrame.from_records(S.tolist()))
+    .pipe(lambda S: pandas.DataFrame.from_records(S.tolist()))
 
-    return Y
+    return DataFrame.from_pandas(Y)
 
 
 
@@ -218,7 +214,7 @@ class Words(Slices):
     self.case = case
     self.minl = minl
 
-  def _prep(self, frame:DataFrame):
+  def _prep(self, frame:pandas.DataFrame):
 
     k = self.value
     c = self.case
@@ -232,7 +228,7 @@ class Words(Slices):
     Y = super()._prep(X)
     Y = Y.loc[Y[k].str.len() >= m]
 
-    return X
+    return DataFrame.from_pandas(Y)
 
 
 
@@ -249,12 +245,12 @@ class Ngrams(Base):
   def __init__(self, *args, n:int,
                prefix:bool=True, suffix:bool=True,
                repl:str='_',
-               count:str='count',
+               score:str='score',
                weight:str='weight',
                owner:str='owner',
                **kwargs):
 
-    super().__init__(*args, count=count, **kwargs)
+    super().__init__(*args, score=score, **kwargs)
     self.n = n
     self.prefix = prefix
     self.suffix = suffix
@@ -262,44 +258,37 @@ class Ngrams(Base):
     self.weight = weight
     self.owner = owner
 
-  def match(self, values:list[str], minscore:float=0.5, aggregation:str='sum', 
-            minshare:float=0.5) -> Series:
+  def match(self, keys:pandas.Series, minscore:float=0.5, aggregation:str='sum', minshare:float=0.5):
 
     A = aggregation
-    m2 = minscore
-    m = minshare
-    k0 = self.weight
+    v = self.value
+    w = self.weight
+    X = self._prep(keys.reset_index()).drop(columns=[w])\
+    .drop_duplicates().set_index(v)
+    M = self.indexed.join(X)
 
-    X = self.flat(values)
-    X.name = self.owner
+    if M.empty: return DataFrame()
 
-    I0 = self.indices
-    Y0 = self.indexed
+    H0 = [self.weight, self.score]
+    K0 = [k for k in M.columns if k not in H0]
+    Y0 = M.groupby(K0).sum()
 
-    I = list(I0 & set(X.index))
+    h0 = self.weight
+    m0 = minshare
+    Y0 = Y0.query(f"{h0} >= {m0}")
 
-    M = Y0.loc[I]
-    if M.empty: return Series()
+    if Y0.empty: return DataFrame()
 
-    K = [k for k in M.columns if k != k0]+[X.name]
-    N = M.join(X).groupby(K).sum()[k0]
-    M2 = N[N >= m].reset_index().drop(columns=[X.name])
-    K2 = [k for k in M2.columns if k != k0]
-    N2 = M2.groupby(K2).agg(A)[k0]
-    N2 = N2[N2 >= m2]
+    Y1 = Y0.reset_index()
+    h = self.score
+    Y1[h] = Y1[h] * Y1[w] if A == 'sum' else Y1[w]
 
-    return N2
+    H = [self.owner, self.weight, self.score]
+    K = [k for k in Y1.columns if k not in H]
+    Y2 = Y1[K+[h]].groupby(K).agg(A)
 
-  def flat(self, values:list[str]):
-    X = values
-    if len(X) == 0: return Series()
-    I, Y = zip(*[(i, y) for i, x in enumerate(X) 
-                 for y in self._string(x)])
-
-    return Series(I, index=Y)
-
-  def _prep(self, frame:DataFrame):
-    return self.batch(frame)
+    m = minscore
+    return Y2.query(f"{h} >= {m}")
 
   def _prep(self, frame: pandas.DataFrame):
 
@@ -313,9 +302,9 @@ class Ngrams(Base):
 
     Y = X.dropna(subset=[k])\
     .apply(gramrepl, axis=1).explode().dropna()\
-    .pipe(lambda S: DataFrame.from_records(S.tolist()))
+    .pipe(lambda S: pandas.DataFrame.from_records(S.tolist()))
 
-    return Y
+    return DataFrame.from_pandas(Y)
 
   def _string(self, x:str):
 

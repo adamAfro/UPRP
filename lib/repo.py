@@ -1,10 +1,11 @@
 from .index import Base as Exact, Digital, Words, Ngrams
 import pickle, yaml, re, warnings
-from datetime import date
+from datetime import datetime
 from pandas import DataFrame, MultiIndex, Series, concat, to_datetime, CategoricalDtype
 from lib.expr import Marker
 from lib.datestr import num as datenum, month
 from lib.datestr import MREGEX
+import cudf
 
 class Storage:
 
@@ -73,9 +74,6 @@ class Storage:
     H = concat(H0)
     H['assignement'] = a
 
-    if a == 'date':
-      H['value'] = to_datetime(H['value'], errors='coerce').dt.date
-
     return H
 
   @staticmethod
@@ -101,11 +99,7 @@ class Storage:
       for k, v in X.items()
       if v == target)
 
-class Searcher:
-
-  "klasa do wyszukiwania danych w repozytorium"
-
-  BUG = []
+class Query:
 
   URLalike=r'(?:http[s]?://(?:\w|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+)'
   codealike, marktarget = ['alnum', 'num', 'series'], {
@@ -124,18 +118,51 @@ class Searcher:
 
   codemarker = Marker(marktarget, codealike)
 
-  def __init__(self):
+  def __init__(self, words:list[str], codes:list[str], dates:list[int], years:list[int]):
 
-    self.indexes = {
-      'dates': Exact(),
-      'years': Exact(factor=0.5),
-      'numbers': Digital(),
-      'numprefix': Ngrams(n=3, suffix=False),
-      'words':  Words(case='upper', factor=0.4),
-      'ngrams': Ngrams(n=3, suffix=False, factor=0.3),
-    }
+    self.words = words
+    self.codes = codes
+    self.dates = dates
+    self.years = years
 
-    for b in Searcher.BUG: warnings.warn(b)
+  def Parse(query:str):
+
+    q = re.sub(Query.URLalike, '', query)
+
+    W = [w for w in re.sub(r"[\W\d\s]+", " ", q).strip().upper().split(' ') if len(w) >= 3]
+
+    X = [(x) for x, _, _, m in Query.codemarker.union(q) if m == True]
+    P = [m.groupdict() for v in X for m in re.finditer(Query.patentalike, v)]
+    P = [re.sub(r'\D', '', d['number']) for d in P]
+    D0 = [(y, m, d) for x in X for _, _, x, d, m, y in datenum(x)] + \
+         [(y, m, d) for x in X for _, _, x, d, m, y in month(x)]
+    D = [datetime(y, m, d).strftime('%Y-%m-%d')
+         for y, m, d in D0 if y is not None and m is not None and d is not None]
+
+    return Query(W, P, D, [y for y in set([y for y,m,d in D0])])
+
+  def wordmelt(self, entry) -> list[dict]:
+    return [{ 'entry': str(entry), 'value': v } for v in self.words]
+
+  def nummelt(self, entry) -> list[dict]:
+    return [{ 'entry': str(entry), 'value': v } for v in self.codes]
+
+  def datemelt(self, entry) -> list[dict]:
+    return [{ 'entry': str(entry), 'value': v } for v in self.dates]
+
+  def yearmelt(self, entry) -> list[dict]:
+    return [{ 'entry': str(entry), 'value': v } for v in self.years]
+
+class Searcher:
+
+  def __init__(self, indexes: dict[str, Exact] = {
+    'dates': Exact(),
+    'years': Exact(factor=0.5),
+    'numbers': Digital(),
+    'numprefix': Ngrams(n=3, suffix=False),
+    'words':  Words(case='upper', factor=1),
+    'ngrams': Ngrams(n=3, suffix=False, factor=1)
+  }): self.indexes = indexes
 
   def dump(self):
     return { h: V.dump() for h, V in self.indexes.items() }
@@ -143,7 +170,7 @@ class Searcher:
   def load(self, dump:dict):
     for h, V in self.indexes.items(): V.load(*dump[h])
 
-  Levels = CategoricalDtype(reversed([
+  Levels = CategoricalDtype([l for l in reversed([
     "exact-dated-supported",
     "exact-yearly-supported",
     "exact-dated",
@@ -162,41 +189,54 @@ class Searcher:
     "dated",
     "yearly",
     ""
-  ]), ordered=True)
+  ])], ordered=True)
 
   @staticmethod
   def levelcal(assignements:Series):
 
-    Q = assignements
+    A = assignements
 
-    N = ('exact' if Q['number'] >= 1 else 'partial' if Q['number'] > 0 else None)
-    D = 'dated' if Q['date'] >= 1 else 'yearly' if Q['date'] > 0 else None
-    X = 'supported' if Q['title'] + Q['name'] + Q['city'] >= 1 else None
+    Q = cudf.DataFrame(index=A.index)
+    Q['exact'] = A['number'] >= 1
+    Q['partial'] = A['number'] > 0
+    Q['dated'] = A['date'] >= 1
+    Q['yearly'] = A['date'] > 0
+    Q['supported'] = A['title'] + A['name'] + A['city'] >= 1
 
-    return '-'.join((x for x in [N, D, X] if x is not None))
+    Q['level'] = Searcher.Levels.categories[0]
+    for c in Searcher.Levels.categories[1:]:
+      q = Q[c.split('-')].all(axis=1)
+      R = Q['level'].where(~ q, c)
+      Q['level'] = R
+
+    return Q['level']
 
   @staticmethod
-  def levelscore(results: DataFrame, limit=100,
-                 stacked=['date', 'city', 'name', 'title']):
+  def levelscore(base: DataFrame, limit:int, 
+                 aggdict={ 'number': 'max',
+                           'date': 'sum',
+                           'city': 'sum',
+                           'name': 'sum',
+                           'title': 'sum' }):
+    A = aggdict
+    X: DataFrame = base
+    S0 = cudf.DataFrame(index=X.index)
 
-    S0 = stacked
-    X: DataFrame = results.copy().T
+    for k0, a in A.items():
+      G = X.loc[:, [k for k in X.columns if k[3] == k0]]
+      V = G.sum(axis=1) if a == 'sum' else G.max(axis=1)
+      S0[k0] = V
 
-    s = X.index.get_level_values('assignement').isin(S0)
-    S = X.loc[ s ].groupby('assignement').agg('sum').T
-    U = X.loc[~s ].groupby('assignement').agg('max').T
+    S = S0.reindex(columns=A.keys(), fill_value=0)
 
-    A = concat([S, U], axis=1).fillna(0)\
-    .reindex(columns=['number', 'date', 'city', 'name', 'title'], fill_value=0)\
+    Z = cudf.DataFrame({ 'score': S.sum(axis=1),
+                         'level': Searcher.levelcal(S).astype(Searcher.Levels) }, 
+                          index=S.index)
 
-    L = A.apply(Searcher.levelcal, axis=1).astype(Searcher.Levels)
-    Y = DataFrame({ 'score': A.sum(axis=1),
-                    'level': L.astype(Searcher.Levels) }, index=A.index)
+    Y = Z.reset_index().sort_values(['level', 'score'])
+    Y = Y.groupby('entry').tail(limit).set_index(['doc', 'entry'])
 
-    Y = Y.sort_values(['score', 'level'])
-    n = min(limit, Y.shape[0])
-
-    return Y.tail(n)
+    return Y
 
   @staticmethod
   def basescore(count: DataFrame, stacked=['date', 'city', 'name', 'title']):
@@ -204,17 +244,17 @@ class Searcher:
     X = count.copy()
 
     s = X['assignement'].isin(stacked)
-    S = X.loc[ s ].pivot_table(index='doc',
+    S = X.loc[ s ].pivot_table(index=['doc', 'entry'],
       columns=['repo', 'frame', 'col', 'assignement'],
       values='score', aggfunc='sum')
 
-    U = X.loc[~s ].pivot_table(index='doc',
+    U = X.loc[~s ].pivot_table(index=['doc', 'entry'],
       columns=['repo', 'frame', 'col', 'assignement'],
       values='score', aggfunc='max')
 
-    Y = S.combine_first(U)
+    Y = S.join(U).fillna(0.0)
 
-    return Y.fillna(0)
+    return Y
 
   def add(self, idxmelted:list[tuple[str, DataFrame]]):
 
@@ -224,80 +264,65 @@ class Searcher:
 
         D = to_datetime(X['value'], errors='coerce')
 
-        X.loc[:, 'value'] = D.dt.date
-        self.indexes['dates'].add(X.copy(), reindex=False)
+        X['value'] = D.dt.strftime('%Y-%m-%d')
+        self.indexes['dates'].add(X, reindex=False)
 
-        X.loc[:, 'value'] = D.dt.year
-        self.indexes['years'].add(X.copy(), reindex=False)
+        X['value'] = D.dt.year
+        X['value'] = X['value'].astype('int')
+        self.indexes['years'].add(X, reindex=False)
 
       elif h == 'number':
 
-        X = self.indexes['numbers'].add(X.copy(), cumulative=False, reindex=False)
+        X = self.indexes['numbers'].add(X, cumulative=False, reindex=False)
 
-        self.indexes['numprefix'].add(X.copy(), cumulative=False, reindex=False)
+        self.indexes['numprefix'].add(X, cumulative=False, reindex=False)
 
       elif h in ['title', 'name', 'city']:
 
-        X = self.indexes['words'].add(X.copy(), reindex=False)
+        X = self.indexes['words'].add(X, reindex=False)
 
-        self.indexes['ngrams'].add(X.copy(), reindex=False)
+        self.indexes['ngrams'].add(X, reindex=False)
 
-    self.indexes['dates'].reindex()
-    self.indexes['years'].reindex()
-    self.indexes['numbers'].reindex()
-    self.indexes['numprefix'].reindex()
-    self.indexes['words'].reindex()
-    self.indexes['ngrams'].reindex()
+    for k in ['dates', 'years', 'numbers', 'numprefix', 'words', 'ngrams']:
+      self.indexes[k].reindex()
 
-  def multisearch(self, idxqueries:list[tuple]):
-    Q = idxqueries
-    Y0 = []
-    for i, q in Q:
-      y = self.search(q)
-      y['entry'] = i
-      y = y.reset_index()\
-      .rename(columns={ 'index': 'doc' })\
-      .set_index(['entry', 'doc'])
-      Y0.append(y)
-    Y = concat(Y0)
-    u = Y.select_dtypes(include='number').columns
-    Y[u] = Y[u].fillna(0)
-    Y.columns = Y.columns.set_names(['repo', 'frame', 'col', 'assignement'])
-    return Y
+    return self
 
-  def search(self, query:str):
+  def search(self, queries:list[tuple], limit:int):
 
-    q = query
-    q = re.sub(Searcher.URLalike, '', q)
+    Q = [(i, Query.Parse(q)) for i, q in queries]
 
-    W = [w for w in re.sub(r"[\W\d\s]+", " ", q).strip().upper().split(' ') if len(w) >= 3]
+    W = DataFrame([y for i, q in Q if q.words for y in q.wordmelt(i)]).set_index('entry')['value']
+    N = DataFrame([y for i, q in Q if q.codes for y in q.nummelt(i)]).set_index('entry')['value']
+    D = DataFrame([y for i, q in Q if q.dates for y in q.datemelt(i)]).set_index('entry')['value']
+    U = DataFrame([y for i, q in Q if q.years for y in q.yearmelt(i)]).set_index('entry')['value']
 
-    X = [(x) for x, _, _, m in self.codemarker.union(q) if m == True]
-    P = [m.groupdict() for v in X for m in re.finditer(Searcher.patentalike, v)]
-    P = [re.sub(r'\D', '', d['number']) for d in P]
-    D0 = [(y, m, d) for x in X for _, _, x, d, m, y in datenum(x)] + \
-         [(y, m, d) for x in X for _, _, x, d, m, y in month(x)]
-    D = [date(y, m, d) for y, m, d in D0 if y is not None and
-                                            m is not None and
-                                            d is not None]
+    X = [(D, 'dates', 'sum'),
+         (U, 'years', 'sum'),
+         (N, 'numbers', 'max'),
+         (N, 'numprefix', 'max'),
+         (W, 'words', 'sum'),
+         (W, 'ngrams', 'sum')]
 
-    M = [
-          self.indexes['dates'].match(D),
-          self.indexes['years'].match(list(set([d.year for d in D]))),
-          self.indexes['numbers'].match(P, aggregation='max'),
-          self.indexes['numprefix'].match(P, aggregation='max'),
-          self.indexes['words'].match(W),
-          self.indexes['ngrams'].match(W),
-                                          ]
+    M = [self.indexes[k].match(q, aggregation=A)
+         for q, k, A in X if not q.empty]
+
     M = [U for U in M if not U.empty]
     for U in M: U.name = 'score'
+
     M = [U.reset_index() for U in M]
-    if not M: return DataFrame()
+    if not M: return cudf.DataFrame()
 
-    Y0 = concat(M).pipe(Searcher.basescore)
-    L = Y0.pipe(Searcher.levelscore)
-    Y = Y0.query('doc in @L.index')
+    S = cudf.concat(M).pipe(Searcher.basescore)
+    S.columns = S.columns.set_names(['repo', 'frame', 'col', 'assignement'])
+    L = S.pipe(Searcher.levelscore, limit=limit)
+    L.columns = MultiIndex.from_tuples([('', '', '', 'score'),
+                                        ('', '', '', 'level')])
 
-    L.columns = MultiIndex.from_tuples([('', '', '', 'score'), ('', '', '', 'level')])
+    Y = S[S.index.isin(L.index)].join(L)
+    Y.columns = Y.columns.set_names(['repo', 'frame', 'col', 'assignement'])
 
-    return Y.join(L)
+    u = Y.select_dtypes(include='number').columns
+    Y[u] = Y[u].fillna(0)
+
+    return Y.round(3).to_pandas()

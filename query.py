@@ -1,19 +1,17 @@
-import pandas, pickle, traceback, sys, random
+import pandas, pickle, sys, random, os
 from lib.log import log, notify, progress
 from lib.repo import Storage, Searcher
-
-r, U = False, 1.0
-for A in sys.argv[1:]:
-  A = A.lower().strip()
-
-  if A == 'reindex': r = True
-  if A.startswith('frac='):
-    try: U = float(A[5:])
-    except: pass
-
 try:
 
-  log('✨', U, r)
+  r, b = False, 128
+  for A in sys.argv[1:]:
+    A = A.lower().strip()
+    if A == 'reindex': r = True
+    if A.startswith('batch='):
+      try: b = int(A[6:])
+      except: pass
+
+  log(f'✨ id={os.getpid()} batch={b} reindex={r}')
   notify('🔴')
 
   S = Searcher()
@@ -28,39 +26,48 @@ try:
     M = [(k0, pandas.concat([X for k, X in M if k == k0 if not X.empty]))
          for k0 in progress(['date', 'number', 'name', 'city', 'title'], desc='🧱')]
     log('📏', { k0: X.shape[0] for k0, X in M })
-    M = [(k, X.iloc[(i*250_000):((i+1)*250_000)])
-         for k, X in progress(M, desc='🔨')
-         for i in range(X.shape[0] // 250_000 + 1)]
 
     random.shuffle(M)
 
     S.add(progress(M, desc='📑'))
-    with open('searcher.pkl', 'wb') as f:
+    with open(f'searcher.cu.pkl', 'wb') as f:
       pickle.dump(S.dump(), f)
       log('💾')
 
   else:
-    with open('searcher.pkl', 'rb') as f:
+    with open(f'searcher.cu.pkl', 'rb') as f:
       S.load(pickle.load(f))
       log('📂')
 
   notify('🟡')
 
-  Q = pandas.read_csv('raport.uprp.gov.pl.csv').reset_index()\
+  Q0 = pandas.read_csv('raport.uprp.gov.pl.csv').reset_index()\
   .rename(columns={'docs':'query', 'index':'entry'})[['entry', 'query']]\
-  .drop_duplicates(subset=['query'], keep='first')
-  if U != 1.0: Q = Q.sample(frac=U, random_state=0)
-  log('🗳', U)
+  .drop_duplicates(subset=['query'], keep='first')\
+  .set_index('entry')['query']
+  Q = [(i, q) for i, q in Q0.items()]
+
+  log('🗳')
 
   notify('🟢')
-  Y = S.multisearch(progress(Q.itertuples(index=False), desc='🔎', total=Q.shape[0]))
-  with open(f'matches{U if U != 1.0 else ""}.pkl', 'wb') as f:
-    pickle.dump(Y, f)
+  n = len(Q)//b
+  B = enumerate(range(0, len(Q), b))
+  Y = []
+
+  for i0, i in progress(B, desc='🔍', total=n+1):
+
+    Y += [S.search(Q[i:i+b], limit=5)]
+
+    k = f'matches?b={b if b != 1.0 else ""}&k={i0+1}&n={n}.pkl'
+    k0 = f'matches?b={b if b != 1.0 else ""}&k={i0}&n={n}.pkl'
+    with open(k, 'wb') as f: pickle.dump(Y, f)
+    if os.path.exists(k0): os.remove(k0)
+    log('💾')
 
   log('✅')
   notify('🏁')
 
 except Exception as e:
   log('❌', e)
-  log(traceback.format_exc())
   notify("❌")
+  raise e.with_traceback(e.__traceback__)
