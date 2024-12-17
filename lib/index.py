@@ -1,6 +1,6 @@
-from cudf import concat, DataFrame
+import pandas, cudf
 import os, time, multiprocessing
-import pandas
+from copy import copy as shallow#HACK01
 
 class Multiprocessor:
 
@@ -13,14 +13,13 @@ class Multiprocessor:
 
   ```py
   class Y(Multiprocessor):
-    def _batched(self, frag:DataFrame) -> DataFrame:
+    def _prep(self, frag:DataFrame) -> DataFrame:
       return f(frag)
   ```
   """
 
-  def __init__(self, name:str, timing=5, tsample=10000, CPUlimit=128, forcecalc=True):
+  def __init__(self, timing=5, tsample=10000, CPUlimit=100, forcecalc=True):
 
-    self.value = name
     self.timing = timing
     self.tsample = tsample
     self.CPUlimit = CPUlimit if CPUlimit is not None else os.cpu_count()
@@ -28,7 +27,7 @@ class Multiprocessor:
     self.forcecalc = forcecalc
     self.tmean = None
 
-  def _calctmean(self, frame:DataFrame):
+  def _calctmean(self, frame:pandas.DataFrame):
 
     "Oblicza `N`-procesorów do osiągnięcia `timing` npdst. `tsample`-próbek"
 
@@ -38,60 +37,75 @@ class Multiprocessor:
     S = X.sample(n)
 
     t0 = time.time()
-    self._batched(S)
+    self._prep(S)
     t = time.time() - t0
 
     return t/n
 
-  def _batched(self, frame:DataFrame): return frame
-  def _batch(self, frame:DataFrame, batches:int) -> DataFrame:
+  def prep(self, frame:pandas.DataFrame, batches:int|None=1) -> cudf.DataFrame:
+
+    N = batches
+    if N is None:
+
+      if (self.tmean is None) or self.forcecalc:
+        self.tmean = self._calctmean(frame)
+
+      X = frame
+      n = X.shape[0]
+      t = self.timing
+      m = self.tmean
+      N0 = self.CPUlimit
+      N = min(int(n*m/t), N0)
+
+    if N < 2:
+      return cudf.DataFrame.from_pandas(self._prep(frame))
+
+    return cudf.concat([cudf.DataFrame.from_pandas(X)
+                        for X in self._bprep(X, N) if not X.empty])
+
+  def _bprep(self, frame:pandas.DataFrame, batches:int) -> list[pandas.DataFrame]:
 
     X0 = frame
     N = batches
     n0 = X0.shape[0]
     n = n0 // N + (n0 % N > 0)
     B = [X0.iloc[i*n:(i+1)*n] for i in range(N)]
+
     Y = []
+    L = [(X,) for X in B]
+    Z = shallow(self)
+    Z.indexed = None#HACK01
+    f = Z._prep
+
     with multiprocessing.Pool(processes=N) as U:
-      Y = list(U.starmap(self._batched, [(X,) for X in B]))
+      Y = [y for y in U.starmap(f, L)]
 
-    return concat(Y)
+    return Y
 
-  def batch(self, frame:DataFrame):
-
-    if (self.tmean is None) or self.forcecalc:
-      self.tmean = self._calctmean(frame)
-
-    X = frame
-    n = X.shape[0]
-    t = self.timing
-    m = self.tmean
-    N0 = self.CPUlimit
-    N = min(int(n*m/t), N0)
-
-    if N < 2: return self._batched(X)
-    return self._batch(X, N)
+  def _prep(self, frame:pandas.DataFrame) -> pandas.DataFrame:
+    return frame
 
 
 
-class Base:
+class Base(Multiprocessor):
 
   "`Base('searched-values').add(X)`"
 
   def __init__(self, factor:float=1.0, value:str='value', score:str='score', *args, **kwargs):
 
+    super().__init__(*args, **kwargs)
 
     self.factor = factor
 
     self.value = value
     self.score = score
-    self.indexed = DataFrame()
+    self.indexed = cudf.DataFrame()
 
   @staticmethod
   def idxinv(X:pandas.Series):
     v = X.name
     Y = X.reset_index().set_index(v)
-    return DataFrame.from_pandas(Y)
+    return cudf.DataFrame.from_pandas(Y)
 
   def match(self, keys:pandas.Series, minscore:float=0.5, aggregation:str='sum'):
 
@@ -99,7 +113,7 @@ class Base:
     X = self.idxinv(keys)
     M = self.indexed.join(X)
 
-    if M.empty: return DataFrame()
+    if M.empty: return cudf.DataFrame()
 
     h = self.score
     K = [k for k in M.columns if k != h]
@@ -126,14 +140,10 @@ class Base:
     raise NotImplementedError('wymaga dodatkowej identyfikacji w `Base.indexed`')
     raise NotImplementedError('wymaga funkcji do wstępnego przetwarzania zapytań w `Base`')
 
-  def _prep(self, frame:DataFrame):
-    return DataFrame.from_pandas(frame)
-
   def add(self, frame:pandas.DataFrame, reindex=True, cumulative=True):
 
     if frame.empty: return frame
-    L = self.indexed
-    X = self._prep(frame)
+    X = self.prep(frame, batches=None)
 
     if self.score in X.columns:
 
@@ -149,9 +159,9 @@ class Base:
       X = X.drop_duplicates()
       X[self.score] = self.factor
 
+    L = self.indexed
     if L.index.name is not None: L = L.reset_index()
-    L = X if L.empty else concat([L, X])
-    self.indexed = L
+    self.indexed = X if L.empty else cudf.concat([L, X])
 
     if reindex:
       self.reindex()
@@ -163,9 +173,9 @@ class Base:
     self.indexed = self.indexed.set_index(self.value).sort_index()
 
   def dump(self):
-    return self.value, self.indexed
+    return self.indexed
 
-  def load(self, name:str, indexed:DataFrame):
+  def load(self, name:str, indexed:cudf.DataFrame):
     self.value = name
     self.indexed = indexed
 
@@ -179,7 +189,7 @@ class Digital(Base):
     X[self.value] = X[self.value].astype('str')\
     .str.replace(r"\D", "", regex=True)
 
-    return DataFrame.from_pandas(X)
+    return X
 
 
 
@@ -195,14 +205,17 @@ class Slices(Base):
     X = frame
     k = self.value
 
-    def wordrepl(x):
-      return [{ **x, k: y } for y in x[k].split(self.sep)]
+    S = X.dropna(subset=[k])\
+    .apply(self.wordrepl, axis=1).explode().dropna()
+    Y = pandas.DataFrame.from_records(S.tolist())
 
-    Y = X.dropna(subset=[k])\
-    .apply(wordrepl, axis=1).explode().dropna()\
-    .pipe(lambda S: pandas.DataFrame.from_records(S.tolist()))
+    return Y
 
-    return DataFrame.from_pandas(Y)
+  def wordrepl(self, x):
+
+    k = self.value
+
+    return [{ **x, k: y } for y in x[k].split(self.sep)]
 
 
 
@@ -228,7 +241,7 @@ class Words(Slices):
     Y = super()._prep(X)
     Y = Y.loc[Y[k].str.len() >= m]
 
-    return DataFrame.from_pandas(Y)
+    return Y
 
 
 
@@ -263,11 +276,11 @@ class Ngrams(Base):
     A = aggregation
     v = self.value
     w = self.weight
-    X = self._prep(keys.reset_index()).drop(columns=[w])\
+    X = self.prep(keys.reset_index()).drop(columns=[w])\
     .drop_duplicates().set_index(v)
     M = self.indexed.join(X)
 
-    if M.empty: return DataFrame()
+    if M.empty: return cudf.DataFrame()
 
     H0 = [self.weight, self.score]
     K0 = [k for k in M.columns if k not in H0]
@@ -277,7 +290,7 @@ class Ngrams(Base):
     m0 = minshare
     Y0 = Y0.query(f"{h0} >= {m0}")
 
-    if Y0.empty: return DataFrame()
+    if Y0.empty: return cudf.DataFrame()
 
     Y1 = Y0.reset_index()
     h = self.score
@@ -294,17 +307,20 @@ class Ngrams(Base):
 
     X = frame
     k = self.value
+
+    S = X.dropna(subset=[k])\
+    .apply(self.gramrepl, axis=1).explode().dropna()
+    Y = pandas.DataFrame.from_records(S.tolist())
+
+    return Y
+
+  def gramrepl(self, x):
+
+    k = self.value
     h = self.weight
     n = self.n
 
-    def gramrepl(x):
-      return [{ **x, k: y, h: 1/(len(x[k])-n+1) } for y in self._string(x[k])]
-
-    Y = X.dropna(subset=[k])\
-    .apply(gramrepl, axis=1).explode().dropna()\
-    .pipe(lambda S: pandas.DataFrame.from_records(S.tolist()))
-
-    return DataFrame.from_pandas(Y)
+    return [{ **x, k: y, h: 1/(len(x[k])-n+1) } for y in self._string(x[k])]
 
   def _string(self, x:str):
 
@@ -315,3 +331,11 @@ class Ngrams(Base):
 
     return [(p*i)*r + x[i:i+n] + (s*max(0,(len(x)-n-i)))*r
       for i in range(len(x)-n+1) ]
+
+#HACK01: przechowywanie ustawień funkcji i danych może i jest wygodne
+# ale gdy używa się wielu procesów to one kopiuję dane, co jest
+# szczególnie problematyczne gdy używa się CUDA, bo karta graficzna się buntuje.
+# Rozwiązanie kopiuje cały obiekt (płytko) i usuwa z siebie referencje do
+# danych, więc nie ma problemu z ich kopiowaniem.
+# Właściwe rozwiązanie wymaga przepisania funkcji `_prep`, żeby nie używały `self`,
+# wtedy będą mogły być swobodnie przekazywane do wielu procesów.
