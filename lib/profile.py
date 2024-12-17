@@ -3,13 +3,6 @@ from pandas import DataFrame
 from uuid import uuid1 as unique
 from .log import progress
 
-def xmlbundleload(f0):
-  with open(f0) as f: F = f.read()
-  F = F.replace("&", "?").split('<?xml version="1.0" encoding="UTF-8"?>')
-  F = [d for d0 in F for d in d0.split('<?xml version="1.0"?>')]
-  F = ['<?xml version="1.0" encoding="UTF-8"?>\n'+d.strip() for d in F if d.strip()]
-  return F
-
 class Profiler:
 
   """
@@ -21,16 +14,23 @@ class Profiler:
   #TODO: ustalanie separatora ścieżki innego niż "/"
   #TODO: zbieranie wyników do dict Y, żeby wywalić pandas
 
-  def __init__(self, raw:dict|None=None, exclude=None):
+  def __init__(self, raw:dict|None=None, exclude=None, only=None):
     self.Q = raw if raw is not None else {}
     self.E = exclude if exclude is not None else []
+    self.O = only if only is not None else []
     self.Y = []
+
+  def isexcluded(self, path:str):
+    if self.O and not any(k in path or path in k for k in self.O):
+      return True
+    if any(k in path for k in self.E): return True
+    return False
 
   def update(self, d:dict|list, path0:str='/'):
     rep = set()
     for k, V in d.items():
       path = path0+k+'/'
-      if any(k in path for k in self.E): continue
+      if self.isexcluded(path): continue
       for v in V if isinstance(V, list) else [V]:
         if path not in self.Q.keys():
           self.Q[path] = dict()
@@ -51,7 +51,7 @@ class Profiler:
       self.Y.append(y)
     for k, V in d.items():
       path = path0+k+'/'
-      if any(k in path for k in self.E): continue
+      if self.isexcluded(path): continue
       for i, v in enumerate(V if isinstance(V, list) else [V]):
         if isinstance(v, dict): self.apply(v, path, y, U)
         else: y[path] = v
@@ -85,16 +85,6 @@ class Profiler:
     for i, f0 in progress(enumerate(F), desc=dir, total=len(F)):
       with open(f0) as f: d = f.read()
       self.apply(xmltodict.parse(d), dir)
-    return self
-  
-  def XMLb(self, dir:str):
-    F = [os.path.join(dir, f) for f in os.listdir(dir) if f.lower().endswith('.xml')]
-    for f0 in progress(F, desc=dir):
-      B = xmlbundleload(f0)
-      for b in B: self.update(xmltodict.parse(b), dir)
-    for i, f0 in progress(enumerate(F), desc=dir, total=len(F)):
-      B = xmlbundleload(f0)
-      for b in B: self.apply(xmltodict.parse(b), dir)
     return self
 
   def dataframes(self):

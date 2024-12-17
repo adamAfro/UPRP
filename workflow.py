@@ -9,20 +9,20 @@ class Profiling(Step):
 
   def __init__(self, dir:str, kind:str,
                assignpath:str, aliaspath:str, 
-               excluded:list[str]=[], *args, **kwargs):
+               profargs:dict=[], *args, **kwargs):
 
     assert kind.upper() in ['JSON', 'JSONL', 'XML']
 
     super().__init__(*args, **kwargs)
     self.dir: str = dir
     self.kind: str = kind.upper()
-    self.excluded: list[str] = excluded
+    self.profargs: list[str] = profargs
     self.assignpath: str = assignpath
     self.aliaspath: str = aliaspath
 
   def run(self):
 
-    P = Profiler()
+    P = Profiler( **self.profargs )
 
     if self.kind == 'XML':
       H = P.XML(self.dir).dataframes()
@@ -201,7 +201,7 @@ try:
 
   Open = 'api.openalex.org'
   pOpen = Profiling(f'{Open}/raw/', kind='JSON',
-                    excluded=["abstract_inverted_index", "updated_date", "created_date"],
+                    profargs=dict(excluded=["abstract_inverted_index", "updated_date", "created_date"]),
                     assignpath=f'{Open}/assignement.null.yaml', 
                     aliaspath=f'{Open}/alias.yaml',
                     outpath=f'{Open}/data.pkl')
