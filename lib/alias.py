@@ -56,7 +56,7 @@ class Pathalias:
     """
     A = self.short
     r = dict()    #odwrotne map. aliasów
-    for k0, k in A.items() + [('id', 'id'), ('doc', 'doc')]:
+    for k0, k in [k for k in A.items()] + [('id', 'id'), ('doc', 'doc')]:
       r[k] = r[k] + [k0] if k in r.keys() else [k0]
 
     u = dict()    #unikalne aliasy
@@ -97,6 +97,7 @@ class Pathalias:
     G0 = G.subgraph(N)
     l = [n for n in N if G0.in_degree(n) == 0][0]
     r = [n for n in N if G0.out_degree(n) == 0][0]
+    if l == r: return [l]
     y = list(networkx.all_simple_paths(G0, source=l, target=r))[0]
 
     return y

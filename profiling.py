@@ -28,8 +28,7 @@ def finalize(frames, dirname=""):
   with open(f"{dirname}/alias.inv.yaml", 'w') as f:
     yaml.dump(qH, f, indent=2)
 
-  H = { qH['frames'][h0]: X.set_index("id").rename(columns=qH['columns'][h0]) 
-        for h0, X in H.items() }
+  H = { qH['frames'][h0]: X.set_index(["id", "doc"]).rename(columns=qH['columns'][h0]) for h0, X in H.items() }
   with open(f"{dirname}/data.pkl", 'wb') as f:
     pickle.dump(H, f)
 
