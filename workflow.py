@@ -1,7 +1,57 @@
-import sys, pandas, matplotlib.pyplot as pyplot
+import sys, pandas, matplotlib.pyplot as pyplot, yaml, re
 from lib.log import notify, log, progress
 from lib.repo import Storage, Searcher
 from lib.step import Ghost, Step
+from lib.profile import Profiler
+from lib.alias import simplify
+
+class Profiling(Step):
+
+  def __init__(self, dir:str, kind:str,
+               assignpath:str, aliaspath:str, 
+               excluded:list[str]=[], *args, **kwargs):
+
+    assert kind.upper() in ['JSON', 'JSONL', 'XML']
+
+    super().__init__(*args, **kwargs)
+    self.dir: str = dir
+    self.kind: str = kind.upper()
+    self.excluded: list[str] = excluded
+    self.assignpath: str = assignpath
+    self.aliaspath: str = aliaspath
+
+  def run(self):
+
+    P = Profiler()
+
+    if self.kind == 'XML':
+      H = P.XML(self.dir).dataframes()
+    elif self.kind == 'JSON':
+      H = P.JSON(self.dir).dataframes()
+    elif self.kind == 'JSONL':
+      H = P.JSONl(self.dir).dataframes(listname="data")
+
+    L = simplify(H, norm=Profiling.pathnorm)
+    H = { L['frames'][h0]: X.set_index(["id", "doc"])\
+         .rename(columns=L['columns'][h0]) for h0, X in H.items() }
+
+    L['columns'] = { L['frames'][h]: { v: k for k, v in Q.items() }  
+                     for h, Q in L['columns'].items() }
+    L['frames'] = { v: k for k, v in L['frames'].items() }
+    with open(self.aliaspath, 'w') as f:
+      yaml.dump(L, f, indent=2)
+
+    A = { h: { k: None for k in V.keys() } for h, V in L['columns'].items() }
+    with open(self.assignpath, 'w') as f:
+      yaml.dump(A, f, indent=2)
+
+    return H
+
+  @staticmethod
+  def pathnorm(x:str):
+    x = re.sub(r'[^\w\.\-/\_]|\d', '', x)
+    x = re.sub(r'\W+', '_', x)
+    return x
 
 class Indexing(Step):
 
@@ -127,15 +177,34 @@ try:
   Q = pandas.read_csv('raport.uprp.gov.pl.csv').set_index('entry')['query']
   Q.index = Q.index.astype('str')
 
+  UPRP = 'api.uprp.gov.pl'
+  pUPRP = Profiling(f'{UPRP}/raw/', kind='XML',
+                    assignpath=f'{UPRP}/assignement.null.yaml', 
+                    aliaspath=f'{UPRP}/alias.yaml',
+                    outpath=f'{UPRP}/data-test.pkl')
+
   iUPRP = Indexing('api.uprp.gov.pl', outpath='api.uprp.gov.pl/searcher.pkl')
   qUPRP = Searching(Q, iUPRP, outpath='api.uprp.gov.pl/matches.pkl')
   dUPRP = Patmatchdrop(Q, qUPRP, outpath='api.uprp.gov.pl/alien.csv')
   oUPRP = Insight(qUPRP, figpath='api.uprp.gov.pl/insight.png')
 
+  Lens = 'api.lens.org'
+  pLens = Profiling(f'{Lens}/raw/', kind='JSONL',
+                    assignpath=f'{Lens}/assignement.null.yaml', 
+                    aliaspath=f'{Lens}/alias.yaml',
+                    outpath=f'{Lens}/data.pkl')
+
   iLens = Indexing('api.lens.org', outpath='api.lens.org/searcher.pkl')
   qLens = Searching(dUPRP, iLens, outpath='api.lens.org/matches.pkl')
   dLens = Patmatchdrop(dUPRP, qLens, outpath='api.lens.org/alien.csv')
   oLens = Insight(qLens, figpath='api.lens.org/insight.png')
+
+  Open = 'api.openalex.org'
+  pOpen = Profiling(f'{Open}/raw/', kind='JSON',
+                    excluded=["abstract_inverted_index", "updated_date", "created_date"],
+                    assignpath=f'{Open}/assignement.null.yaml', 
+                    aliaspath=f'{Open}/alias.yaml',
+                    outpath=f'{Open}/data.pkl')
 
   iOpen = Indexing('api.openalex.org', outpath='api.openalex.org/searcher.pkl')
   qOpen = Searching(dLens, iOpen, outpath='api.openalex.org/matches.pkl')
@@ -143,6 +212,9 @@ try:
   oOpen = Insight(qOpen, figpath='api.openalex.org/insight.png')
 
   steps = {
+    'pUPRP': pUPRP,
+    'pLens': pLens,
+    'pOpen': pOpen,
     'iUPRP': iUPRP,
     'iLens': iLens,
     'iOpen': iOpen,
