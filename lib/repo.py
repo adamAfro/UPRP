@@ -250,6 +250,10 @@ class Searcher:
       columns=['repo', 'frame', 'col', 'assignement'],
       values='score', aggfunc='sum')
 
+    if s.all():
+      S[('', '', '', 'number')] = 0
+      return S
+
     U = X.loc[~s ].pivot_table(index=['doc', 'entry'],
       columns=['repo', 'frame', 'col', 'assignement'],
       values='score', aggfunc='max')
