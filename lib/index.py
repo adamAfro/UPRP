@@ -109,6 +109,8 @@ class Base(Multiprocessor):
 
   def match(self, keys:pandas.Series, minscore:float=0.5, aggregation:str='sum'):
 
+    if self.indexed.empty: return cudf.DataFrame()
+
     A = aggregation
     X = self.idxinv(keys)
     M = self.indexed.join(X)
@@ -272,6 +274,8 @@ class Ngrams(Base):
     self.owner = owner
 
   def match(self, keys:pandas.Series, minscore:float=0.5, aggregation:str='sum', minshare:float=0.5):
+
+    if self.indexed.empty: return cudf.DataFrame()
 
     A = aggregation
     v = self.value
