@@ -3,8 +3,10 @@ from tqdm.asyncio import tqdm as tqdm_async
 
 LOGGED = False
 IPYNB = hasattr(sys, 'ps1') or 'ipykernel' in sys.modules
+DEBUGGER = any('pydevd' in mod for mod in sys.modules)
+INTERACTIVE = IPYNB or DEBUGGER
 
-NOTIFY = False if IPYNB else True
+NOTIFY = False if INTERACTIVE else True
 def ntoogle(state:bool|None=None):
   global NOTIFY
   if state is not None: NOTIFY = state
@@ -35,7 +37,7 @@ def log( *anything ):
     t = '{:02}:{:02}'.format(int(t // 60), int(t % 60))
     print(f"{t}", *anything, flush=True)
 
-TQDMINTERVAL = dict() if IPYNB else dict(mininterval=60, maxinterval=3600)
+TQDMINTERVAL = dict() if INTERACTIVE else dict(mininterval=60, maxinterval=3600)
 TQDMBAR = "{elapsed:>4} {desc} {n_fmt} {bar} {percentage:3.0f}%  {total_fmt} {remaining} {postfix}"
 def progress(*args, asyncio=False, **kwargs):
   if asyncio:
