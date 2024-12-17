@@ -7,6 +7,10 @@ api.uprp.gov.pl/*
 api.openalex.org/*
 !api.openalex.org/*.py
 
+developer.uspto.gov/**/*.*
+!developer.uspto.gov/*.py
+!developer.uspto.gov/**/*.py
+
 __pycache__
 
 log
@@ -15,5 +19,6 @@ log
 
 *.csv
 *.pkl
+*.xml
 
 .vscode

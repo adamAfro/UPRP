@@ -211,10 +211,26 @@ try:
   dOpen = Patmatchdrop(dLens, qOpen, outpath='api.openalex.org/alien.csv')
   oOpen = Insight(qOpen, figpath='api.openalex.org/insight.png')
 
+  USPG = 'developer.uspto.gov/grant'
+  pUSPG = Profiling(f'{USPG}/raw/', kind='XML',
+                    profargs=dict(only=['developer.uspto.gov/grant/raw/us-patent-grant/us-bibliographic-data-grant/']),
+                    assignpath=f'{USPG}/assignement.null.yaml', 
+                    aliaspath=f'{USPG}/alias.yaml',
+                    outpath=f'{USPG}/data.pkl')
+
+  USPA = 'developer.uspto.gov/application'
+  pUSPA = Profiling(f'{USPA}/raw/', kind='XML',
+                    profargs=dict(only=['developer.uspto.gov/application/raw/us-patent-application/us-bibliographic-data-application/']),
+                    assignpath=f'{USPA}/assignement.null.yaml', 
+                    aliaspath=f'{USPA}/alias.yaml',
+                    outpath=f'{USPA}/data.pkl')
+
   steps = {
     'pUPRP': pUPRP,
     'pLens': pLens,
     'pOpen': pOpen,
+    'pUSPG': pUSPG,
+    'pUSPA': pUSPA,
     'iUPRP': iUPRP,
     'iLens': iLens,
     'iOpen': iOpen,
