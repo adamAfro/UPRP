@@ -298,10 +298,14 @@ class Searcher:
 
     Q = [(i, Query.Parse(q)) for i, q in queries]
 
-    W = DataFrame([y for i, q in Q if q.words for y in q.wordmelt(i)]).set_index('entry')['value']
-    N = DataFrame([y for i, q in Q if q.codes for y in q.nummelt(i)]).set_index('entry')['value']
-    D = DataFrame([y for i, q in Q if q.dates for y in q.datemelt(i)]).set_index('entry')['value']
-    U = DataFrame([y for i, q in Q if q.years for y in q.yearmelt(i)]).set_index('entry')['value']
+    try: W = DataFrame([y for i, q in Q if q.words for y in q.wordmelt(i)]).set_index('entry')['value']
+    except: W = DataFrame()
+    try: N = DataFrame([y for i, q in Q if q.codes for y in q.nummelt(i)]).set_index('entry')['value']
+    except: N = DataFrame()
+    try: D = DataFrame([y for i, q in Q if q.dates for y in q.datemelt(i)]).set_index('entry')['value']
+    except: D = DataFrame()
+    try: U = DataFrame([y for i, q in Q if q.years for y in q.yearmelt(i)]).set_index('entry')['value']
+    except: U = DataFrame()
 
     X = [(D, 'dates', 'sum'),
          (U, 'years', 'sum'),

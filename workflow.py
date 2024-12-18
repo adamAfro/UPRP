@@ -1,4 +1,4 @@
-import sys, pandas, matplotlib.pyplot as pyplot, yaml, re
+import sys, pandas, matplotlib.pyplot as pyplot, yaml, re, os
 from lib.log import notify, log, progress
 from lib.repo import Storage, Searcher
 from lib.step import Ghost, Step
@@ -185,7 +185,7 @@ try:
 
   iUPRP = Indexing('api.uprp.gov.pl', outpath='api.uprp.gov.pl/searcher.pkl')
   qUPRP = Searching(Q, iUPRP, outpath='api.uprp.gov.pl/matches.pkl')
-  dUPRP = Patmatchdrop(Q, qUPRP, outpath='api.uprp.gov.pl/alien.csv')
+  dUPRP = Patmatchdrop(Q, qUPRP, outpath='api.uprp.gov.pl/alien.s.csv')
   oUPRP = Insight(qUPRP, figpath='api.uprp.gov.pl/insight.png')
 
   Lens = 'api.lens.org'
@@ -196,7 +196,7 @@ try:
 
   iLens = Indexing('api.lens.org', outpath='api.lens.org/searcher.pkl')
   qLens = Searching(dUPRP, iLens, outpath='api.lens.org/matches.pkl')
-  dLens = Patmatchdrop(dUPRP, qLens, outpath='api.lens.org/alien.csv')
+  dLens = Patmatchdrop(dUPRP, qLens, outpath='api.lens.org/alien.s.csv')
   oLens = Insight(qLens, figpath='api.lens.org/insight.png')
 
   Open = 'api.openalex.org'
@@ -208,7 +208,7 @@ try:
 
   iOpen = Indexing('api.openalex.org', outpath='api.openalex.org/searcher.pkl')
   qOpen = Searching(dLens, iOpen, outpath='api.openalex.org/matches.pkl')
-  dOpen = Patmatchdrop(dLens, qOpen, outpath='api.openalex.org/alien.csv')
+  dOpen = Patmatchdrop(dLens, qOpen, outpath='api.openalex.org/alien.s.csv')
   oOpen = Insight(qOpen, figpath='api.openalex.org/insight.png')
 
   USPG = 'developer.uspto.gov/grant'

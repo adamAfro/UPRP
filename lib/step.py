@@ -85,6 +85,8 @@ class Step(Lazy):
       elif self._ext == 'csv':
         import pandas
         Y = pandas.read_csv(p)
+        if self.outpath.split('.')[-1] == 's':
+          Y = Y.set_index(Y.columns[0])[Y.columns[1]]
 
       self._loaded = Y
 
