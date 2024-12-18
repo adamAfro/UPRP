@@ -175,6 +175,7 @@ class Insight(Ghost):
 try:
 
   Q = pandas.read_csv('raport.uprp.gov.pl.csv').set_index('entry')['query']
+  Q = Q.drop_duplicates()
   Q.index = Q.index.astype('str')
 
   UPRP = 'api.uprp.gov.pl'
