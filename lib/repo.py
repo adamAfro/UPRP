@@ -110,22 +110,24 @@ class Query:
     "series": r"(?:" + r'|'.join([rf"(?:\d+\s*{s}+\s*)+" for s in [r'\.', r'\-', r'/', r'\\', r'\s']]) + r")\s*\d+",
     "num":    r"(?<!\w)\d+(?!\w)", "space":  r"[\s\-\/\\\.]+",
     "braced": '|'.join([rf"\{a}\w{{1,4}}\{b}" for a,b in ['()','{}','[]', '""', '<>']]),
-    "abbr":   r"(?<!\w)[^\W\d]{1,4}\.?(?!\w)",
+    "abbr":   r"(?<!\w)[^\W\d]{1,4}[\.,]?(?!\w)",
   }
 
-  patentalike = r'(?P<country>(?<![^\W])[a-zA-Z]{2}(?![^\W\d]))' + \
-                r'(?P<prefix>(?:[^\W\d]|[\.\s]){,5})?' + \
+  patentalike = r'(?P<country>(?<![^\W])[a-zA-Z]{2})' + \
+                r'(?P<prefix>(?:[\W\s]{0,5}[a-zA-Z]{0,2}[\W\s]{0,5}))?' + \
                 r'(?P<number>(?:\d\W?\s?){5,})(?!\d)' + \
                 r'(?P<suffix>[\W\s]{,3}[^\w\s]*[0123abuABUXY][^\w\s\)\}\]]*[0123a-zA-Z]?[^\w\s]*)?'
 
   codemarker = Marker(marktarget, codealike)
 
-  def __init__(self, words:list[str], codes:list[str], dates:list[int], years:list[int]):
+  def __init__(self, words:list[str], codes:list[str], dates:list[int], years:list[int], fullcodes:list):
 
     self.words = words
     self.codes = codes
     self.dates = dates
     self.years = years
+
+    self.fullcodes = fullcodes
 
   def Parse(query:str):
 
@@ -134,14 +136,14 @@ class Query:
     W = [w for w in re.sub(r"[\W\d\s]+", " ", q).strip().upper().split(' ') if len(w) >= 3]
 
     X = [(x) for x, _, _, m in Query.codemarker.union(q) if m == True]
-    P = [m.groupdict() for v in X for m in re.finditer(Query.patentalike, v)]
-    P = [re.sub(r'\D', '', d['number']) for d in P]
+    P0 = [m.groupdict() for v in X for m in re.finditer(Query.patentalike, v)]
+    P = [re.sub(r'\D', '', d['number']) for d in P0]
     D0 = [(y, m, d) for x in X for _, _, x, d, m, y in datenum(x)] + \
          [(y, m, d) for x in X for _, _, x, d, m, y in month(x)]
     D = [datetime(y, m, d).strftime('%Y-%m-%d')
          for y, m, d in D0 if y is not None and m is not None and d is not None]
 
-    return Query(W, P, D, [y for y in set([y for y,m,d in D0])])
+    return Query(W, P, D, [y for y in set([y for y,m,d in D0])], P0)
 
   def wordmelt(self, entry) -> list[dict]:
     return [{ 'entry': str(entry), 'value': v } for v in self.words]

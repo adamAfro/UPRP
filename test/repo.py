@@ -8,7 +8,7 @@ seed(42)
 DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.join(DIR, '..')
 sys.path.append(ROOT)
-from lib.repo import Storage, Searcher
+from lib.repo import Storage, Searcher, Query
 from lib.log import log, progress
 
 def randinsert(x:str, char:str, min:int, max:int):
@@ -116,6 +116,34 @@ def genqueries(loader:Storage):
 
   return G
 
+class TestUtil(unittest.TestCase):
+
+  def test_patregex(self):
+
+    Q = [
+      ("PL, 105 732 U1", "PL", ', ' , "105 732 ", "U1"),
+      ("PLP.358773", "PL", "P.", "358773", None),
+      ("PL, Ru 61 797", "PL", ", Ru ", "61 797", None),
+      ("PL W.109663 U1", "PL", " W.", "109663 ", "U1"),
+      ("PL197180B1", "PL", '', "197180", "B1"),
+      ("PL.P-347643", "PL", ".P-", "347643", None),
+      ("PLP-380605", "PL", "P-", "380605", None),
+      ("PL. nr 129733", "PL", ". nr ", "129733", None),
+      ("PLRu57768", "PL", "Ru", "57768", None),
+      ("PL W-107645", "PL", " W-", "107645", None),
+      ("PL - P 382053", "PL", " - P ", "382053", None),
+    ]
+
+    for q, J0, p0, P0, s0 in Q:
+      with self.subTest(query=q):
+        Y = Query.Parse(q).fullcodes
+        self.assertTrue(Y, 'no match')
+        y = Y[0]
+        self.assertEqual(y['country'], J0)
+        self.assertEqual(y['prefix'], p0)
+        self.assertEqual(y['number'], P0)
+        self.assertEqual(y['suffix'], s0)
+
 class TestSearch(unittest.TestCase):
 
   @classmethod
@@ -195,6 +223,12 @@ class AssertionOnlyTestRunner(unittest.TextTestRunner):
   def _makeResult(self):
     return AssertionOnlyTestResult(self.stream, self.descriptions, self.verbosity)
 
+
+Tu = unittest.TestSuite()
+Tu.addTest(TestUtil('test_patregex'))
+
+with cProfile.Profile() as pr:
+  AssertionOnlyTestRunner().run(Tu)
 
 T = unittest.TestSuite()
 T.addTest(TestSearch('test_search'))
