@@ -242,10 +242,19 @@ try:
     'oOpen': oOpen,
   }
 
+  log('🚀', os.getpid())
   for a in sys.argv[1:]:
+    log('📦', a)
     steps[a].output()
 
+  notify("✅")
+
 except Exception as e:
-  log('❌', e)
+
   notify("❌")
+
   raise e.with_traceback(e.__traceback__)
+
+finally:
+
+  log('🏁', os.getpid())
