@@ -233,17 +233,23 @@ class Searcher:
     X = count.copy()
 
     s = X['assignement'].isin(stacked)
+
     S = X.loc[ s ].pivot_table(index=['doc', 'entry'],
       columns=['repo', 'frame', 'col', 'assignement'],
-      values='score', aggfunc='sum')
-
-    if s.all():
-      S[('', '', '', 'number')] = 0
-      return S
+      values='score', aggfunc='sum') if s.any() else None
 
     U = X.loc[~s ].pivot_table(index=['doc', 'entry'],
       columns=['repo', 'frame', 'col', 'assignement'],
-      values='score', aggfunc='max')
+      values='score', aggfunc='max') if not s.all() else None
+
+    if S is None:
+      for c in stacked:
+        U[('', '', '', c)] = 0
+      return U
+
+    if U is None:
+      S[('', '', '', 'number')] = 0
+      return S
 
     Y = S.join(U).fillna(0.0)
 
@@ -253,6 +259,8 @@ class Searcher:
 
     for h, X in idxmelted:
 
+      X = X.dropna()
+
       if h == 'date':
 
         D = to_datetime(X['value'], errors='coerce')
@@ -261,6 +269,7 @@ class Searcher:
         self.indexes['dates'].add(X, reindex=False)
 
         X['value'] = D.dt.year
+        X = X.dropna()
         X['value'] = X['value'].astype('int')
         self.indexes['years'].add(X, reindex=False)
 
@@ -281,34 +290,74 @@ class Searcher:
 
     return self
 
-  def search(self, queries:list[tuple], limit:int):
+  def search(self, queries:list[tuple], limit:int, narrow:bool=False):
 
     Q = [(i, Query.Parse(q)) for i, q in queries]
+    M = []
 
-    try: W = DataFrame([y for i, q in Q if q.words for y in q.wordmelt(i)]).set_index('entry')['value']
-    except: W = DataFrame()
-    try: N = DataFrame([y for i, q in Q if q.codes for y in q.nummelt(i)]).set_index('entry')['value']
-    except: N = DataFrame()
-    try: D = DataFrame([y for i, q in Q if q.dates for y in q.datemelt(i)]).set_index('entry')['value']
-    except: D = DataFrame()
-    try: U = DataFrame([y for i, q in Q if q.years for y in q.yearmelt(i)]).set_index('entry')['value']
-    except: U = DataFrame()
+    a = not self.indexes['numbers'].indexed.empty
+    if a:
 
-    X = [(D, 'dates', 'sum'),
-         (U, 'years', 'sum'),
-         (N, 'numbers', 'max'),
-         (N, 'numprefix', 'max'),
-         (W, 'words', 'sum'),
-         (W, 'ngrams', 'sum')]
+      P = DataFrame([y for i, q in Q if q.dates for y in q.nummelt(i)])
+      if not P.empty:
 
-    M = [self.indexes[k].match(q, aggregation=A)
-         for q, k, A in X if not q.empty]
+        P = P.set_index('entry')['value']
+        m0 = self.indexes['numbers'].match(P, aggregation='max')
+        if not m0.empty:
+          m0.name = 'score'
+          m0 = m0.reset_index()
+          M.append(m0)
 
-    M = [U for U in M if not U.empty]
-    for U in M: U.name = 'score'
+        m = self.indexes['numprefix'].match(P, aggregation='max')
+        if not m.empty:
+          m.name = 'score'
+          m = m.reset_index()
+          M.append(m)
 
-    M = [U.reset_index() for U in M]
-    if not M: return cudf.DataFrame()
+    b = not self.indexes['dates'].indexed.empty
+    if b:
+
+      D = DataFrame([y for i, q in Q if q.dates for y in q.datemelt(i)])
+      if not D.empty:
+
+        D = D.set_index('entry')['value']
+        m0 = self.indexes['dates'].match(D, aggregation='sum')
+        if not m0.empty:
+          m0.name = 'score'
+          m0 = m0.reset_index()
+          M.append(m0)
+
+      m = DataFrame([y for i, q in Q if q.dates for y in q.yearmelt(i)])
+      if not m.empty:
+
+        m = m.set_index('entry')['value']
+        m = self.indexes['years'].match(m, aggregation='sum')
+        if not m.empty:
+          m.name = 'score'
+          m = m.reset_index()
+          M.append(m)
+
+    if narrow and (a or b):
+      U = [u for u in set([i for m in M for i in m['entry'].unique().to_pandas().values])]
+      Q = [(i0, q) for i0, q in Q if i0 in U]
+
+    W = DataFrame([y for i, q in Q if q.words for y in q.wordmelt(i)])
+    if not W.empty:
+
+      W = W.set_index('entry')['value']
+      m0 = self.indexes['words'].match(W, aggregation='sum')
+      if not m0.empty:
+        m0.name = 'score'
+        m0 = m0.reset_index()
+        M.append(m0)
+
+      m = self.indexes['ngrams'].match(W, aggregation='sum')
+      if not m.empty:
+        m.name = 'score'
+        m = m.reset_index()
+        M.append(m)
+
+    if not M: return DataFrame()
 
     S = cudf.concat(M).pipe(Searcher.basescore)
     S.columns = S.columns.set_names(['repo', 'frame', 'col', 'assignement'])

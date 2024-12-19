@@ -82,26 +82,33 @@ class Indexing(Step):
 
 class Searching(Step):
 
-  def __init__(self, queries:pandas.Series, searcher:Searcher, *args, **kwargs):
+  def __init__(self, queries:pandas.Series, searcher:Searcher, batch=128,
+               search=dict(), *args, **kwargs):
 
     super().__init__(*args, **kwargs)
 
     self.queries: pandas.Series = queries
     self.searcher: Searcher = searcher
 
-  def run(self, batch=128):
+    self.batch: int = batch
+
+    self.search = dict()
+    self.search['limit'] = search.get('limit', 3)
+    self.search['narrow'] = search.get('narrow', True)
+
+  def run(self):
 
     Q = self.queries
     S = self.searcher
     Q = [(i, q) for i, q in Q.items()]
-    b = batch
+    b = int(self.batch)
     n = len(Q)//b
     B = enumerate(range(0, len(Q), b))
     Y0 = None
 
     for i0, i in progress(B, desc=f'🔍', total=n+1):
 
-      Y = S.search(Q[i:i+b], limit=5)
+      Y = S.search(Q[i:i+b], **self.search)
       if Y.empty: continue
       Y0 = pandas.concat([Y0, Y]) if Y0 is not None else Y
       self.dumpprog(Y0, 100*(i0+1)//n)
@@ -193,7 +200,7 @@ class Preview(Ghost):
     self.matches: pandas.DataFrame|None = matches
     self.queries: pandas.Series|None = queries
 
-  def run(self, n0=24, n=4):
+  def run(self, n0=24, n=16):
     with pandas.option_context('display.max_columns', None,
                                'display.max_rows', n0,
                                'display.expand_frame_repr', False):
@@ -213,8 +220,11 @@ class Preview(Ghost):
       M = self.matches.sample(n)
       Q = self.queries
 
+      M = M[M.index.get_level_values(1).isin(Q.index.values)]
+      M = M.sample(min(M.shape[0], n))
+
       for i, m in M.iterrows():
-        Y += Q.loc[ i[1] ] + '\n\n' + str(m.to_frame()) + '\n\n' + H.strdocs([ i[0] ])
+        Y += Q.loc[ i[1] ] + '\n\n' + str(m.to_frame().T) + '\n\n' + H.strdocs([ i[0] ])
 
       with open(self.path, 'w') as f: f.write(Y)
 
@@ -265,17 +275,22 @@ try:
     f[k]['index'] = Indexing(f[k]['profile'], assignpath=p+'/assignement.yaml',
                              outpath=p+'/searcher.pkl')
 
-    f[k]['match'] = Searching(Q, f[k]['index'], outpath=p+'/matches.pkl')
+    f[k]['narrow'] = Searching(Q, f[k]['index'], search=dict(narrow=True),
+                               outpath=p+'/matches.narrow.pkl')
 
-    f[k]['insight'] = Insight(f[k]['match'], p+'/insight.png')
+    f[k]['ndrop'] = Patmatchdrop(Q, f[k]['narrow'], 
+                                 outpath=p+'/alien.s.csv', skipable=False)
+
+    f[k]['insight'] = Insight(f[k]['narrow'], p+'/insight.png')
 
     f[k]['preview0'] = Preview(f"{p}/profile.txt", f[k]['profile'])
-    f[k]['preview'] = Preview(f"{p}/profile.txt", f[k]['profile'], f[k]['match'], Q)
+    f[k]['preview'] = Preview(f"{p}/profile.txt", f[k]['profile'], f[k]['narrow'], Q)
 
-    f[k]['drop'] = Patmatchdrop(Q, f[k]['match'], outpath=p+'/alien.s.csv', skipable=False)
+  f['UPRP']['narrow'] = Searching(Q, f['UPRP']['index'], 768, search=dict(narrow=True),
+                                  outpath=D['UPRP']+'/matches.narrow.pkl')
 
-  f['Lens']['match'] = Searching(f['UPRP']['drop'], f['Lens']['index'],
-                                 outpath=D["Lens"]+'/matches.pkl')
+  # f['Lens']['match'] = Searching(f['UPRP']['drop'], f['Lens']['index'],
+  #                                outpath=D["Lens"]+'/matches.pkl')
 
   if len(sys.argv) == 2:
     a, b, *C = sys.argv[1].split(" ")
