@@ -308,7 +308,7 @@ class Searcher:
           m0 = m0.reset_index()
           M.append(m0)
 
-        m = self.indexes['numprefix'].match(P, aggregation='max')
+        m = self.indexes['numprefix'].match(P, aggregation='max', ownermatch=m0)
         if not m.empty:
           m.name = 'score'
           m = m.reset_index()
@@ -351,7 +351,7 @@ class Searcher:
         m0 = m0.reset_index()
         M.append(m0)
 
-      m = self.indexes['ngrams'].match(W, aggregation='sum')
+      m = self.indexes['ngrams'].match(W, aggregation='sum', ownermatch=m0)
       if not m.empty:
         m.name = 'score'
         m = m.reset_index()

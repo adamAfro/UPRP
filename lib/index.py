@@ -273,7 +273,7 @@ class Ngrams(Base):
     self.weight = weight
     self.owner = owner
 
-  def match(self, keys:pandas.Series, minscore:float=0.5, aggregation:str='sum', minshare:float=0.5):
+  def match(self, keys:pandas.Series, minscore:float=0.5, aggregation:str='sum', minshare:float=0.5, ownermatch=None):
 
     if self.indexed.empty: return cudf.DataFrame()
 
@@ -288,17 +288,25 @@ class Ngrams(Base):
 
     H0 = [self.weight, self.score]
     K0 = [k for k in M.columns if k not in H0]
-    Y0 = M.groupby(K0).sum()
+    Y0 = M.groupby(K0).sum().clip(upper=1)
 
-    h0 = self.weight
     m0 = minshare
-    Y0 = Y0.query(f"{h0} >= {m0}")
+    Y0 = Y0.query(f"{w} >= {m0}")
 
     if Y0.empty: return cudf.DataFrame()
 
     Y1 = Y0.reset_index()
     h = self.score
     Y1[h] = Y1[h] * Y1[w] if A == 'sum' else Y1[w]
+
+    if (ownermatch is not None) and (not ownermatch.empty):
+
+      O = ownermatch.drop(columns=[self.score])
+      D = Y1.reset_index().set_index(O.columns.tolist())
+      O = O.set_index(O.columns.tolist())
+      D = D.join(O, how='inner')
+      Y1 = Y1.drop(D['index'].values, axis=0)
+      if Y1.empty: return cudf.DataFrame()
 
     H = [self.owner, self.weight, self.score]
     K = [k for k in Y1.columns if k not in H]
