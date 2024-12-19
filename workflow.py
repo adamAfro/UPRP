@@ -178,6 +178,46 @@ class Insight(Ghost):
 
     F.savefig(self.figpath, format='png')
 
+class Preview(Ghost):
+
+  def __init__(self, path:str,
+               profile:dict[str, pandas.DataFrame],
+               matches:pandas.DataFrame|None = None,
+               queries:pandas.Series|None = None,
+               *args, **kwargs):
+
+    super().__init__(*args, **kwargs)
+
+    self.path: str = path
+    self.storage: dict[str, pandas.DataFrame] = profile
+    self.matches: pandas.DataFrame|None = matches
+    self.queries: pandas.Series|None = queries
+
+  def run(self, n0=24, n=4):
+    with pandas.option_context('display.max_columns', None,
+                               'display.max_rows', n0,
+                               'display.expand_frame_repr', False):
+
+      H = self.storage
+      Y = H.str()
+
+      if self.matches is None:
+
+        D = H.docs.sample(n).reset_index(drop=True).values
+        Y += H.strdocs(D)
+
+        with open(self.path, 'w') as f: f.write(Y)
+
+        return
+
+      M = self.matches.sample(n)
+      Q = self.queries
+
+      for i, m in M.iterrows():
+        Y += Q.loc[ i[1] ] + '\n\n' + str(m.to_frame()) + '\n\n' + H.strdocs([ i[0] ])
+
+      with open(self.path, 'w') as f: f.write(Y)
+
 try:
 
   Q = pandas.read_csv('raport.uprp.gov.pl.csv').set_index('entry')['query']

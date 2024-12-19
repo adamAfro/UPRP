@@ -59,6 +59,33 @@ class Storage:
       for k, v in X.items()
       if v == target)
 
+  def str(self):
+    def underline(x:str): return '\n\n\n'+x+'\n'+''.join(['=' for i in x])+'\n\n'
+
+    Y = ''
+
+    for k, X in self.data.items():
+      if X.empty: continue
+      Y += underline(k) + str(X)
+
+    return Y + '\n\n\n'
+
+  def strdocs(self, docs=[]):
+    def underline(x:str): return '\n\n\n'+x+'\n'+''.join(['-' for i in x])+'\n\n'
+
+    Y = ''
+    D = docs
+
+    for d in D:
+
+      for k, X in self.data.items():
+        Y += underline(f"{k}/{d}")
+        U = X.reset_index().query(f'doc == "{d}"')
+        if U.empty: continue
+        Y += str(U)
+
+    return Y + '\n\n\n'
+
 class Query:
 
   URLalike=r'(?:http[s]?://(?:\w|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+)'
