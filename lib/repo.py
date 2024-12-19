@@ -203,7 +203,7 @@ class Searcher:
   @staticmethod
   def levelscore(base: DataFrame, limit:int, 
                  aggdict={ 'number': 'max',
-                           'date': 'sum',
+                           'date': 'max',
                            'city': 'sum',
                            'name': 'sum',
                            'title': 'sum' }):
@@ -228,7 +228,7 @@ class Searcher:
     return Y
 
   @staticmethod
-  def basescore(count: DataFrame, stacked=['date', 'city', 'name', 'title']):
+  def basescore(count: DataFrame, stacked=['city', 'name', 'title']):
 
     X = count.copy()
 
@@ -308,7 +308,7 @@ class Searcher:
           m0 = m0.reset_index()
           M.append(m0)
 
-        m = self.indexes['numprefix'].match(P, aggregation='max', ownermatch=m0)
+        m = self.indexes['numprefix'].match(P, aggregation='max')
         if not m.empty:
           m.name = 'score'
           m = m.reset_index()
@@ -321,7 +321,7 @@ class Searcher:
       if not D.empty:
 
         D = D.set_index('entry')['value']
-        m0 = self.indexes['dates'].match(D, aggregation='sum')
+        m0 = self.indexes['dates'].match(D, aggregation='max')
         if not m0.empty:
           m0.name = 'score'
           m0 = m0.reset_index()
@@ -331,7 +331,7 @@ class Searcher:
       if not m.empty:
 
         m = m.set_index('entry')['value']
-        m = self.indexes['years'].match(m, aggregation='sum')
+        m = self.indexes['years'].match(m, aggregation='max')
         if not m.empty:
           m.name = 'score'
           m = m.reset_index()
@@ -345,13 +345,15 @@ class Searcher:
     if not W.empty:
 
       W = W.set_index('entry')['value']
-      m0 = self.indexes['words'].match(W, aggregation='sum')
+      m0 = self.indexes['words'].match(W, minscore=0.1, aggregation='sum')
       if not m0.empty:
         m0.name = 'score'
         m0 = m0.reset_index()
         M.append(m0)
 
-      m = self.indexes['ngrams'].match(W, aggregation='sum', ownermatch=m0)
+      m = self.indexes['ngrams'].match(W, minscore=0.1,
+                                       aggregation='sum', ownermatch=m0)
+
       if not m.empty:
         m.name = 'score'
         m = m.reset_index()

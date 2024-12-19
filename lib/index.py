@@ -147,19 +147,20 @@ class Base(Multiprocessor):
     if frame.empty: return frame
     X = self.prep(frame, batches=None)
 
-    if self.score in X.columns:
+    if (self.score in X.columns) and cumulative:
 
-      X = X.drop(columns=[self.score])
+      K = [k for k in X.columns if k != self.score]
+      X = X.groupby(K).sum().reset_index()
 
-    if cumulative:
+    elif cumulative:
 
-      X = X.value_counts() * self.factor
+      X = X.value_counts()
       X = X.reset_index(name=self.score)
 
     else:
 
       X = X.drop_duplicates()
-      X[self.score] = self.factor
+      X[self.score] = 1
 
     L = self.indexed
     if L.index.name is not None: L = L.reset_index()
@@ -216,8 +217,9 @@ class Slices(Base):
   def wordrepl(self, x):
 
     k = self.value
+    w = self.score
 
-    return [{ **x, k: y } for y in x[k].split(self.sep)]
+    return [{ **x, k: y, w: len(y)/len(x[k]) } for y in x[k].split(self.sep)]
 
 
 
@@ -286,8 +288,8 @@ class Ngrams(Base):
 
     if M.empty: return cudf.DataFrame()
 
-    H0 = [self.weight, self.score]
-    K0 = [k for k in M.columns if k not in H0]
+    h0 = self.weight
+    K0 = [k for k in M.columns if k != h0]
     Y0 = M.groupby(K0).sum().clip(upper=1)
 
     m0 = minshare
@@ -297,7 +299,8 @@ class Ngrams(Base):
 
     Y1 = Y0.reset_index()
     h = self.score
-    Y1[h] = Y1[h] * Y1[w] if A == 'sum' else Y1[w]
+    Y1[h] = Y1[h] * Y1[w]
+    Y1 = Y1.drop(columns=[w])
 
     if (ownermatch is not None) and (not ownermatch.empty):
 
@@ -308,12 +311,14 @@ class Ngrams(Base):
       Y1 = Y1.drop(D['index'].values, axis=0)
       if Y1.empty: return cudf.DataFrame()
 
-    H = [self.owner, self.weight, self.score]
-    K = [k for k in Y1.columns if k not in H]
-    Y2 = Y1[K+[h]].groupby(K).agg(A)
+    K2 = [k for k in Y1.columns if k != self.score]
+    Y2 = Y1[K2+[h]].groupby(K2).agg(A).reset_index()
+
+    K3 = [k for k in K2 if k != self.owner]
+    Y3 = Y2.groupby(K3).agg('max')
 
     m = minscore
-    return Y2.query(f"{h} >= {m}")
+    return Y3.query(f"{h} >= {m}")
 
   def _prep(self, frame: pandas.DataFrame):
 
