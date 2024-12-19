@@ -76,7 +76,7 @@ class Indexing(Step):
     M = [(k, S.melt(k)) for k in K]
     M = [(k, S) for k, S in M if not S.empty]
 
-    Y = Searcher().add(progress(M, desc=f'📑 {self.dir}'))
+    Y = Searcher().add(progress(M, desc=f'📑'))
 
     return Y
 

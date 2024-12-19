@@ -9,11 +9,11 @@ import re, cudf
 class Storage:
 
   def __init__(self, name:str, data:dict[str, DataFrame],
-               assignment:dict[str, dict[str, dict[str, str]]]|None=None):
+               assignement:dict[str, dict[str, dict[str, str]]]|None=None):
 
     self.name = name
     self.data = data
-    self.assignment = assignment
+    self.assignement = assignement
 
     self.docs = concat([X.index.get_level_values('doc').to_series()
       for X in self.data.values()]).drop_duplicates()\
@@ -55,7 +55,7 @@ class Storage:
   def _assigned(self, target:str):
 
     return ((h, k)
-      for h, X in self.assignment.items()
+      for h, X in self.assignement.items()
       for k, v in X.items()
       if v == target)
 
