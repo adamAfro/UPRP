@@ -248,7 +248,8 @@ class Searcher:
       return U
 
     if U is None:
-      S[('', '', '', 'number')] = 0
+      for c in ['date', 'number']:
+        S[('', '', '', c)] = 0
       return S
 
     Y = S.join(U).fillna(0.0)
@@ -295,10 +296,10 @@ class Searcher:
     Q = [(i, Query.Parse(q)) for i, q in queries]
     M = []
 
-    a = not self.indexes['numbers'].indexed.empty
-    if a:
+    I1 = not self.indexes['numbers'].indexed.empty
+    if I1:
 
-      P = DataFrame([y for i, q in Q if q.dates for y in q.nummelt(i)])
+      P = DataFrame([y for i, q in Q if q.codes for y in q.nummelt(i)])
       if not P.empty:
 
         P = P.set_index('entry')['value']
@@ -314,8 +315,8 @@ class Searcher:
           m = m.reset_index()
           M.append(m)
 
-    b = not self.indexes['dates'].indexed.empty
-    if b:
+    I2 = not self.indexes['dates'].indexed.empty
+    if I2:
 
       D = DataFrame([y for i, q in Q if q.dates for y in q.datemelt(i)])
       if not D.empty:
@@ -327,7 +328,7 @@ class Searcher:
           m0 = m0.reset_index()
           M.append(m0)
 
-      m = DataFrame([y for i, q in Q if q.dates for y in q.yearmelt(i)])
+      m = DataFrame([y for i, q in Q if q.years for y in q.yearmelt(i)])
       if not m.empty:
 
         m = m.set_index('entry')['value']
@@ -337,7 +338,7 @@ class Searcher:
           m = m.reset_index()
           M.append(m)
 
-    if narrow and (a or b):
+    if narrow and (I1 or I2):
       U = [u for u in set([i for m in M for i in m['entry'].unique().to_pandas().values])]
       Q = [(i0, q) for i0, q in Q if i0 in U]
 
@@ -351,13 +352,17 @@ class Searcher:
         m0 = m0.reset_index()
         M.append(m0)
 
-      m = self.indexes['ngrams'].match(W, minscore=0.1,
-                                       aggregation='sum', ownermatch=m0)
-
-      if not m.empty:
-        m.name = 'score'
-        m = m.reset_index()
-        M.append(m)
+      N0 = 500_000
+      N = self.indexes['ngrams'].indexed.shape[0]
+      b = max(10, min(N // N0 + (N % N0 > 0), 1024))
+      for i in range(0, len(Q), b):
+        v = W.iloc[i:i+b]
+        m = self.indexes['ngrams'].match(v, minscore=0.1,
+                                        aggregation='sum', ownermatch=m0)
+        if not m.empty:
+          m.name = 'score'
+          m = m.reset_index()
+          M.append(m)
 
     if not M: return DataFrame()
 

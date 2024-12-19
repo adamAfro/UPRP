@@ -286,7 +286,7 @@ try:
     f[k]['preview0'] = Preview(f"{p}/profile.txt", f[k]['profile'])
     f[k]['preview'] = Preview(f"{p}/profile.txt", f[k]['profile'], f[k]['narrow'], Q)
 
-  f['UPRP']['narrow'] = Searching(Q, f['UPRP']['index'], 768, search=dict(narrow=True),
+  f['UPRP']['narrow'] = Searching(Q, f['UPRP']['index'], 1024, search=dict(narrow=True),
                                   outpath=D['UPRP']+'/matches.narrow.pkl')
 
   # f['Lens']['match'] = Searching(f['UPRP']['drop'], f['Lens']['index'],

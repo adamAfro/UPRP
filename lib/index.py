@@ -110,10 +110,11 @@ class Base(Multiprocessor):
   def match(self, keys:pandas.Series, minscore:float=0.5, aggregation:str='sum'):
 
     if self.indexed.empty: return cudf.DataFrame()
+    if keys.empty: return cudf.DataFrame()
 
     A = aggregation
     X = self.idxinv(keys)
-    M = self.indexed.join(X)
+    M = self.indexed.join(X, how='inner')
 
     if M.empty: return cudf.DataFrame()
 
@@ -278,13 +279,14 @@ class Ngrams(Base):
   def match(self, keys:pandas.Series, minscore:float=0.5, aggregation:str='sum', minshare:float=0.5, ownermatch=None):
 
     if self.indexed.empty: return cudf.DataFrame()
+    if keys.empty: return cudf.DataFrame()
 
     A = aggregation
     v = self.value
     w = self.weight
     X = self.prep(keys.reset_index()).drop(columns=[w])\
     .drop_duplicates().set_index(v)
-    M = self.indexed.join(X)
+    M = self.indexed.join(X, how='inner')
 
     if M.empty: return cudf.DataFrame()
 
