@@ -9,7 +9,7 @@ class Profiling(Step):
 
   def __init__(self, dir:str, kind:str,
                assignpath:str, aliaspath:str, 
-               profargs:dict=[], *args, **kwargs):
+               profargs:dict={}, *args, **kwargs):
 
     assert kind.upper() in ['JSON', 'JSONL', 'XML']
 
@@ -25,27 +25,29 @@ class Profiling(Step):
     P = Profiler( **self.profargs )
 
     if self.kind == 'XML':
-      H = P.XML(self.dir).dataframes()
+      P.XML(self.dir)
     elif self.kind == 'JSON':
-      H = P.JSON(self.dir).dataframes()
+      P.JSON(self.dir)
     elif self.kind == 'JSONL':
-      H = P.JSONl(self.dir).dataframes(listname="data")
+      P.JSONl(self.dir, listname="data")
+
+    H = P.dataframes()
 
     L = simplify(H, norm=Profiling.pathnorm)
     H = { L['frames'][h0]: X.set_index(["id", "doc"])\
-         .rename(columns=L['columns'][h0]) for h0, X in H.items() }
+         .rename(columns=L['columns'][h0]) for h0, X in H.items() if not X.empty }
 
     L['columns'] = { L['frames'][h]: { v: k for k, v in Q.items() }  
                      for h, Q in L['columns'].items() }
     L['frames'] = { v: k for k, v in L['frames'].items() }
     with open(self.aliaspath, 'w') as f:
-      yaml.dump(L, f, indent=2)
+      yaml.dump(L, f, indent=2)#do wglądu
 
     A = { h: { k: None for k in V.keys() } for h, V in L['columns'].items() }
     with open(self.assignpath, 'w') as f:
-      yaml.dump(A, f, indent=2)
+      yaml.dump(A, f, indent=2)#do ręcznej edycji
 
-    return H
+    return Storage(self.dir, H)
 
   @staticmethod
   def pathnorm(x:str):
@@ -55,19 +57,26 @@ class Profiling(Step):
 
 class Indexing(Step):
 
-  def __init__(self, dir:str, *args, **kwargs):
+  def __init__(self, storage:dict[str, pandas.DataFrame], 
+               assignpath:str, *args, **kwargs):
 
     super().__init__(*args, **kwargs)
-    self.dir: str = dir
+    self.storage: dict[str, pandas.DataFrame] = storage
+    self.assignpath: str = assignpath
 
   def run(self):
 
-    Y = Searcher()
-    X = Storage.Within(self.dir)
+    S = self.storage
+    a = self.assignpath
+
+    with open(a, 'r') as f:
+      S.assignement = yaml.load(f, Loader=yaml.FullLoader)
+
     K = ['date', 'number', 'name', 'city', 'title']
-    M = [(k, X.melt(k)) for k in K]
-    M = [(k, X) for k, X in M if not X.empty]
-    Y.add(progress(M, desc=f'📑 {self.dir}'))
+    M = [(k, S.melt(k)) for k in K]
+    M = [(k, S) for k, S in M if not S.empty]
+
+    Y = Searcher().add(progress(M, desc=f'📑 {self.dir}'))
 
     return Y
 
@@ -178,75 +187,69 @@ try:
   Q = Q.drop_duplicates()
   Q.index = Q.index.astype('str')
 
-  UPRP = 'api.uprp.gov.pl'
-  pUPRP = Profiling(f'{UPRP}/raw/', kind='XML',
-                    assignpath=f'{UPRP}/assignement.null.yaml', 
-                    aliaspath=f'{UPRP}/alias.yaml',
-                    outpath=f'{UPRP}/data-test.pkl')
+  D = { 'UPRP': 'api.uprp.gov.pl',
+        'Lens': 'api.lens.org',
+        'Open': 'api.openalex.org',
+        'USPG': 'developer.uspto.gov/grant',
+        'USPA': 'developer.uspto.gov/application' }
 
-  iUPRP = Indexing('api.uprp.gov.pl', outpath='api.uprp.gov.pl/searcher.pkl')
-  qUPRP = Searching(Q, iUPRP, outpath='api.uprp.gov.pl/matches.pkl')
-  dUPRP = Patmatchdrop(Q, qUPRP, outpath='api.uprp.gov.pl/alien.s.csv')
-  oUPRP = Insight(qUPRP, figpath='api.uprp.gov.pl/insight.png')
+  f = { k: dict() for k in D.keys() }
 
-  Lens = 'api.lens.org'
-  pLens = Profiling(f'{Lens}/raw/', kind='JSONL',
-                    assignpath=f'{Lens}/assignement.null.yaml', 
-                    aliaspath=f'{Lens}/alias.yaml',
-                    outpath=f'{Lens}/data.pkl')
+  f['UPRP']['profile'] = Profiling(D['UPRP']+'/raw/', kind='XML',
+                                   assignpath=D['UPRP']+'/assignement.null.yaml', 
+                                   aliaspath=D['UPRP']+'/alias.yaml',
+                                   outpath=D['UPRP']+'/storage.pkl')
 
-  iLens = Indexing('api.lens.org', outpath='api.lens.org/searcher.pkl')
-  qLens = Searching(dUPRP, iLens, outpath='api.lens.org/matches.pkl')
-  dLens = Patmatchdrop(dUPRP, qLens, outpath='api.lens.org/alien.s.csv')
-  oLens = Insight(qLens, figpath='api.lens.org/insight.png')
+  f['Lens']['profile'] = Profiling(D['Lens']+'/res/', kind='JSONL',
+                                   assignpath=D['Lens']+'/assignement.null.yaml', 
+                                   aliaspath=D['Lens']+'/alias.yaml',
+                                   outpath=D['Lens']+'/storage.pkl')
 
-  Open = 'api.openalex.org'
-  pOpen = Profiling(f'{Open}/raw/', kind='JSON',
-                    profargs=dict(excluded=["abstract_inverted_index", "updated_date", "created_date"]),
-                    assignpath=f'{Open}/assignement.null.yaml', 
-                    aliaspath=f'{Open}/alias.yaml',
-                    outpath=f'{Open}/data.pkl')
+  f['Open']['profile'] = Profiling(D['Open']+'/raw/', kind='JSON',
+                                   profargs=dict(excluded=["abstract_inverted_index", "updated_date", "created_date"]),
+                                   assignpath=D['Open']+'/assignement.null.yaml', 
+                                   aliaspath=D['Open']+'/alias.yaml',
+                                   outpath=D['Open']+'/storage.pkl')
 
-  iOpen = Indexing('api.openalex.org', outpath='api.openalex.org/searcher.pkl')
-  qOpen = Searching(dLens, iOpen, outpath='api.openalex.org/matches.pkl')
-  dOpen = Patmatchdrop(dLens, qOpen, outpath='api.openalex.org/alien.s.csv')
-  oOpen = Insight(qOpen, figpath='api.openalex.org/insight.png')
+  f['USPG']['profile'] = Profiling(D['USPG']+'/raw/', kind='XML',
+                                   profargs=dict(only=['developer.uspto.gov/grant/raw/us-patent-grant/us-bibliographic-data-grant/']),
+                                   assignpath=D['USPG']+'/assignement.null.yaml',
+                                   aliaspath=D['USPG']+'/alias.yaml',
+                                   outpath=D['USPG']+'/storage.pkl')
 
-  USPG = 'developer.uspto.gov/grant'
-  pUSPG = Profiling(f'{USPG}/raw/', kind='XML',
-                    profargs=dict(only=['developer.uspto.gov/grant/raw/us-patent-grant/us-bibliographic-data-grant/']),
-                    assignpath=f'{USPG}/assignement.null.yaml', 
-                    aliaspath=f'{USPG}/alias.yaml',
-                    outpath=f'{USPG}/data.pkl')
+  f['USPA']['profile'] = Profiling(D['USPA']+'/raw/', kind='XML',
+                                   profargs=dict(only=['developer.uspto.gov/application/raw/us-patent-application/us-bibliographic-data-application/']),
+                                   assignpath=D['USPA']+'/assignement.null.yaml', 
+                                   aliaspath=D['USPA']+'/alias.yaml',
+                                   outpath=D['USPA']+'/storage.pkl')
 
-  USPA = 'developer.uspto.gov/application'
-  pUSPA = Profiling(f'{USPA}/raw/', kind='XML',
-                    profargs=dict(only=['developer.uspto.gov/application/raw/us-patent-application/us-bibliographic-data-application/']),
-                    assignpath=f'{USPA}/assignement.null.yaml', 
-                    aliaspath=f'{USPA}/alias.yaml',
-                    outpath=f'{USPA}/data.pkl')
+  for k, p in D.items():
 
-  steps = {
-    'pUPRP': pUPRP,
-    'pLens': pLens,
-    'pOpen': pOpen,
-    'pUSPG': pUSPG,
-    'pUSPA': pUSPA,
-    'iUPRP': iUPRP,
-    'iLens': iLens,
-    'iOpen': iOpen,
-    'qUPRP': qUPRP,
-    'qLens': qLens,
-    'qOpen': qOpen,
-    'oUPRP': oUPRP,
-    'oLens': oLens,
-    'oOpen': oOpen,
-  }
+    f[k]['index'] = Indexing(f[k]['profile'], assignpath=p+'/assignement.yaml',
+                             outpath=p+'/searcher.pkl')
 
+    f[k]['match'] = Searching(Q, f[k]['index'], outpath=p+'/matches.pkl')
+
+    f[k]['insight'] = Insight(f[k]['match'], p+'/insight.png')
+
+    f[k]['preview0'] = Preview(f"{p}/profile.txt", f[k]['profile'])
+    f[k]['preview'] = Preview(f"{p}/profile.txt", f[k]['profile'], f[k]['match'], Q)
+
+    f[k]['drop'] = Patmatchdrop(Q, f[k]['match'], outpath=p+'/alien.s.csv', skipable=False)
+
+  f['Lens']['match'] = Searching(f['UPRP']['drop'], f['Lens']['index'],
+                                 outpath=D["Lens"]+'/matches.pkl')
+
+  if len(sys.argv) == 2:
+    a, b, *C = sys.argv[1].split(" ")
+  else:
+    a, b = sys.argv[1], sys.argv[2]
+    C = sys.argv[3:] if len(sys.argv) > 3 else []
+
+  y = f[a][b]
   log('🚀', os.getpid())
-  for a in sys.argv[1:]:
-    log('📦', a)
-    steps[a].output()
+  notify(' '.join(sys.argv))
+  y.endpoint(*C)
 
   notify("✅")
 

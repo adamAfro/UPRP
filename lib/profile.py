@@ -1,6 +1,5 @@
 import os, json, xmltodict
 from pandas import DataFrame
-from uuid import uuid1 as unique
 from .log import progress
 
 class Profiler:
@@ -19,6 +18,11 @@ class Profiler:
     self.E = exclude if exclude is not None else []
     self.O = only if only is not None else []
     self.Y = []
+    self.i = 0
+
+  def id(self):
+    self.i += 1
+    return str(self.i)
 
   def isexcluded(self, path:str):
     if self.O and not any(k in path or path in k for k in self.O):
@@ -44,7 +48,7 @@ class Profiler:
   def apply(self, d:dict|list, path0:str='/', y:dict|None=None, U=None):
     if (y is None) or self.Q[path0]["repeat"]:
       y0 = y if y is not None else None
-      i = str(unique())
+      i = self.id()
       if U is None: U = i
       y = { "id": i, "path": path0, "doc": U }
       if y0 is not None: y[ "&" + y0['path'] ] = y0['id']

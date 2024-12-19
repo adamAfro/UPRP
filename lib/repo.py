@@ -1,19 +1,15 @@
 from .index import Base as Exact, Digital, Words, Ngrams
-import pickle, yaml, re, warnings
 from datetime import datetime
 from pandas import DataFrame, MultiIndex, Series, concat, to_datetime, CategoricalDtype
 from lib.expr import Marker
 from lib.datestr import num as datenum, month
 from lib.datestr import MREGEX
-import cudf
+import re, cudf
 
 class Storage:
 
-  "klasa do wczytywania danych z repozytorium"
-
-  def __init__(self, name:str,
-               data:dict[str, DataFrame],
-               assignment:dict[str, dict[str, dict[str, str]]]):
+  def __init__(self, name:str, data:dict[str, DataFrame],
+               assignment:dict[str, dict[str, dict[str, str]]]|None=None):
 
     self.name = name
     self.data = data
@@ -31,41 +27,7 @@ class Storage:
       except KeyError: continue
     return Y
 
-  def Within(path:str, name:str|None=None):
-
-    "wczytuje dane z katalogu (pliki `data.pkl` i `assignement.yaml`)"
-
-    f0 = path
-    k = name if name is not None else f0.split('/')[-1]
-
-    A: dict[str, dict[str, str]] = dict()
-    with open(f'{f0}/assignement.yaml', 'r') as f:
-      A = yaml.load(f, Loader=yaml.FullLoader)
-
-    H: dict[str, DataFrame] = dict()
-    with open(f'{f0}/data.pkl', 'rb') as f:
-      H = pickle.load(f)
-
-    for h, X in H.items():
-      X.set_index(['doc', X.index], inplace=True)
-
-    return Storage(k, H, A)
-
   def melt(self, name:str):
-
-    """
-    dane w formacie długim dla przyporządkowanych kolumn, 
-    kolumny: `'repo', 'frame', 'col', 'assignement', 'doc', 'value'`
-
-    Uwaga
-    -----
-
-    Rozw. tymczasowe (patrz: `search`) zakłada unikalność 
-    dokumentów kolumny `doc` po między repozytoriami,
-
-    - przykładowy konfilkt: 2 repozytoria mają identyfikatory iterowane 
-    od `0:n1` oraz od `0:n2`, wtedy znajdy `0:min(n1,n2)` są dwuznaczne.
-    """
 
     a = name
     H0 = [self.data[h][k].to_frame().pipe(Storage._melt, self.name, h) for h, k in self._assigned(a)]
@@ -79,8 +41,6 @@ class Storage:
   @staticmethod
   def _melt(frame:DataFrame, repo:str, name:str):
 
-    "funk. wewn. do tworzenia ramki danych w formacie długim"
-
     X = frame
     K = ['repo', 'frame', 'col', 'doc', 'id', 'value']
     X.columns = [k if k not in K else k+'*' for k in X.columns]
@@ -93,8 +53,6 @@ class Storage:
     return Y[K]
 
   def _assigned(self, target:str):
-
-    "zwraca przyporządkowane kolumny dla danego celu"
 
     return ((h, k)
       for h, X in self.assignment.items()
