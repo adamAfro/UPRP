@@ -88,7 +88,6 @@ class Searching(Step):
 
     self.queries: pandas.Series = queries
     self.searcher: Searcher = searcher
-    self.lazy.update(['queries', 'searcher'])
 
   def run(self, batch=128):
 
@@ -118,7 +117,6 @@ class Patmatchdrop(Step):
 
     self.queries: pandas.Series = queries
     self.matches: pandas.DataFrame = matches
-    self.lazy.update(['queries', 'matches'])
 
   def run(self):
 
@@ -146,7 +144,6 @@ class Insight(Ghost):
 
     self.figpath: str = figpath
     self.matches: pandas.DataFrame = matches
-    self.lazy.update(['matches'])
 
   def run(self):
 

@@ -1,22 +1,18 @@
 import os, glob, pickle, json
 
-class Lazy:
-
-  def __init__(self):
-    self.lazy = set()
+class Ghost:
 
   def __getattribute__(self, name):
-    K = super().__getattribute__('lazy')
     Y = super().__getattribute__(name)
-    if name not in K: return Y
     return Y.output() if isinstance(Y, Step) else Y
 
-  def output(self, *args, **kwargs):
-    self.run(*args, **kwargs)
+  def run(self, *args, **kwargs):
+    raise NotImplementedError()
 
-class Ghost(Lazy): pass
+  def endpoint(self, *args, **kwargs):
+    return self.run(*args, **kwargs)
 
-class Step(Lazy):
+class Step(Ghost):
 
   EXT = ['pkl', 'json', 'csv']
 
@@ -33,8 +29,8 @@ class Step(Lazy):
 
     self._loaded = None
 
-  def run(self, *args, **kwargs):
-    raise NotImplementedError()
+  def endpoint(self, *args, **kwargs):
+    return self.output(*args, **kwargs)
 
   def dumpprog(self, Y, perc:int):
     P = f"{self.outpath}[0-9][0-9].{self._ext}"
