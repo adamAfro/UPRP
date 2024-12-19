@@ -18,7 +18,7 @@ def notify(*message, sep=" "):
   t = time.time() - N0
   N0 = time.time()
   if not NOTIFY: return
-  message = sep.join(message)
+  message = str(datetime.datetime.now())+sep+sep.join(message)
   D = dict(data=message.encode(encoding='utf-8'))
   requests.post( "https://ntfy.sh/uprp_dev", **D )
   print("notify", message, flush=True)
