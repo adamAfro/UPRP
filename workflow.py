@@ -292,25 +292,29 @@ try:
   # f['Lens']['match'] = Searching(f['UPRP']['drop'], f['Lens']['index'],
   #                                outpath=D["Lens"]+'/matches.pkl')
 
-  if len(sys.argv) == 2:
-    a, b, *C = sys.argv[1].split(" ")
-  else:
-    a, b = sys.argv[1], sys.argv[2]
-    C = sys.argv[3:] if len(sys.argv) > 3 else []
+  E = []
+  for a in sys.argv[1:]:
+    try:
 
-  y = f[a][b]
-  log('🚀', os.getpid())
-  notify(' '.join(sys.argv))
-  y.endpoint(*C)
+      k, h = a.split('.')
+      f0 = f[k][h]
 
-  notify("✅")
+      log('🚀', os.getpid(), ' '.join(sys.argv))
+
+      notify(a)
+
+      f0.endpoint()
+
+      notify("✅")
+
+    except Exception as e:
+
+      E.append(e)
+
+      notify("❌")
+
+  if E: raise ExceptionGroup("❌", E)
 
 except Exception as e:
 
-  notify("❌")
-
   raise e.with_traceback(e.__traceback__)
-
-finally:
-
-  log('🏁', os.getpid())

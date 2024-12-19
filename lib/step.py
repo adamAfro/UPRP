@@ -4,7 +4,7 @@ class Ghost:
 
   def __getattribute__(self, name):
     Y = super().__getattribute__(name)
-    return Y.output() if isinstance(Y, Step) else Y
+    return Y.footprint() if isinstance(Y, Step) else Y
 
   def run(self, *args, **kwargs):
     raise NotImplementedError()
@@ -30,7 +30,7 @@ class Step(Ghost):
     self._loaded = None
 
   def endpoint(self, *args, **kwargs):
-    return self.output(*args, **kwargs)
+    return self.footprint(True, *args, **kwargs)
 
   def dumpprog(self, Y, perc:int):
     P = f"{self.outpath}[0-9][0-9].{self._ext}"
@@ -48,9 +48,9 @@ class Step(Ghost):
     else:
       self._dump(Y)
 
-  def output(self, *args, **kwargs):
+  def footprint(self, force=False, *args, **kwargs):
 
-    if self.skipable:
+    if (not force) and self.skipable:
       Y = self._load()
       if Y is not None:
         return Y

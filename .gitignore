@@ -13,9 +13,7 @@ developer.uspto.gov/**/*.*
 
 __pycache__
 
-log
-.log
-*.log
+nohup*.out
 
 *.csv
 *.pkl
