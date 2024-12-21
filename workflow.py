@@ -97,26 +97,30 @@ class Indexing(Step):
 
 class Parsing(Step):
 
-  def __init__(self, queries:pandas.Series, *args, **kwargs):
+  def __init__(self, searches:pandas.Series, *args, **kwargs):
 
     super().__init__(*args, **kwargs)
 
-    self.queries: pandas.Series = queries
+    self.searches: pandas.Series = searches
 
   def run(self):
 
-    Q = self.queries
-    Y = []
+    Q = self.searches
+    Y, P = [], []
 
     for i, q0 in Q.items():
 
       q = Query.Parse(q0)
+
+      P.extend([{ 'entry': i, **v } for v in q.codes])
+
       Y.extend([{ 'entry': i, 'value': v, 'kind': 'number' } for v in q.numbers])
       Y.extend([{ 'entry': i, 'value': v, 'kind': 'date' } for v in q.dates])
       Y.extend([{ 'entry': i, 'value': v, 'kind': 'year' } for v in q.years])
       Y.extend([{ 'entry': i, 'value': v, 'kind': 'word' } for v in q.words])
 
-    return pandas.DataFrame(Y).set_index('entry')
+    return pandas.DataFrame(Y).set_index('entry'),\
+           pandas.DataFrame(P).set_index('entry')
 
 class Search(Step):
 
@@ -220,7 +224,7 @@ class Narrow(Search):
 
   def run(self):
 
-    Q = self.queries
+    Q, _ = self.queries
     P0, P, D0, W0, W = self.indexes
 
     QP = Q.query('kind == "number"')
@@ -288,7 +292,7 @@ class Drop(Step):
 
   def run(self):
 
-    Q = self.queries
+    Q, P = self.queries
     M = self.matches
     K = [('entry', '', '', ''), ('doc', '', '', ''),
          ('', '', '', 'level'), ('', '', '', 'score')]
@@ -306,10 +310,13 @@ class Drop(Step):
     Y['level'] = Y['level'].astype(Search.Levels)
     Y = Y[Y['level'] >= "exact-dated"]
 
-    I0 = Q.index.astype(str).unique()
-    I = I0[I0.isin(Y['entry'].values_host)]
+    p0 = P.index.astype(str).unique()
+    p = p0[p0.isin(Y['entry'].values_host)]
 
-    return Q[ ~ Q.index.isin(I)]
+    q0 = Q.index.astype(str).unique()
+    q = q0[q0.isin(Y['entry'].values_host)]
+
+    return Q[ ~ Q.index.isin(q)], P[ ~ P.index.isin(p) ]
 
 class Preview(Ghost):
 
@@ -344,7 +351,7 @@ class Preview(Ghost):
         return
 
       M = self.matches.sample(n)
-      Q = self.queries
+      Q, _ = self.queries
 
       M = M[M.index.get_level_values(1).isin(Q.index.values)]
       M = M.sample(min(M.shape[0], n))
@@ -356,10 +363,9 @@ class Preview(Ghost):
 
 try:
 
-  Q0 = pandas.read_csv('raport.uprp.gov.pl.csv').set_index('entry')['query']
-  Q0 = Q0.drop_duplicates()
-  Q0.index = Q0.index.astype('str')
-  Q = Parsing(Q0, outpath='queries.pkl')
+  Q = pandas.read_csv('raport.uprp.gov.pl.csv').set_index('entry')['query']
+  Q = Q.drop_duplicates()
+  Q.index = Q.index.astype('str')
 
   D = { 'UPRP': 'api.uprp.gov.pl',
         'Lens': 'api.lens.org',
@@ -368,6 +374,9 @@ try:
         'USPA': 'developer.uspto.gov/application' }
 
   f = { k: dict() for k in D.keys() }
+
+  f['All'] = dict()
+  f['All']['query'] = Parsing(Q, outpath='queries.pkl')
 
   f['UPRP']['profile'] = Profiling(D['UPRP']+'/raw/', kind='XML',
                                    assignpath=D['UPRP']+'/assignement.null.yaml', 
@@ -402,23 +411,34 @@ try:
     f[k]['index'] = Indexing(f[k]['profile'], assignpath=p+'/assignement.yaml',
                              outpath=p+'/indexes.pkl', skipable=True)
 
-    f[k]['narrow'] = Narrow(Q, f[k]['index'], batch=2**14, outpath=p+'/narrow.pkl')
+    f[k]['narrow'] = Narrow(f['All']['query'], f[k]['index'],
+                            batch=2**14, outpath=p+'/narrow.pkl')
 
-    f[k]['drop'] = Drop(Q, f[k]['narrow'], outpath=p+'/alien.s.csv', skipable=False)
+    f[k]['drop'] = Drop(f['All']['query'], f[k]['narrow'],
+                        outpath=p+'/alien', skipable=False)
 
     f[k]['preview0'] = Preview(f"{p}/profile.txt", f[k]['profile'])
-    f[k]['preview'] = Preview(f"{p}/profile.txt", f[k]['profile'], f[k]['narrow'], Q)
+    f[k]['preview'] = Preview(f"{p}/profile.txt", f[k]['profile'], 
+                              f[k]['narrow'], f['All']['query'])
 
-  f['UPRP']['narrow'] = Narrow(Q, f['UPRP']['index'], batch=2**14, outpath=D['UPRP']+'/narrow.pkl')
+  f['UPRP']['narrow'] = Narrow(f['All']['query'], 
+                               f['UPRP']['index'], batch=2**14, 
+                               outpath=D['UPRP']+'/narrow.pkl')
 
-  f['USPG']['narrow'] = Narrow(Q, f['USPG']['index'], batch=2**14, outpath=D['USPG']+'/narrow.pkl')
-  f['USPA']['narrow'] = Narrow(Q, f['USPA']['index'], batch=2**14, outpath=D['USPA']+'/narrow.pkl')
+  f['USPG']['narrow'] = Narrow(f['All']['query'], 
+                               f['USPG']['index'], batch=2**14,
+                                outpath=D['USPG']+'/narrow.pkl')
 
-  f['Lens']['narrow'] = Narrow(Q, f['Lens']['index'], batch=2**12, outpath=D["Lens"]+'/narrow.pkl')
+  f['USPA']['narrow'] = Narrow(f['All']['query'], 
+                               f['USPA']['index'], batch=2**14, 
+                               outpath=D['USPA']+'/narrow.pkl')
 
-  f['All'] = dict()
-  f['All']['drop'] = Drop(Q, [f[k]['narrow'] for k in D.keys()], 
-                          outpath='alien.s.csv', skipable=False)
+  f['Lens']['narrow'] = Narrow(f['All']['query'], 
+                               f['Lens']['index'], batch=2**12, 
+                               outpath=D["Lens"]+'/narrow.pkl')
+
+  f['All']['drop'] = Drop(f['All']['query'], [f[k]['narrow'] for k in D.keys()], 
+                          outpath='alien', skipable=False)
 
   E = []
   for a in sys.argv[1:]:
