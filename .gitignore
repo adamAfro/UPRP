@@ -11,6 +11,8 @@ developer.uspto.gov/**/*.*
 !developer.uspto.gov/*.py
 !developer.uspto.gov/**/*.py
 
+patents.google.com
+
 __pycache__
 
 nohup*.out

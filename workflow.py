@@ -1,4 +1,6 @@
-import sys, pandas, cudf, matplotlib.pyplot as pyplot, yaml, re, os
+import sys, pandas, cudf, matplotlib.pyplot as pyplot,\
+      yaml, re, os, asyncio, aiohttp
+
 from lib.log import notify, log, progress
 from lib.storage import Storage
 from lib.query import Query
@@ -6,6 +8,7 @@ from lib.step import Ghost, Step
 from lib.profile import Profiler
 from lib.alias import simplify
 from lib.index import Exact, Words, Digital, Ngrams, Date
+from fake_useragent import UserAgent
 
 class Profiling(Step):
 
@@ -361,6 +364,36 @@ class Preview(Ghost):
 
       with open(self.path, 'w') as f: f.write(Y)
 
+class Fetch(Ghost):
+
+  def __init__(self, queries:pandas.Series, URL:str, outdir:str, *args, **kwargs):
+
+    super().__init__(*args, **kwargs)
+
+    self.URL: str = URL
+    self.outdir: str = outdir
+    self.queries: pandas.Series = queries
+
+  def run(self):
+
+    async def scrap(P:list):
+
+      t = 1
+      H = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
+      async with aiohttp.ClientSession(headers=H) as S:
+        for i, p in P.iterrows():
+          j, d = p['country'].upper(), ''.join(re.findall(r'\d+', p['number']))
+          o = f"{self.outdir}/{j}{d}.html"
+          if os.path.exists(o): continue
+          x = f"{self.URL}/{j}{d}"
+          async with S.get(x) as y0:
+            y = await y0.text()
+            await asyncio.sleep(t)
+            with open(o, "w") as f: f.write(y)
+
+    _, P = self.queries
+    asyncio.run(scrap(P))
+
 try:
 
   Q = pandas.read_csv('raport.uprp.gov.pl.csv').set_index('entry')['query']
@@ -439,6 +472,12 @@ try:
 
   f['All']['drop'] = Drop(f['All']['query'], [f[k]['narrow'] for k in D.keys()], 
                           outpath='alien', skipable=False)
+
+
+  D['Google'] = 'patents.google.com'
+  f['Google'] = dict()
+  f['Google']['fetch'] = Fetch(f['All']['drop'], 'https://patents.google.com/patent',
+                              outdir=D['Google']+'/web', )
 
   E = []
   for a in sys.argv[1:]:
