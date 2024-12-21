@@ -1,9 +1,11 @@
-import sys, pandas, matplotlib.pyplot as pyplot, yaml, re, os
+import sys, pandas, cudf, matplotlib.pyplot as pyplot, yaml, re, os
 from lib.log import notify, log, progress
-from lib.repo import Storage, Searcher
+from lib.storage import Storage
+from lib.query import Query
 from lib.step import Ghost, Step
 from lib.profile import Profiler
 from lib.alias import simplify
+from lib.index import Exact, Words, Digital, Ngrams, Date
 
 class Profiling(Step):
 
@@ -64,7 +66,7 @@ class Indexing(Step):
     self.storage: dict[str, pandas.DataFrame] = storage
     self.assignpath: str = assignpath
 
-  def run(self):
+  def run(self) -> tuple[Digital, Ngrams, Exact, Words, Ngrams]:
 
     S = self.storage
     a = self.assignpath
@@ -72,89 +74,113 @@ class Indexing(Step):
     with open(a, 'r') as f:
       S.assignement = yaml.load(f, Loader=yaml.FullLoader)
 
-    K = ['date', 'number', 'name', 'city', 'title']
-    M = [(k, S.melt(k)) for k in K]
-    M = [(k, S) for k, S in M if not S.empty]
+    P0, P = Digital(), Ngrams(n=3, suffix=False)
+    p = S.melt('number')
+    p = P0.add(p)
+    p['assignement'] = 'partial-number'
+    p = P.add(p)
 
-    Y = Searcher().add(progress(M, desc=f'📑'))
+    D0 = Date()
+    d = S.melt('date')
+    d = D0.add(d)
+
+    W0, W = Words(), Ngrams(n=3, suffix=False)
+
+    for k in ['name', 'title', 'city']:
+
+      w = S.melt(k)
+      w = W0.add(w)
+      w['assignement'] = f'partial-{k}'
+      w = W.add(w)
+
+    return P0, P, D0, W0, W
+
+class Parsing(Step):
+
+  def __init__(self, queries:pandas.Series, *args, **kwargs):
+
+    super().__init__(*args, **kwargs)
+
+    self.queries: pandas.Series = queries
+
+  def run(self):
+
+    Q = self.queries
+    Y = []
+
+    for i, q0 in Q.items():
+
+      q = Query.Parse(q0)
+      Y.extend([{ 'entry': i, 'value': v, 'kind': 'number' } for v in q.numbers])
+      Y.extend([{ 'entry': i, 'value': v, 'kind': 'date' } for v in q.dates])
+      Y.extend([{ 'entry': i, 'value': v, 'kind': 'year' } for v in q.years])
+      Y.extend([{ 'entry': i, 'value': v, 'kind': 'word' } for v in q.words])
+
+    return pandas.DataFrame(Y).set_index('entry')
+
+class Search(Step):
+
+  Levels = cudf.CategoricalDtype([
+    "weakest", "dated", "partial",
+    "supported", "partial-supported",
+    "exact", "dated-supported",
+    "partial-dated", "partial-dated-supported",
+    "exact-supported",
+    "exact-dated", "exact-dated-supported"
+  ], ordered=True)
+
+  def __init__(self,
+               queries:pandas.Series,
+               indexes:tuple[Exact],
+               batch:int,
+               *args, **kwargs):
+
+    super().__init__(*args, **kwargs)
+
+    self.queries: pandas.Series = queries
+    self.indexes: tuple[Exact] = indexes
+    self.batch: int = batch
+
+  def score(self, matches:cudf.DataFrame):
+
+    X = matches
+    S = cudf.DataFrame(index=X.index)
+
+    for k0 in ['number', 'date', 'partial-number']:
+      S[k0] = X.loc[:, [k for k in X.columns if k[3] == k0]].max(axis=1)
+
+    for k0 in ['name', 'city', 'title']:
+      S[k0] = X.loc[:, [k for k in X.columns if k[3].endswith(k0)]].sum(axis=1)
+
+    S = S.reindex(columns=['number', 'date', 'partial-number', 'name', 'title', 'city'], fill_value=0)
+
+    L = cudf.DataFrame(index=S.index)
+    L['exact'] = S['number'] >= 1
+    L['partial'] = S['partial-number'] > 0
+    L['dated'] = S['date'] >= 1
+    L['supported'] = S['title'] + S['name'] + S['city'] + \
+      (S['title'] * S['name'] > 1.) + \
+      (S['name']  * S['city'] > 1.) + \
+      (S['title'] * S['city'] > 1.) >= 3.
+
+    L0 = Search.Levels.categories.to_pandas()
+    L['level'] = L0[0]
+    for c in L0[1:]:
+      try: q = L[c.split('-')].all(axis=1)
+      except KeyError: continue
+      R = L['level'].where(~ q, c)
+      L['level'] = R
+
+    Z = cudf.DataFrame({ 'score': S.sum(axis=1), 'level': L['level'].astype(Search.Levels) }, index=S.index)
+
+    Y = Z.reset_index().sort_values(['level', 'score'])
+    Y = Y.groupby('entry').tail(1).set_index(['doc', 'entry'])
 
     return Y
 
-class Searching(Step):
+  def insight(self, matches:pandas.DataFrame):
 
-  def __init__(self, queries:pandas.Series, searcher:Searcher, batch=128,
-               search=dict(), *args, **kwargs):
-
-    super().__init__(*args, **kwargs)
-
-    self.queries: pandas.Series = queries
-    self.searcher: Searcher = searcher
-
-    self.batch: int = batch
-
-    self.search = dict()
-    self.search['limit'] = search.get('limit', 3)
-    self.search['narrow'] = search.get('narrow', True)
-
-  def run(self):
-
-    Q = self.queries
-    S = self.searcher
-    Q = [(i, q) for i, q in Q.items()]
-    b = int(self.batch)
-    n = len(Q)//b
-    B = enumerate(range(0, len(Q), b))
-    Y0 = None
-
-    for i0, i in progress(B, desc=f'🔍', total=n+1):
-
-      Y = S.search(Q[i:i+b], **self.search)
-      if Y.empty: continue
-      Y0 = pandas.concat([Y0, Y]) if Y0 is not None else Y
-      self.dumpprog(Y0, 100*(i0+1)//n)
-
-    assert Y0 is not None
-    return Y0
-
-class Patmatchdrop(Step):
-
-  def __init__(self, queries:pandas.Series, matches:pandas.DataFrame, *args, **kwargs):
-
-    super().__init__(*args, **kwargs)
-
-    self.queries: pandas.Series = queries
-    self.matches: pandas.DataFrame = matches
-
-  def run(self):
-
-    Q = self.queries
-    M = self.matches
-    K = [('entry', '', '', ''), ('doc', '', '', ''),
-         ('', '', '', 'level'), ('', '', '', 'score')]
-
-    Y = M.reset_index()[K]
-    Y.columns = ['entry', 'doc', 'level', 'score']
-    Y = Y.sort_values(by=['level', 'score'], ascending=False)\
-    .drop_duplicates(subset='entry')
-
-    assert Y['level'].dtype == 'category'
-    Y = Y[Y['level'] >= "exact-dated"]
-    I = set(Q.index.values) & set(Y['entry'].values)
-
-    return Q.drop(I)
-
-class Insight(Ghost):
-
-  def __init__(self, matches:pandas.DataFrame, figpath:str, *args, **kwargs):
-
-    super().__init__(*args, **kwargs)
-
-    self.figpath: str = figpath
-    self.matches: pandas.DataFrame = matches
-
-  def run(self):
-
-    M = self.matches
+    M = matches
     K = [('', '', '', 'level'), ('', '', '', 'score')] +\
         [k for r in ['api.uprp.gov.pl', 'api.lens.org', 'api.openalex.org']
           for k0 in ['date', 'number', 'name', 'city', 'title']
@@ -180,10 +206,106 @@ class Insight(Ghost):
               ylabel='', xlabel='', colors=['y', 'g'], autopct='%1.1f%%', ax=A[0]);
 
     Y.value_counts('level').sort_index()\
-    .plot.barh(title='Rozkład poziomów dopasowania', ylabel='', xlabel='',
-              color=[k for k in reversed('gggyyyyyyrrrrrrrrb')], ax=A[1]);
+    .plot.barh(title='Rozkład poziomów dopasowania', ylabel='', xlabel='', ax=A[1],
+               color=[k for k in 'rrrryyyyyggg']);
 
-    F.savefig(self.figpath, format='png')
+    F.savefig(self.outpath+'.png', format='png')
+    pyplot.close()
+
+class Narrow(Search):
+
+  def run(self):
+
+    Q = self.queries
+    P0, P, D0, W0, W = self.indexes
+
+    QP = Q.query('kind == "number"')
+
+    mP0 = P0.match(QP['value'], 'max').reset_index()
+
+    b = self.batch
+    mP = cudf.concat([P.match(QP.iloc[i:i+b]['value'], 'max', 0.6, ownermatch=mP0)
+      for i in progress(range(0, QP.shape[0], b))]).reset_index()
+
+    m0P = cudf.concat([mP0, mP]).set_index('entry')
+
+    Q = m0P.join(cudf.from_pandas(Q.astype(str)))\
+    [['doc', 'value', 'kind']].to_pandas()
+
+    D0 = D0.extend('doc')
+    mD0 = D0.match(Q[Q['kind'] == 'date'][['value', 'doc']], 'max')\
+    .reset_index()
+
+    M = cudf.concat([m0P.reset_index(), mD0]).pivot_table(
+      index=['doc', 'entry'],
+      columns=['repo', 'frame', 'col', 'assignement'],
+      values='score', aggfunc='max') if not mP0.empty else cudf.DataFrame()
+
+    W0 = W0.extend('doc')
+    mW0 = W0.match(Q[Q['kind'] == 'word'][['value', 'doc']], 'sum')\
+    .reset_index()
+
+    W = W.extend('doc')
+    mW = W.match(Q[Q['kind'] == 'word'][['value', 'doc']], 'sum', ownermatch=mW0)\
+    .reset_index()
+
+    Ms = cudf.concat([mW0, mW]).pivot_table(
+      index=['doc', 'entry'],
+      columns=['repo', 'frame', 'col', 'assignement'],
+      values='score',
+      aggfunc='sum') if not mW0.empty else cudf.DataFrame()
+
+    if not M.empty and not Ms.empty:
+      L = M.join(Ms).fillna(0.0).pipe(self.score)
+    elif not M.empty:
+      L = M.fillna(0.0).pipe(self.score)
+    elif not Ms.empty:
+      L = Ms.fillna(0.0).pipe(self.score)
+    else:
+      L = cudf.DataFrame()
+
+    L.columns = cudf.MultiIndex.from_tuples([('', '', '', 'score'), ('', '', '', 'level')])
+
+    Y = M[M.index.isin(L.index)].join(L)
+    Y = Y[Y[('', '', '', 'level')] >= "partial-supported"]
+
+    self.insight(Y.to_pandas())
+
+    return Y
+
+class Drop(Step):
+
+  def __init__(self, queries:pandas.Series, matches:list[pandas.DataFrame], *args, **kwargs):
+
+    super().__init__(*args, **kwargs)
+
+    self.queries: pandas.Series = queries
+    self.matches: pandas.DataFrame = matches
+
+  def run(self):
+
+    Q = self.queries
+    M = self.matches
+    K = [('entry', '', '', ''), ('doc', '', '', ''),
+         ('', '', '', 'level'), ('', '', '', 'score')]
+
+    Y = []
+
+    for m in M:
+      y = m.reset_index()[K]
+      y.columns = ['entry', 'doc', 'level', 'score']
+      Y.append(y)
+
+    Y = cudf.concat(Y, axis=0, ignore_index=True)
+    assert Y['level'].dtype == 'category'
+    Y = Y.sort_values(['level', 'score'])
+    Y['level'] = Y['level'].astype(Search.Levels)
+    Y = Y[Y['level'] >= "exact-dated"]
+
+    I0 = Q.index.astype(str).unique()
+    I = I0[I0.isin(Y['entry'].values_host)]
+
+    return Q[ ~ Q.index.isin(I)]
 
 class Preview(Ghost):
 
@@ -230,13 +352,14 @@ class Preview(Ghost):
 
 try:
 
-  Q = pandas.read_csv('raport.uprp.gov.pl.csv').set_index('entry')['query']
-  Q = Q.drop_duplicates()
-  Q.index = Q.index.astype('str')
+  Q0 = pandas.read_csv('raport.uprp.gov.pl.csv').set_index('entry')['query']
+  Q0 = Q0.drop_duplicates()
+  Q0.index = Q0.index.astype('str')
+  Q = Parsing(Q0, outpath='queries.pkl')
 
   D = { 'UPRP': 'api.uprp.gov.pl',
         'Lens': 'api.lens.org',
-        'Open': 'api.openalex.org',
+        # 'Open': 'api.openalex.org',
         'USPG': 'developer.uspto.gov/grant',
         'USPA': 'developer.uspto.gov/application' }
 
@@ -252,11 +375,11 @@ try:
                                    aliaspath=D['Lens']+'/alias.yaml',
                                    outpath=D['Lens']+'/storage.pkl')
 
-  f['Open']['profile'] = Profiling(D['Open']+'/raw/', kind='JSON',
-                                   profargs=dict(excluded=["abstract_inverted_index", "updated_date", "created_date"]),
-                                   assignpath=D['Open']+'/assignement.null.yaml', 
-                                   aliaspath=D['Open']+'/alias.yaml',
-                                   outpath=D['Open']+'/storage.pkl')
+  # f['Open']['profile'] = Profiling(D['Open']+'/raw/', kind='JSON',
+  #                                  profargs=dict(excluded=["abstract_inverted_index", "updated_date", "created_date"]),
+  #                                  assignpath=D['Open']+'/assignement.null.yaml', 
+  #                                  aliaspath=D['Open']+'/alias.yaml',
+  #                                  outpath=D['Open']+'/storage.pkl')
 
   f['USPG']['profile'] = Profiling(D['USPG']+'/raw/', kind='XML',
                                    profargs=dict(only=['developer.uspto.gov/grant/raw/us-patent-grant/us-bibliographic-data-grant/']),
@@ -273,48 +396,42 @@ try:
   for k, p in D.items():
 
     f[k]['index'] = Indexing(f[k]['profile'], assignpath=p+'/assignement.yaml',
-                             outpath=p+'/searcher.pkl')
+                             outpath=p+'/indexes.pkl', skipable=True)
 
-    f[k]['narrow'] = Searching(Q, f[k]['index'], search=dict(narrow=True),
-                               outpath=p+'/matches.narrow.pkl')
+    f[k]['narrow'] = Narrow(Q, f[k]['index'], batch=2**14, outpath=p+'/narrow.pkl')
 
-    f[k]['ndrop'] = Patmatchdrop(Q, f[k]['narrow'], 
-                                 outpath=p+'/alien.s.csv', skipable=False)
-
-    f[k]['insight'] = Insight(f[k]['narrow'], p+'/insight.png')
+    f[k]['drop'] = Drop(Q, f[k]['narrow'], outpath=p+'/alien.s.csv', skipable=False)
 
     f[k]['preview0'] = Preview(f"{p}/profile.txt", f[k]['profile'])
     f[k]['preview'] = Preview(f"{p}/profile.txt", f[k]['profile'], f[k]['narrow'], Q)
 
-  f['UPRP']['narrow'] = Searching(Q, f['UPRP']['index'], 1024, search=dict(narrow=True),
-                                  outpath=D['UPRP']+'/matches.narrow.pkl')
+  f['UPRP']['narrow'] = Narrow(Q, f['UPRP']['index'], batch=2**14, outpath=D['UPRP']+'/narrow.pkl')
 
-  # f['Lens']['match'] = Searching(f['UPRP']['drop'], f['Lens']['index'],
-  #                                outpath=D["Lens"]+'/matches.pkl')
+  f['USPG']['narrow'] = Narrow(Q, f['USPG']['index'], batch=2**14, outpath=D['USPG']+'/narrow.pkl')
+  f['USPA']['narrow'] = Narrow(Q, f['USPA']['index'], batch=2**14, outpath=D['USPA']+'/narrow.pkl')
+
+  f['Lens']['narrow'] = Narrow(Q, f['Lens']['index'], batch=2**12, outpath=D["Lens"]+'/narrow.pkl')
+
+  f['All'] = dict()
+  f['All']['drop'] = Drop(Q, [f[k]['narrow'] for k in D.keys()], 
+                          outpath='alien.s.csv', skipable=False)
 
   E = []
   for a in sys.argv[1:]:
-    try:
 
-      k, h = a.split('.')
-      f0 = f[k][h]
+    k, h = a.split('.')
+    f0 = f[k][h]
 
-      log('🚀', os.getpid(), ' '.join(sys.argv))
+    log('🚀', os.getpid(), ' '.join(sys.argv))
 
-      notify(a)
+    notify(a)
 
-      f0.endpoint()
+    f0.endpoint()
 
-      notify("✅")
-
-    except Exception as e:
-
-      E.append(e)
-
-      notify("❌")
-
-  if E: raise ExceptionGroup("❌", E)
+    notify("✅")
 
 except Exception as e:
+
+  notify("❌")
 
   raise e.with_traceback(e.__traceback__)

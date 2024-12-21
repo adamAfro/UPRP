@@ -87,27 +87,28 @@ class Multiprocessor:
 
 
 
-class Base(Multiprocessor):
+class Exact(Multiprocessor):
 
-  "`Base('searched-values').add(X)`"
+  "`Exact('searched-values').add(X)`"
 
-  def __init__(self, factor:float=1.0, value:str='value', score:str='score', *args, **kwargs):
+  def __init__(self, value:str='value', score:str='score', *args, **kwargs):
 
     super().__init__(*args, **kwargs)
 
-    self.factor = factor
-
     self.value = value
+    self.keys = [value]
     self.score = score
     self.indexed = cudf.DataFrame()
 
   @staticmethod
   def idxinv(X:pandas.Series):
-    v = X.name
+    v = X.name if isinstance(X, pandas.Series) else X.columns.tolist()
     Y = X.reset_index().set_index(v)
+    Y = Y.astype('str')
+    Y.index = Y.index.astype('object')
     return cudf.DataFrame.from_pandas(Y)
 
-  def match(self, keys:pandas.Series, minscore:float=0.5, aggregation:str='sum'):
+  def match(self, keys:pandas.Series, aggregation:str, minscore:float=0.5):
 
     if self.indexed.empty: return cudf.DataFrame()
     if keys.empty: return cudf.DataFrame()
@@ -140,13 +141,13 @@ class Base(Multiprocessor):
     })
     ```
     """
-    raise NotImplementedError('wymaga dodatkowej identyfikacji w `Base.indexed`')
-    raise NotImplementedError('wymaga funkcji do wstępnego przetwarzania zapytań w `Base`')
+    raise NotImplementedError('wymaga dodatkowej identyfikacji w `Exact.indexed`')
+    raise NotImplementedError('wymaga funkcji do wstępnego przetwarzania zapytań w `Exact`')
 
   def add(self, frame:pandas.DataFrame, reindex=True, cumulative=True):
 
     if frame.empty: return frame
-    X = self.prep(frame, batches=None)
+    X = self.prep(frame)
 
     if (self.score in X.columns) and cumulative:
 
@@ -172,32 +173,55 @@ class Base(Multiprocessor):
 
     return X.to_pandas()
 
+  def narrow(self, docs):
+
+    Y = shallow(self)
+    Y.indexed = self.indexed[ self.indexed['doc'].isin(docs) ]
+
+    return Y
+
+  def extend(self, column:str, drop:bool=False):
+
+    Y = shallow(self)
+    Y.indexed = Y.indexed.set_index(column, append=True, drop=drop)
+    Y.keys = Y.keys + [column]
+
+    return Y
+
   def reindex(self):
     if self.indexed.empty: return
-    self.indexed = self.indexed.set_index(self.value).sort_index()
-
-  def dump(self):
-    return self.indexed
-
-  def load(self, name:str, indexed:cudf.DataFrame):
-    self.value = name
-    self.indexed = indexed
+    self.indexed = self.indexed.set_index(self.keys).sort_index()
 
 
 
-class Digital(Base):
+class Digital(Exact):
 
   def _prep(self, frame):
 
     X = frame
     X[self.value] = X[self.value].astype('str')\
-    .str.replace(r"\D", "", regex=True)
+    .str.findall(r'(\d+)').str.join('')
 
     return X
 
 
 
-class Slices(Base):
+class Date(Exact):
+
+  def _prep(self, frame):
+
+    X = frame
+    k = self.value
+    D = pandas.to_datetime(X[k], errors='coerce', format='mixed', dayfirst=False)
+
+    X['value'] = D.dt.strftime('%Y-%m-%d')
+    X = X.dropna(subset=['value'])
+
+    return X
+
+
+
+class Slices(Exact):
 
   def __init__(self, *args, sep:str=' ', **kwargs):
 
@@ -220,7 +244,9 @@ class Slices(Base):
     k = self.value
     w = self.score
 
-    return [{ **x, k: y, w: len(y)/len(x[k]) } for y in x[k].split(self.sep)]
+    if len(x[k]) == 0: return []
+
+    return [{ **x, k: y } for y in x[k].split(self.sep)]
 
 
 
@@ -239,7 +265,7 @@ class Words(Slices):
     m = self.minl
     X = frame
 
-    X[k] = X[k].astype('str').str.replace(r"[\W\d\s]+", " ", regex=True)
+    X[k] = X[k].astype('str').str.findall(r'(\w+)').str.join(' ')
     if c == 'lower': X[k] = X[k].str.lower()
     elif c == 'upper': X[k] = X[k].str.upper()
 
@@ -250,7 +276,7 @@ class Words(Slices):
 
 
 
-class Ngrams(Base):
+class Ngrams(Exact):
 
   """
   ```py
@@ -276,13 +302,13 @@ class Ngrams(Base):
     self.weight = weight
     self.owner = owner
 
-  def match(self, keys:pandas.Series, minscore:float=0.5, aggregation:str='sum', minshare:float=0.5, ownermatch=None):
+  def match(self, keys:pandas.Series, aggregation:str, minscore:float=0.5, minshare:float=0.5, ownermatch=None):
 
     if self.indexed.empty: return cudf.DataFrame()
     if keys.empty: return cudf.DataFrame()
 
     A = aggregation
-    v = self.value
+    v = self.keys
     w = self.weight
     X = self.prep(keys.reset_index()).drop(columns=[w])\
     .drop_duplicates().set_index(v)
@@ -338,6 +364,8 @@ class Ngrams(Base):
     k = self.value
     h = self.weight
     n = self.n
+
+    if len(x[k]) == 0: return []
 
     return [{ **x, k: y, h: 1/(len(x[k])-n+1) } for y in self._string(x[k])]
 
