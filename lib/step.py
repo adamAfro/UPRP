@@ -4,6 +4,10 @@ class Ghost:
 
   def __getattribute__(self, name):
     Y = super().__getattribute__(name)
+    if isinstance(Y, list):
+      if Y and isinstance(Y[0], Step):
+        return [y.footprint() for y in Y]
+
     return Y.footprint() if isinstance(Y, Step) else Y
 
   def run(self, *args, **kwargs):
