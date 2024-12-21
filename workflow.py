@@ -147,10 +147,14 @@ class Search(Step):
     S = cudf.DataFrame(index=X.index)
 
     for k0 in ['number', 'date', 'partial-number']:
-      S[k0] = X.loc[:, [k for k in X.columns if k[3] == k0]].max(axis=1)
+      K = [k for k in X.columns if k[3] == k0]
+      if not K: continue
+      S[k0] = X.loc[:, K].max(axis=1)
 
     for k0 in ['name', 'city', 'title']:
-      S[k0] = X.loc[:, [k for k in X.columns if k[3].endswith(k0)]].sum(axis=1)
+      K = [k for k in X.columns if k[3] == k0]
+      if not K: continue
+      S[k0] = X.loc[:, K].sum(axis=1)
 
     S = S.reindex(columns=['number', 'date', 'partial-number', 'name', 'title', 'city'], fill_value=0)
 
