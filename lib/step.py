@@ -36,22 +36,6 @@ class Step(Ghost):
   def endpoint(self, *args, **kwargs):
     return self.footprint(True, *args, **kwargs)
 
-  def dumpprog(self, Y, perc:int):
-    P = f"{self.outpath}[0-9][0-9].{self._ext}"
-    for f in glob.glob(P): os.remove(f)
-    if perc < 100:
-      p = f"{self.outpath}{perc:02d}.{self._ext}"
-
-      if self._ext == 'pkl':
-        with open(p, 'wb') as f: pickle.dump(Y, f)
-      elif self._ext == 'json':
-        with open(p, 'w') as f: json.dump(Y, f)
-      elif self._ext == 'csv':
-        Y.to_csv(p)
-
-    else:
-      self._dump(Y)
-
   def footprint(self, force=False, *args, **kwargs):
 
     if (not force) and self.skipable:
