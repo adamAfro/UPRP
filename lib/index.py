@@ -42,21 +42,23 @@ class Multiprocessor:
 
     return t/n
 
-  def prep(self, frame:pandas.DataFrame, batches:int|None=1) -> cudf.DataFrame:
+  def prep(self, frame:pandas.DataFrame, batches:int|None=None) -> cudf.DataFrame:
 
+    X = frame
+    n = X.shape[0]
     N = batches
-    if N is None:
+
+    if N is None and (n > 10*self.tsample):
 
       if (self.tmean is None) or self.forcecalc:
         self.tmean = self._calctmean(frame)
 
-      X = frame
-      n = X.shape[0]
       t = self.timing
       m = self.tmean
       N0 = self.CPUlimit
       N = min(int(n*m/t), N0)
 
+    if N is None: N = 1
     if N < 2:
       return cudf.DataFrame.from_pandas(self._prep(frame))
 
