@@ -39,6 +39,8 @@ def log( *anything ):
 
 TQDMINTERVAL = dict() if INTERACTIVE else dict(mininterval=60, maxinterval=3600)
 TQDMBAR = "{elapsed:>4} {desc} {n_fmt} {bar} {percentage:3.0f}%  {total_fmt} {remaining} {postfix}"
+if not INTERACTIVE:
+  TQDMBAR = "{elapsed:>4} {desc} {percentage:3.0f}%  {total_fmt} {remaining} {postfix}"
 def progress(*args, asyncio=False, **kwargs):
   if asyncio:
     return tqdm_async(*args, bar_format=TQDMBAR, **TQDMINTERVAL, **kwargs)
