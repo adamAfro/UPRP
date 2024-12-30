@@ -449,7 +449,7 @@ try:
     f[k]['narrow'] = Narrow(f['All']['query'], f[k]['index'],
                             batch=2**14, outpath=p+'/narrow.pkl')
 
-    f[k]['drop'] = Drop(f['All']['query'], f[k]['narrow'],
+    f[k]['drop'] = Drop(f['All']['query'], [f[k]['narrow']],
                         outpath=p+'/alien', skipable=False)
 
     f[k]['preview0'] = Preview(f"{p}/profile.txt", f[k]['profile'])
