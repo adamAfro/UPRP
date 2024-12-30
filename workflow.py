@@ -16,7 +16,7 @@ class Profiling(Step):
                assignpath:str, aliaspath:str, 
                profargs:dict={}, *args, **kwargs):
 
-    assert kind.upper() in ['JSON', 'JSONL', 'XML']
+    assert kind.upper() in ['JSON', 'JSONL', 'XML', 'HTMLMICRODATA']
 
     super().__init__(*args, **kwargs)
     self.dir: str = dir
@@ -31,6 +31,8 @@ class Profiling(Step):
 
     if self.kind == 'XML':
       P.XML(self.dir)
+    elif self.kind == 'HTMLMICRODATA':
+      P.HTMLmicrodata(self.dir)
     elif self.kind == 'JSON':
       P.JSON(self.dir)
     elif self.kind == 'JSONL':

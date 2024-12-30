@@ -1,4 +1,4 @@
-import os, json, xmltodict
+import os, json, xmltodict, microdata
 from pandas import DataFrame
 from .log import progress
 
@@ -89,6 +89,16 @@ class Profiler:
     for i, f0 in progress(enumerate(F), desc=dir, total=len(F)):
       with open(f0) as f: d = f.read()
       self.apply(xmltodict.parse(d), dir)
+    return self
+
+  def HTMLmicrodata(self, dir:str):
+    F = [os.path.join(dir, f) for f in os.listdir(dir) if f.lower().endswith('.html')]
+    for f0 in progress(F, desc=dir):
+      with open(f0) as f: d = f.read()
+      self.update({ "root": [u.json_dict() for u in microdata.get_items(d)] }, dir)
+    for i, f0 in progress(enumerate(F), desc=dir, total=len(F)):
+      with open(f0) as f: d = f.read()
+      self.apply({ "root": [u.json_dict() for u in microdata.get_items(d)] }, dir)
     return self
 
   def dataframes(self):
