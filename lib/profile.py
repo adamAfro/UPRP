@@ -84,11 +84,17 @@ class Profiler:
   def XML(self, dir:str):
     F = [os.path.join(dir, f) for f in os.listdir(dir) if f.lower().endswith('.xml')]
     for f0 in progress(F, desc=dir):
-      with open(f0) as f: d = f.read()
-      self.update(xmltodict.parse(d), dir)
+      with open(f0) as f: 
+        d0 = f.read()
+        d = xmltodict.parse(d0)
+        d['filename'] = f0#HACK01
+      self.update(d, dir)
     for i, f0 in progress(enumerate(F), desc=dir, total=len(F)):
-      with open(f0) as f: d = f.read()
-      self.apply(xmltodict.parse(d), dir)
+      with open(f0) as f:
+        d0 = f.read()
+        d = xmltodict.parse(d0)
+        d['filename'] = f0#HACK01
+      self.apply(d, dir)
     return self
 
   def HTMLmicrodata(self, dir:str):
@@ -104,3 +110,8 @@ class Profiler:
   def dataframes(self):
     return { n: X.drop(columns=['path']).dropna(axis=1, how='all')
                 for n, X in DataFrame(self.Y).groupby('path') }
+
+
+#HACK01:
+#        Pobieranie raportów odbywało się przez kody P.
+#        które odnoszą sie do nazw plików więc to jest potrzeben...
