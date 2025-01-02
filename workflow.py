@@ -160,6 +160,8 @@ class Search(Step):
 
   def score(self, matches:cudf.DataFrame):
 
+    "Zwraca ramkę z kolumnami 'score' i 'level' i indeksem 'doc' i 'entry'."
+
     X = matches
     S = cudf.DataFrame(index=X.index)
 
