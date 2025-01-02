@@ -22,3 +22,5 @@ nohup*.out
 *.xml
 
 .vscode
+
+geoportal.gov.pl/*
