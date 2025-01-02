@@ -23,6 +23,8 @@ class Storage:
 
   def melt(self, name:str):
 
+    'Uwaga: tworzy poziom "repo", które nie jest używany'
+
     a = name
     H0 = [self.data[h][k].to_frame().pipe(Storage._melt, self.name, h) for h, k in self._assigned(a)]
     if not H0: return DataFrame(columns=['repo', 'frame', 'col', 'assignement', 'doc', 'id', 'value'])
@@ -34,6 +36,8 @@ class Storage:
 
   @staticmethod
   def _melt(frame:DataFrame, repo:str, name:str):
+
+    'Uwaga: tworzy poziom "repo", które nie jest używany'
 
     X = frame
     K = ['repo', 'frame', 'col', 'doc', 'id', 'value']
