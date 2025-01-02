@@ -416,7 +416,47 @@ class Fetch(Ghost):
     _, P = self.queries
     asyncio.run(scrap(P))
 
+class Geoloc(Step):
+
+  """
+  Dopasowanie patentu do punktów geograficznych `(lat, lon)`.
+
+  Uwagi:
+
+  1. patent ma wiele lokalizacji (inaczej punktów powiązanych);
+  2. nazwy mogą być zduplikowane; do zaimplementowania: estymacja 
+  poprawnego miasta przez minimalizację średniej odległości 
+  do pt.ów powiązanych.
+  """
+
+  def __init__(self, storage:Storage, geodata:pandas.DataFrame, assignpath:str, *args, **kwargs):
+
+    super().__init__(*args, **kwargs)
+
+    self.storage = storage
+    self.geodata = geodata
+    self.assignpath = assignpath
+
+  def run(self):
+
+    S = self.storage
+    with open(self.assignpath, 'r') as f:
+      S.assignement = yaml.load(f, Loader=yaml.FullLoader)
+
+    C = S.melt('city').drop(columns=['repo', 'id', 'col', 'frame', 'assignement'])
+    C = C.drop_duplicates(subset=['doc', 'value'])
+    C = C.set_index('value')
+    G = self.geodata.set_index('NAZWAGLOWNA')
+
+    J = C.join(G, how='inner')
+    J = J.reset_index().dropna(axis=1)
+    J = J.set_index('doc')
+
+    return J
+
 try:
+
+  G = pandas.read_pickle('geoportal.gov.pl/wfs/name.pkl')
 
   Q = pandas.read_csv('raport.uprp.gov.pl.csv').set_index('entry')['query']
   Q = Q.drop_duplicates()
@@ -482,6 +522,9 @@ try:
     f[k]['preview0'] = Preview(f"{p}/profile.txt", f[k]['profile'])
     f[k]['preview'] = Preview(f"{p}/profile.txt", f[k]['profile'], 
                               f[k]['narrow'], f['All']['query'])
+
+    f[k]['geoloc'] = Geoloc(f[k]['profile'], assignpath=p+'/assignement.yaml', geodata=G,
+                            outpath=p+'/geoloc.pkl', skipable=True)
 
   f['UPRP']['narrow'] = Narrow(f['All']['query'], 
                                f['UPRP']['index'], batch=2**14, 
