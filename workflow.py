@@ -104,6 +104,37 @@ class Indexing(Step):
 
     return P0, P, D0, W0, W
 
+class Qdentify(Step):
+
+  "Dopasowanie zapytań do ich patentów - dodaje indeks `doc`."
+
+  def __init__(self, entries:pandas.DataFrame,
+               storage:Storage, docsframe, *args, **kwargs):
+
+    super().__init__(*args, **kwargs)
+
+    self.entries: pandas.DataFrame = entries
+    self.storage: Storage = storage
+    self.docsframe: str = docsframe
+
+  def run(self):
+
+    Q = self.entries.reset_index()
+    D = self.storage.data[self.docsframe]
+
+    assert 'P' in Q.columns
+    assert 'filename' in D.columns
+
+    D['P'] = D['filename'].str.extract(r'(\d{6}).*\.xml')
+    Q['P'] = Q['P'].astype(str)
+    Q = Q.set_index('P')
+    D = D.reset_index().set_index('P')
+
+    Y = Q.join(D['doc'], how='left')
+    if Y['doc'].isna().any(): raise ValueError()
+
+    return Y
+
 class Parsing(Step):
 
   "Przetwarzanie zapytań tekstowych na listy słów kluczowych."
@@ -460,9 +491,10 @@ try:
 
   G = pandas.read_pickle('geoportal.gov.pl/wfs/name.pkl')
 
-  Q = pandas.read_csv('raport.uprp.gov.pl.csv').set_index('entry')['query']
-  Q = Q.drop_duplicates()
-  Q.index = Q.index.astype('str')
+  Q = pandas.read_csv('raport.uprp.gov.pl.csv')
+  S = Q.set_index('entry')['query']
+  S = S.drop_duplicates()
+  S.index = S.index.astype('str')
 
   D = { 'UPRP': 'api.uprp.gov.pl',
         'Lens': 'api.lens.org',
@@ -475,7 +507,7 @@ try:
 
   f['Base'] = dict()
   f['All'] = dict()
-  f['All']['query'] = Parsing(Q, outpath='queries.pkl')
+  f['All']['query'] = Parsing(S, outpath='queries.pkl')
 
   f['UPRP']['profile'] = Profiling(D['UPRP']+'/raw/', kind='XML',
                                    assignpath=D['UPRP']+'/assignement.null.yaml', 
@@ -558,6 +590,9 @@ try:
   D['Google'] = 'patents.google.com'
   f['Google']['fetch'] = Fetch(f['All']['drop'], 'https://patents.google.com/patent',
                               outdir=D['Google']+'/web', )
+
+  f['UPRP']['identify'] = Qdentify(Q, f['UPRP']['profile'], docsframe='raw',
+                                   outpath=D['UPRP']+'/identify.pkl')
 
   E = []
   for a in sys.argv[1:]:
