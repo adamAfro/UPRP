@@ -12,6 +12,8 @@ from fake_useragent import UserAgent
 
 class Profiling(Step):
 
+  "Profilowanie danych z różnych źródeł do ramek danych relacyjnych."
+
   def __init__(self, dir:str, kind:str,
                assignpath:str, aliaspath:str, 
                profargs:dict={}, *args, **kwargs):
@@ -64,6 +66,8 @@ class Profiling(Step):
 
 class Indexing(Step):
 
+  "Indeksowanie danych z profili."
+
   def __init__(self, storage:dict[str, pandas.DataFrame], 
                assignpath:str, *args, **kwargs):
 
@@ -102,6 +106,8 @@ class Indexing(Step):
 
 class Parsing(Step):
 
+  "Przetwarzanie zapytań tekstowych na listy słów kluczowych."
+
   def __init__(self, searches:pandas.Series, *args, **kwargs):
 
     super().__init__(*args, **kwargs)
@@ -128,6 +134,8 @@ class Parsing(Step):
            pandas.DataFrame(P).set_index('entry')
 
 class Search(Step):
+
+  "Klasa z metodami pomocniczymi dla wyszukiwania."
 
   Levels = cudf.CategoricalDtype([
     "weakest", "dated", "partial",
@@ -227,6 +235,8 @@ class Search(Step):
 
 class Narrow(Search):
 
+  "Wyszukiwanie ograniczone (patrz: kod) oparte o kody, daty i słowa kluczowe."
+
   def run(self):
 
     Q, _ = self.queries
@@ -288,6 +298,8 @@ class Narrow(Search):
 
 class Drop(Step):
 
+  "Wyrzuca ze zbioru wyników wyniki które są niezadowalające (patrz: kod)."
+
   def __init__(self, queries:pandas.Series, matches:list[pandas.DataFrame], *args, **kwargs):
 
     super().__init__(*args, **kwargs)
@@ -324,6 +336,12 @@ class Drop(Step):
     return Q[ ~ Q.index.isin(q)], P[ ~ P.index.isin(p) ]
 
 class Preview(Ghost):
+
+  """
+  Podgląd wyników przetwarzania jako plik tekstowy zawartych tabel,
+  gdy podane są wyniki `matches` i `queries` to wyświetla również
+  wyniki zapytań i ich dopasowania; jeśli nie to przykładowe obserwacje.
+  """
 
   def __init__(self, path:str,
                profile:dict[str, pandas.DataFrame],
@@ -367,6 +385,8 @@ class Preview(Ghost):
       with open(self.path, 'w') as f: f.write(Y)
 
 class Fetch(Ghost):
+
+  "Pobieranie pełnych stron HTML z wynikami wyszukiwania."
 
   def __init__(self, queries:pandas.Series, URL:str, outdir:str, *args, **kwargs):
 
