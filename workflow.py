@@ -373,14 +373,14 @@ class Preview(Ghost):
 
         return
 
-      M = self.matches.sample(n)
+      M = self.matches.to_pandas().sample(n)
       Q, _ = self.queries
 
       M = M[M.index.get_level_values(1).isin(Q.index.values)]
       M = M.sample(min(M.shape[0], n))
 
       for i, m in M.iterrows():
-        Y += Q.loc[ i[1] ] + '\n\n' + str(m.to_frame().T) + '\n\n' + H.strdocs([ i[0] ])
+        Y += str(Q.loc[ i[1] ]) + '\n\n' + str(m.to_frame().T) + '\n\n' + H.strdocs([ i[0] ])
 
       with open(self.path, 'w') as f: f.write(Y)
 
