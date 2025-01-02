@@ -406,10 +406,12 @@ try:
         'Lens': 'api.lens.org',
         # 'Open': 'api.openalex.org',
         'USPG': 'developer.uspto.gov/grant',
-        'USPA': 'developer.uspto.gov/application' }
+        'USPA': 'developer.uspto.gov/application',
+        'Google': 'patents.google.com' }
 
   f = { k: dict() for k in D.keys() }
 
+  f['Base'] = dict()
   f['All'] = dict()
   f['All']['query'] = Parsing(Q, outpath='queries.pkl')
 
@@ -440,6 +442,11 @@ try:
                                    assignpath=D['USPA']+'/assignement.null.yaml', 
                                    aliaspath=D['USPA']+'/alias.yaml',
                                    outpath=D['USPA']+'/storage.pkl')
+
+  f['Google']['profile'] = Profiling(D['Google']+'/web/', kind='HTMLmicrodata',
+                                     assignpath=D['Google']+'/assignement.null.yaml', 
+                                     aliaspath=D['Google']+'/alias.yaml',
+                                     outpath=D['Google']+'/storage.pkl')
 
   for k, p in D.items():
 
@@ -472,12 +479,18 @@ try:
                                f['Lens']['index'], batch=2**12, 
                                outpath=D["Lens"]+'/narrow.pkl')
 
+  f['Base']['drop'] = Drop(f['All']['query'], [f['UPRP']['narrow'], f['Lens']['narrow']],
+                           outpath='alien.base', skipable=False)
+
+  f['Google']['narrow'] = Narrow(f['Base']['drop'], 
+                                 f['Google']['index'], batch=2**10, 
+                                 outpath=D["Google"]+'/narrow.pkl')
+
   f['All']['drop'] = Drop(f['All']['query'], [f[k]['narrow'] for k in D.keys()], 
                           outpath='alien', skipable=False)
 
 
   D['Google'] = 'patents.google.com'
-  f['Google'] = dict()
   f['Google']['fetch'] = Fetch(f['All']['drop'], 'https://patents.google.com/patent',
                               outdir=D['Google']+'/web', )
 
