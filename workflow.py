@@ -487,6 +487,35 @@ class Geoloc(Step):
 
     return J
 
+class Merge(Step):
+
+  "Łączenie wyników z różnych źródeł."
+
+  def __init__(self, matches:dict[str, cudf.DataFrame], *args, **kwargs):
+
+    super().__init__(*args, **kwargs)
+
+    self.matches: dict[str, cudf.DataFrame] = matches
+
+  def run(self):
+
+    U0 = self.matches
+    for h, M in U0.items():
+      M[('', '', '', 'repo')] = h
+
+    M = pandas.concat([M.to_pandas().reset_index() for M in U0.values()], axis=0)
+    M = M.sort_values([('', '', '', 'level'), ('', '', '', 'score')])
+    M = M.drop_duplicates(subset=[('entry', '', '', ''), ('doc', '', '', '')], keep='first')
+    M = M.set_index([('entry', '', '', '')])
+
+    return M
+
+class Pull(Step):
+
+  "Wyciąga ze zbiorów danych informacje o wynikach."
+
+  pass
+
 try:
 
   G = pandas.read_pickle('geoportal.gov.pl/wfs/name.pkl')
@@ -593,6 +622,8 @@ try:
 
   f['UPRP']['identify'] = Qdentify(Q, f['UPRP']['profile'], docsframe='raw',
                                    outpath=D['UPRP']+'/identify.pkl')
+
+  f['All']['merge'] = Merge({ k: f[k]['narrow'] for k in D.keys() }, outpath='matches.pkl')
 
   E = []
   for a in sys.argv[1:]:
