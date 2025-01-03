@@ -359,7 +359,7 @@ class Drop(Step):
     assert Y['level'].dtype == 'category'
     Y = Y.sort_values(['level', 'score'])
     Y['level'] = Y['level'].astype(Search.Levels)
-    Y = Y[Y['level'] >= "exact-dated"]
+    Y = Y[Y['level'] >= "partial-dated-supported"]
 
     p0 = P.index.astype(str).unique()
     p = p0[p0.isin(Y['entry'].values_host)]
