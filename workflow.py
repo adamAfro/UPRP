@@ -312,17 +312,18 @@ class Narrow(Search):
       aggfunc='sum') if not mW0.empty else cudf.DataFrame()
 
     if not M.empty and not Ms.empty:
-      L = M.join(Ms).fillna(0.0).pipe(self.score)
+      J = M.join(Ms).fillna(0.0)
     elif not M.empty:
-      L = M.fillna(0.0).pipe(self.score)
+      J = M.fillna(0.0)
     elif not Ms.empty:
-      L = Ms.fillna(0.0).pipe(self.score)
+      J = Ms.fillna(0.0)
     else:
-      L = cudf.DataFrame()
+      return cudf.DataFrame()
 
+    L = self.score(J)
     L.columns = cudf.MultiIndex.from_tuples([('', '', '', 'score'), ('', '', '', 'level')])
 
-    Y = M[M.index.isin(L.index)].join(L)
+    Y = J[J.index.isin(L.index)].join(L)
     Y = Y[Y[('', '', '', 'level')] >= "partial-supported"]
 
     self.insight(Y.to_pandas())
