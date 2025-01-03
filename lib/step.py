@@ -7,6 +7,9 @@ class Ghost:
     if isinstance(Y, list):
       if Y and isinstance(Y[0], Step):
         return [y.footprint() for y in Y]
+    if isinstance(Y, dict):
+      if Y and isinstance(Y[next(iter(Y))], Step):
+        return {k: v.footprint() for k, v in Y.items()}
 
     return Y.footprint() if isinstance(Y, Step) else Y
 
