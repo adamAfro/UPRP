@@ -501,12 +501,10 @@ class Merge(Step):
   def run(self):
 
     U0 = self.matches
-    for h, M in U0.items():
-      M[('', '', '', 'repo')] = h
-
-    M = pandas.concat([M.to_pandas().reset_index() for M in U0.values()], axis=0)
+    for h, M in U0.items(): M[('', '', '', 'repo')] = h
+    M = pandas.concat([M.reset_index().to_pandas() for M in U0.values()], axis=0)
     M = M.sort_values([('', '', '', 'level'), ('', '', '', 'score')])
-    M = M.drop_duplicates(subset=[('entry', '', '', ''), ('doc', '', '', '')], keep='first')
+    M = M.drop_duplicates(subset=[('entry', '', '', '')], keep='first')
     M = M.set_index([('entry', '', '', '')])
 
     return M
