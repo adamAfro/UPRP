@@ -522,11 +522,63 @@ class Merge(Step):
 
     return M
 
-class Pull(Step):
+class Classify(Step):
 
-  "Wyciąga ze zbiorów danych informacje o wynikach."
+  """
+  Zwraca ramkę z klasyfikacjami, przyporządkowanie może być szczegółowe,
+  np. IPC-section albo ogólne IPC.
+  """
 
-  pass
+  def __init__(self, storage:Storage, assignpath:str, *args, **kwargs):
+
+    super().__init__(*args, **kwargs)
+
+    self.storage: Storage = storage
+    self.assignpath: str = assignpath
+
+  def run(self):
+
+    H = self.storage
+    a = self.assignpath
+
+    with open(a, 'r') as f:
+      H.assignement = yaml.load(f, Loader=yaml.FullLoader)
+
+    K = ['IPC', 'IPCR', 'CPC', 'NPC']
+    K0 = ['section', 'class', 'subclass', 'group', 'subgroup']
+
+    U = [H.melt(k).reset_index() for k in K]
+    U = [m for m in U if not m.empty]
+    C = pandas.concat(U)
+
+    C['value'] = C['value'].str.replace(r'\s+', ' ', regex=True)
+    C['section'] = C['value'].str.extract(r'^(\w)') 
+    C['class'] = C['value'].str.extract(r'^\w\s?(\d+)')
+    C['subclass'] = C['value'].str.extract(r'^\w\s?\d+\s?(\w)')
+    C['group'] = C['value'].str.extract(r'^\w\s?\d+\s?\w\s?(\d+)')
+    C['subgroup'] = C['value'].str.extract(r'^\w\s?\d+\s?\w\s?\d+\s?/\s?(\d+)')
+    C = C[['id', 'doc', 'assignement'] + K0]
+
+    F = pandas.concat([H.melt(f'{k}-{k0}').reset_index() for k in K for k0 in K0])
+    F = F.rename(columns={'assignement': 'classification'})
+    F['assignement'] = F['classification'].str.split('-').str[0]
+    P = F.pivot_table(index=['id', 'doc', 'assignement'], columns='classification', values='value', aggfunc='first').reset_index()
+    P.columns = [k.split('-')[1] if '-' in k else k for k in P.columns]
+
+    if (not C.empty) and (not P.empty):
+      Y = pandas.concat([C, P], axis=0)
+    elif not C.empty:
+      Y = C
+    elif not P.empty:
+      Y = P
+    else:
+      return pandas.DataFrame()
+
+    Y = pandas.concat([C, P], axis=0)
+    Y.columns = ['id', 'doc', 'classification'] + K0
+    Y = Y.set_index(['id', 'doc'])
+
+    return Y
 
 try:
 
@@ -600,6 +652,10 @@ try:
 
     f[k]['geoloc'] = Geoloc(f[k]['profile'], assignpath=p+'/assignement.yaml', geodata=G,
                             outpath=p+'/geoloc.pkl', skipable=True)
+
+    f[k]['classify'] = Classify(storage=f[k]['profile'], 
+                                assignpath=p+'/assignement.yaml',
+                                outpath=p+'/classification.pkl')
 
   f['UPRP']['narrow'] = Narrow(f['All']['query'], 
                                f['UPRP']['index'], batch=2**14, 
