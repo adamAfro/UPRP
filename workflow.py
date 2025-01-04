@@ -108,12 +108,14 @@ class Qdentify(Step):
 
   "Dopasowanie zapytań do ich patentów - dodaje indeks `doc`."
 
-  def __init__(self, entries:pandas.DataFrame,
-               storage:Storage, docsframe, *args, **kwargs):
+  def __init__(self, entries:pandas.DataFrame, 
+               storage:Storage, docsframe, 
+               matched:pandas.DataFrame, *args, **kwargs):
 
     super().__init__(*args, **kwargs)
 
     self.entries: pandas.DataFrame = entries
+    self.matched: pandas.DataFrame = matched
     self.storage: Storage = storage
     self.docsframe: str = docsframe
 
@@ -121,6 +123,7 @@ class Qdentify(Step):
 
     Q = self.entries.reset_index()
     D = self.storage.data[self.docsframe]
+    M = self.matched
 
     assert 'P' in Q.columns
     assert 'filename' in D.columns
@@ -133,7 +136,14 @@ class Qdentify(Step):
     Y = Q.join(D['doc'], how='left')
     if Y['doc'].isna().any(): raise ValueError()
 
-    return Y
+    QJ = Y[['doc', 'entry']].set_index(['entry'])['doc']
+    QJ.index = QJ.index.astype(str)
+    QJ.name = ('', '', '', 'origin')
+    J = M.join(QJ, how='inner')
+    J = J.set_index([('', '', '', 'origin'), ('doc', '', '', ''), ('', '', '', 'repo')])
+    J.index.names = ['x', 'y', 'yrepo']
+
+    return J
 
 class Parsing(Step):
 
@@ -619,10 +629,11 @@ try:
   f['Google']['fetch'] = Fetch(f['All']['drop'], 'https://patents.google.com/patent',
                               outdir=D['Google']+'/web', )
 
-  f['UPRP']['identify'] = Qdentify(Q, f['UPRP']['profile'], docsframe='raw',
-                                   outpath=D['UPRP']+'/identify.pkl')
-
   f['All']['merge'] = Merge({ k: f[k]['narrow'] for k in D.keys() }, outpath='matches.pkl')
+
+  f['UPRP']['identify'] = Qdentify(Q, f['UPRP']['profile'], docsframe='raw',
+                                   matched=f['All']['merge'],
+                                   outpath=D['UPRP']+'/identify.pkl')
 
   E = []
   for a in sys.argv[1:]:
