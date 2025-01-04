@@ -489,15 +489,25 @@ class Geoloc(Step):
 
     C = S.melt('city').drop(columns=['repo', 'id', 'col', 'frame', 'assignement'])
     C = C.drop_duplicates(subset=['doc', 'value'])
+    C = C.set_index('doc')
+    C = C['value'].str.split(',').explode()
+    C = C.str.split(';').explode()
+    C = C.str.upper().str.replace(r'\W+', ' ', regex=True)
+    C = C.str.extractall(r'((?:[^\d\W]|\s)+)')[0].rename('value').dropna()
+    C = C.str.upper().str.strip()
+    C = C.reset_index().drop(columns='match')
     C = C.set_index('value')
-    G = self.geodata.set_index('NAZWAGLOWNA')
 
-    J = C.join(G, how='inner')
+    L = self.geodata
+    L = L[ L['RODZAJOBIEKTU'] == 'miasto' ].copy()
+    L['NAZWAGLOWNA'] = L['NAZWAGLOWNA'].str.upper().str.replace(r'\W+', ' ', regex=True).str.strip()
+    L = L.set_index('NAZWAGLOWNA')
+
+    J = C.join(L, how='inner')
     J = J.reset_index().dropna(axis=1)
-    J = J.set_index('doc')
 
-    J = J[[ 'value', 'GMINA', 'POWIAT', 'WOJEWODZTWO', 'latitude', 'longitude', 'srsName' ]]
-    J.columns = ['city', 'gmina', 'powiat', 'województwo', 'lat', 'lon', 'srs']
+    J = J[[ 'doc', 'value', 'GMINA', 'POWIAT', 'WOJEWODZTWO', 'latitude', 'longitude', 'srsName' ]]
+    J.columns = ['doc', 'name', 'gmina', 'powiat', 'województwo', 'lat', 'lon', 'srs']
 
     return J
 
