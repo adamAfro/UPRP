@@ -496,6 +496,9 @@ class Geoloc(Step):
     J = J.reset_index().dropna(axis=1)
     J = J.set_index('doc')
 
+    J = J[[ 'value', 'GMINA', 'POWIAT', 'WOJEWODZTWO', 'latitude', 'longitude', 'srsName' ]]
+    J.columns = ['city', 'gmina', 'powiat', 'województwo', 'lat', 'lon', 'srs']
+
     return J
 
 class Merge(Step):
