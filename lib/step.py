@@ -1,25 +1,57 @@
-import os, glob, pickle, json
+import pickle, json, inspect
+from .log import log
 
-class Ghost:
+def trail(cls):
+
+  def decorator(func):
+    def wrapper(*args, **kwargs):
+
+      S = inspect.signature(func)
+      P = list(S.parameters.keys())
+
+      K = {k: v for k, v in kwargs.items() if k in P}
+      A = args[:len(P)]
+
+      K0 = {k: v for k, v in kwargs.items() if k not in K}
+      A0 = args[len(P):]
+
+      class _Datum(cls):
+
+        def __init__(self):
+          super().__init__(*A0, **K0)
+
+        def run(self):
+          return func(*[lazy(x) for x in A], **{k: lazy(v) for k, v in K.items()})
+
+      _Datum.__name__ = func.__name__
+      return _Datum()
+
+    return wrapper
+  return decorator
+
+def lazy(x):
+  if isinstance(x, list):
+    if x and isinstance(x[0], Step):
+      return [y.footprint() for y in x]
+  if isinstance(x, dict):
+    if x and isinstance(x[next(iter(x))], Step):
+      return {k: v.footprint() for k, v in x.items()}
+  return x.footprint() if isinstance(x, Step) else x
+
+class Trace:
 
   def __getattribute__(self, name):
-    Y = super().__getattribute__(name)
-    if isinstance(Y, list):
-      if Y and isinstance(Y[0], Step):
-        return [y.footprint() for y in Y]
-    if isinstance(Y, dict):
-      if Y and isinstance(Y[next(iter(Y))], Step):
-        return {k: v.footprint() for k, v in Y.items()}
+    return lazy(super().__getattribute__(name))
 
-    return Y.footprint() if isinstance(Y, Step) else Y
-
-  def run(self, *args, **kwargs):
+  def run(self):
     raise NotImplementedError()
 
-  def endpoint(self, *args, **kwargs):
-    return self.run(*args, **kwargs)
+  def endpoint(self):
+    log(f"🔚 {self.__class__.__name__}")
+    Y = self.run()
+    return Y
 
-class Step(Ghost):
+class Step(Trace):
 
   EXT = ['pkl', 'json', 'csv']
 
@@ -36,8 +68,10 @@ class Step(Ghost):
 
     self._loaded = None
 
-  def endpoint(self, *args, **kwargs):
-    return self.footprint(True, *args, **kwargs)
+  def endpoint(self):
+    log(f"🔚 {self.__class__.__name__}")
+    Y = self.footprint(True)
+    return Y
 
   def footprint(self, force=False, *args, **kwargs):
 
@@ -52,6 +86,8 @@ class Step(Ghost):
     return Y
 
   def _dump(self, Y):
+
+    log(f"💾 {self.__class__.__name__} {self.outpath}.{self._ext}")
     p = f"{self.outpath}.{self._ext}"
     if self._ext == 'pkl':
       with open(p, 'wb') as f: pickle.dump(Y, f)
@@ -59,8 +95,14 @@ class Step(Ghost):
       with open(p, 'w') as f: json.dump(Y, f)
     elif self._ext == 'csv':
       Y.to_csv(p)
+    else:
+      raise ValueError()
+
+    log(f"✅ {self.__class__.__name__}")
 
   def _load(self):
+
+    log(f"📂 {self.__class__.__name__} {self.outpath}.{self._ext}")
     if self._loaded is not None:
       return self._loaded
     try:
@@ -76,8 +118,10 @@ class Step(Ghost):
           Y = Y.set_index(Y.columns[0])[Y.columns[1]]
 
       self._loaded = Y
+      log(f"✅ {self.__class__.__name__}")
 
     except FileNotFoundError: 
       Y = None
+      log(f"🟨 {self.__class__.__name__} {self.outpath}.{self._ext} 404")
 
     return Y
