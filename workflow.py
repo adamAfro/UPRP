@@ -566,27 +566,6 @@ class Timeloc(Step):
 
     return C
 
-class Merge(Step):
-
-  "Łączenie wyników z różnych źródeł."
-
-  def __init__(self, matches:dict[str, cudf.DataFrame], *args, **kwargs):
-
-    super().__init__(*args, **kwargs)
-
-    self.matches: dict[str, cudf.DataFrame] = matches
-
-  def run(self):
-
-    U0 = self.matches
-    for h, M in U0.items(): M[('', '', '', 'repo')] = h
-    M = pandas.concat([M.reset_index().to_pandas() for M in U0.values()], axis=0)
-    M = M.sort_values([('', '', '', 'level'), ('', '', '', 'score')])
-    M = M.drop_duplicates(subset=[('entry', '', '', '')], keep='first')
-    M = M.set_index([('entry', '', '', '')])
-
-    return M
-
 class Classify(Step):
 
   """
@@ -645,6 +624,38 @@ class Classify(Step):
     Y = Y.set_index(['id', 'doc'])
 
     return Y
+
+class Bundle(Step):
+
+  def __init__(self,
+               matches:dict[str, cudf.DataFrame],
+               storages:dict[str, Storage],
+               geo: dict[str, pandas.DataFrame], 
+               time:dict[str, pandas.DataFrame], 
+               clsf:dict[str, pandas.DataFrame],
+               *args, **kwargs):
+
+    super().__init__(*args, **kwargs)
+
+    self.matches: dict[str, cudf.DataFrame] = matches
+    self.storages: dict[str, Storage] = storages
+    self.geo: dict[str, pandas.DataFrame] = geo
+    self.time: dict[str, pandas.DataFrame] = time
+    self.clsf: dict[str, pandas.DataFrame] = clsf
+
+  def run(self):
+
+    M, S, G, T, C = self.matches, self.storages, self.geo, self.time, self.clsf
+
+    U0 = self.matches
+    for h, M in U0.items():
+      M[('', '', '', 'repo')] = h
+    M = pandas.concat([M.reset_index().to_pandas() for M in U0.values()], axis=0)
+    M = M.sort_values([('', '', '', 'level'), ('', '', '', 'score')])
+    M = M.drop_duplicates(subset=[('entry', '', '', '')], keep='first')
+    M = M.set_index([('entry', '', '', '')])
+
+    return M
 
 try:
 
@@ -756,6 +767,13 @@ try:
   D['Google'] = 'patents.google.com'
   f['Google']['fetch'] = Fetch(f['All']['drop'], 'https://patents.google.com/patent',
                               outdir=D['Google']+'/web', )
+
+  f['All']['bundle'] = Bundle(matches={ k: f[k]['narrow'] for k in D.keys() },
+                              storages={ k: f[k]['profile'] for k in D.keys() },
+                              geo={ k: f[k]['geoloc'] for k in D.keys() },
+                              time={ k: f[k]['timeloc'] for k in D.keys() },
+                              clsf={ k: f[k]['classify'] for k in D.keys() },
+                              outpath='bundle.pkl')
 
   E = []
   for a in sys.argv[1:]:
