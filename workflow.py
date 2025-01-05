@@ -70,11 +70,11 @@ class Indexing(Step):
 
   "Indeksowanie danych z profili."
 
-  def __init__(self, storage:dict[str, pandas.DataFrame], 
+  def __init__(self, storage:Storage, 
                assignpath:str, *args, **kwargs):
 
     super().__init__(*args, **kwargs)
-    self.storage: dict[str, pandas.DataFrame] = storage
+    self.storage: Storage = storage
     self.assignpath: str = assignpath
 
   def run(self) -> tuple[Digital, Ngrams, Exact, Words, Ngrams]:
