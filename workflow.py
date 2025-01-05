@@ -8,6 +8,7 @@ from lib.step import Ghost, Step
 from lib.profile import Profiler
 from lib.alias import simplify
 from lib.index import Exact, Words, Digital, Ngrams, Date
+from lib.geo import closest
 from fake_useragent import UserAgent
 
 class Profiling(Step):
@@ -500,7 +501,10 @@ class Geoloc(Step):
 
     L = self.geodata
     L = L[ L['RODZAJOBIEKTU'] == 'miasto' ].copy()
-    L['NAZWAGLOWNA'] = L['NAZWAGLOWNA'].str.upper().str.replace(r'\W+', ' ', regex=True).str.strip()
+    L['NAZWAGLOWNA'] = L['NAZWAGLOWNA'].str.upper()\
+                      .str.replace(r'\W+', ' ', regex=True)\
+                      .str.strip()
+
     L = L.set_index('NAZWAGLOWNA')
 
     J = C.join(L, how='inner')
@@ -508,8 +512,13 @@ class Geoloc(Step):
 
     J = J[[ 'doc', 'value', 'GMINA', 'POWIAT', 'WOJEWODZTWO', 'latitude', 'longitude', 'srsName' ]]
     J.columns = ['doc', 'name', 'gmina', 'powiat', 'województwo', 'lat', 'lon', 'srs']
+    J = J.drop_duplicates(subset=['doc', 'name', 'lat', 'lon'])
 
-    return J
+    J['lat'] = pandas.to_numeric(J['lat'])
+    J['lon'] = pandas.to_numeric(J['lon'])
+    Y = closest(J, 'doc', 'name', 'lat', 'lon', 'EPSG:2180')
+
+    return Y
 
 class Merge(Step):
 
