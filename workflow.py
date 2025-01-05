@@ -544,6 +544,34 @@ class Geoloc(Step):
     x = unicodedata.normalize('NFD', text)
     return ''.join([c for c in x if unicodedata.category(c) != 'Mn'])
 
+class Timeloc(Step):
+
+  "Wybiera daty z patentów"
+
+  def __init__(self, storage:Storage, assignpath:str, *args, **kwargs):
+
+    super().__init__(*args, **kwargs)
+
+    self.storage: Storage = storage
+    self.assignpath: str = assignpath
+
+  def run(self):
+
+    S = self.storage
+    with open(self.assignpath, 'r') as f:
+      S.assignement = yaml.load(f, Loader=yaml.FullLoader)
+
+    C = S.melt('date')[['doc', 'value']]
+    C['value'] = pandas.to_datetime(C['value'], 
+                                    errors='coerce', 
+                                    format='mixed', 
+                                    dayfirst=False)
+
+    C = C.drop_duplicates(subset=['doc', 'value'])
+    C = C.set_index('doc')
+
+    return C
+
 class Merge(Step):
 
   "Łączenie wyników z różnych źródeł."
@@ -695,6 +723,9 @@ try:
 
     f[k]['geoloc'] = Geoloc(f[k]['profile'], assignpath=p+'/assignement.yaml', geodata=G,
                             outpath=p+'/geoloc.pkl', skipable=True)
+
+    f[k]['timeloc'] = Timeloc(f[k]['profile'], assignpath=p+'/assignement.yaml',
+                              outpath=p+'/timeloc.pkl', skipable=True)
 
     f[k]['classify'] = Classify(storage=f[k]['profile'], 
                                 assignpath=p+'/assignement.yaml',
