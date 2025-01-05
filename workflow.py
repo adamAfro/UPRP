@@ -1,5 +1,6 @@
 import sys, pandas, cudf, matplotlib.pyplot as pyplot
 import yaml, re, os, asyncio, aiohttp, unicodedata
+import xml.etree.ElementTree as ET
 from lib.log import notify, log, progress
 from lib.storage import Storage
 from lib.query import Query
@@ -536,9 +537,35 @@ def Bundle(matches:dict[str, cudf.DataFrame],
 
   return M
 
-try:
+@trail(Step)
+def GMLParse(path:str):
 
-  G = pandas.read_pickle('geoportal.gov.pl/wfs/name.pkl')
+    tree = ET.parse(path)
+    root = tree.getroot()
+
+    N = { 'ms': 'http://mapserver.gis.umn.edu/mapserver',
+          'gml': 'http://www.opengis.net/gml/3.2',
+          'wfs': 'http://www.opengis.net/wfs/2.0' }
+
+    Y = []
+    for M in root.findall('wfs:member', N):
+
+      E = {}
+
+      for e in M.find('ms:M1_UrzedoweNazwyMiejscowosci', N):
+        E[e.tag.split('}')[1]] = e.text
+
+      P = M.find('ms:M1_UrzedoweNazwyMiejscowosci/ms:msGeometry/gml:Point', N)
+      U = P.find('gml:pos', N)
+      if U is None: continue
+      E['latitude'], E['longitude'] = U.text.split()
+      E['srsName'] = P.attrib['srsName']
+
+      Y.append(E)
+
+    return pandas.DataFrame(Y)
+
+try:
 
   D = { 'UPRP': 'api.uprp.gov.pl',
         'Lens': 'api.lens.org',
@@ -548,6 +575,10 @@ try:
         'Google': 'patents.google.com' }
 
   f = { k: dict() for k in D.keys() }
+
+  f['Geoportal'] = dict()
+  f['Geoportal']['parse'] = GMLParse(path='geoportal.gov.pl/wfs/name.gml', 
+                                     outpath='geoportal.gov.pl/wfs/name.pkl')
 
   f['UPRP']['profile'] = Profiling(D['UPRP']+'/raw/', kind='XML',
                                    assignpath=D['UPRP']+'/assignement.null.yaml', 
@@ -605,7 +636,8 @@ try:
     f[k]['preview'] = Preview(f"{p}/profile.txt", f[k]['profile'], 
                               f[k]['narrow'], f['All']['query'])
 
-    f[k]['geoloc'] = Geoloc(f[k]['profile'], assignpath=p+'/assignement.yaml', geodata=G,
+    f[k]['geoloc'] = Geoloc(f[k]['profile'], assignpath=p+'/assignement.yaml', 
+                            geodata=f['Geoportal']['parse'],
                             outpath=p+'/geoloc.pkl', skipable=True)
 
     f[k]['timeloc'] = Timeloc(f[k]['profile'], assignpath=p+'/assignement.yaml',
