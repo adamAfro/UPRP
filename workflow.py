@@ -1,6 +1,7 @@
 import sys, pandas, cudf, matplotlib.pyplot as pyplot,\
       yaml, re, os, asyncio, aiohttp
 
+import unicodedata
 from lib.log import notify, log, progress
 from lib.storage import Storage
 from lib.query import Query
@@ -518,7 +519,30 @@ class Geoloc(Step):
     J['lon'] = pandas.to_numeric(J['lon'])
     Y = closest(J, 'doc', 'name', 'lat', 'lon', 'EPSG:2180')
 
+    #ASCII
+    C = C[ ~ C.index.isin(Y['name']) ]
+    C.index = C.index.to_series().apply(Geoloc.plremove).values
+    L.index = L.index.to_series().apply(Geoloc.plremove).values
+
+    J = C.join(L, how='inner')
+    J = J.reset_index().dropna(axis=1)
+
+    J = J[[ 'doc', 'index', 'GMINA', 'POWIAT', 'WOJEWODZTWO', 'latitude', 'longitude', 'srsName' ]]
+                   #^WTF: z jakiegoś powodu nie 'value'
+
+    J.columns = ['doc', 'name', 'gmina', 'powiat', 'województwo', 'lat', 'lon', 'srs']
+    J = J.drop_duplicates(subset=['doc', 'name', 'lat', 'lon'])
+
+    J['lat'] = pandas.to_numeric(J['lat'])
+    J['lon'] = pandas.to_numeric(J['lon'])
+    Y = pandas.concat([Y, closest(J, 'doc', 'name', 'lat', 'lon', 'EPSG:2180')])
+
     return Y
+
+  def plremove(text):
+
+    x = unicodedata.normalize('NFD', text)
+    return ''.join([c for c in x if unicodedata.category(c) != 'Mn'])
 
 class Merge(Step):
 
