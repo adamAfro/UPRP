@@ -686,6 +686,17 @@ try:
                               clsf={ k: f[k]['classify'] for k in D.keys() },
                               outpath='bundle.pkl')
 
+  if sys.argv[1] == 'restart':
+
+    for k in f.keys():
+      print(k)
+      for h in f[k].keys():
+        print(k, h)
+        if not isinstance(f[k][h], Step): continue
+        f[k][h].restart()
+
+    exit()
+
   E = []
   for a in sys.argv[1:]:
 

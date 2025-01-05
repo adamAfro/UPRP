@@ -1,4 +1,4 @@
-import pickle, json, inspect
+import os, pickle, json, inspect
 from .log import log
 
 def trail(cls):
@@ -125,3 +125,12 @@ class Step(Trace):
       log(f"🟨 {self.__class__.__name__} {self.outpath}.{self._ext} 404")
 
     return Y
+
+  def restart(self):
+
+    log(f"🗑 {self.__class__.__name__} {self.outpath}.{self._ext}")
+    p = f"{self.outpath}.{self._ext}"
+    if os.path.exists(p):
+      os.remove(p)
+
+    log(f"✅ {self.__class__.__name__}")
