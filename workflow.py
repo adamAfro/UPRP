@@ -620,6 +620,7 @@ class Classify(Step):
 
     U = [H.melt(k).reset_index() for k in K]
     U = [m for m in U if not m.empty]
+    if not U: return pandas.DataFrame()
     C = pandas.concat(U)
 
     C['value'] = C['value'].str.replace(r'\s+', ' ', regex=True)
