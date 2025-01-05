@@ -108,24 +108,20 @@ class Indexing(Step):
 
 class Qdentify(Step):
 
-  "Dopasowanie zapytań do ich patentów - dodaje indeks `doc`."
+  "Dopasowanie zapytań do ich patentów - zamienia entry na indeks dokumentu."
 
-  def __init__(self, entries:pandas.DataFrame, 
-               storage:Storage, docsframe, 
-               matched:pandas.DataFrame, *args, **kwargs):
+  def __init__(self, qpath:str, storage:Storage, docsframe, *args, **kwargs):
 
     super().__init__(*args, **kwargs)
 
-    self.entries: pandas.DataFrame = entries
-    self.matched: pandas.DataFrame = matched
+    self.qpath: pandas.DataFrame = qpath
     self.storage: Storage = storage
     self.docsframe: str = docsframe
 
   def run(self):
 
-    Q = self.entries.reset_index()
+    Q = pandas.read_csv(self.qpath)
     D = self.storage.data[self.docsframe]
-    M = self.matched
 
     assert 'P' in Q.columns
     assert 'filename' in D.columns
@@ -135,17 +131,13 @@ class Qdentify(Step):
     Q = Q.set_index('P')
     D = D.reset_index().set_index('P')
 
-    Y = Q.join(D['doc'], how='left')
+    Y = Q.join(D['doc'], how='left').reset_index()
     if Y['doc'].isna().any(): raise ValueError()
 
-    QJ = Y[['doc', 'entry']].set_index(['entry'])['doc']
-    QJ.index = QJ.index.astype(str)
-    QJ.name = ('', '', '', 'origin')
-    J = M.join(QJ, how='inner')
-    J = J.set_index([('', '', '', 'origin'), ('doc', '', '', ''), ('', '', '', 'repo')])
-    J.index.names = ['x', 'y', 'yrepo']
+    Y['entry'] = Y['doc']
+    Y = Y.drop(columns=['P', 'doc'])
 
-    return J
+    return Y
 
 class Parsing(Step):
 
@@ -159,7 +151,9 @@ class Parsing(Step):
 
   def run(self):
 
-    Q = self.searches
+    Q = self.searches.set_index('entry')['query']
+    Q.index = Q.index.astype('str')
+
     Y, P = [], []
 
     for i, q0 in Q.items():
@@ -656,11 +650,6 @@ try:
 
   G = pandas.read_pickle('geoportal.gov.pl/wfs/name.pkl')
 
-  Q = pandas.read_csv('raport.uprp.gov.pl.csv')
-  S = Q.set_index('entry')['query']
-  S = S.drop_duplicates()
-  S.index = S.index.astype('str')
-
   D = { 'UPRP': 'api.uprp.gov.pl',
         'Lens': 'api.lens.org',
         # 'Open': 'api.openalex.org',
@@ -669,10 +658,6 @@ try:
         'Google': 'patents.google.com' }
 
   f = { k: dict() for k in D.keys() }
-
-  f['Base'] = dict()
-  f['All'] = dict()
-  f['All']['query'] = Parsing(S, outpath='queries.pkl')
 
   f['UPRP']['profile'] = Profiling(D['UPRP']+'/raw/', kind='XML',
                                    assignpath=D['UPRP']+'/assignement.null.yaml', 
@@ -706,6 +691,14 @@ try:
                                      assignpath=D['Google']+'/assignement.null.yaml', 
                                      aliaspath=D['Google']+'/alias.yaml',
                                      outpath=D['Google']+'/storage.pkl')
+
+  f['UPRP']['identify'] = Qdentify(qpath='raport.uprp.gov.pl.csv',
+                                   storage=f['UPRP']['profile'], docsframe='raw',
+                                   outpath=D['UPRP']+'/identify.pkl')
+
+  f['All'] = dict()
+
+  f['All']['query'] = Parsing(f['UPRP']['identify'], outpath='queries.pkl')
 
   for k, p in D.items():
 
@@ -748,6 +741,7 @@ try:
                                f['Lens']['index'], batch=2**12, 
                                outpath=D["Lens"]+'/narrow.pkl')
 
+  f['Base'] = dict()
   f['Base']['drop'] = Drop(f['All']['query'], [f['UPRP']['narrow'], f['Lens']['narrow']],
                            outpath='alien.base', skipable=False)
 
@@ -762,12 +756,6 @@ try:
   D['Google'] = 'patents.google.com'
   f['Google']['fetch'] = Fetch(f['All']['drop'], 'https://patents.google.com/patent',
                               outdir=D['Google']+'/web', )
-
-  f['All']['merge'] = Merge({ k: f[k]['narrow'] for k in D.keys() }, outpath='matches.pkl')
-
-  f['UPRP']['identify'] = Qdentify(Q, f['UPRP']['profile'], docsframe='raw',
-                                   matched=f['All']['merge'],
-                                   outpath=D['UPRP']+'/identify.pkl')
 
   E = []
   for a in sys.argv[1:]:
