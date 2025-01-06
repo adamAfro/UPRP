@@ -4,7 +4,7 @@ import xml.etree.ElementTree as ET
 from lib.log import notify, log, progress
 from lib.storage import Storage
 from lib.query import Query
-from lib.step import trail, Trace, Step
+from lib.step import trail, Trace, Step, walk
 from lib.profile import Profiler
 from lib.alias import simplify
 from lib.index import Exact, Words, Digital, Ngrams, Date
@@ -743,6 +743,24 @@ try:
         print(k, h)
         if not isinstance(f[k][h], Step): continue
         f[k][h].restart()
+
+    exit()
+
+  if sys.argv[1] == 'print':
+
+    for k in f.keys():
+      for h in f[k].keys():
+        f[k][h].name = f"{k}.{h}"
+
+    def traceprint(x:Trace, indent=0):
+      print(' '*indent + str(x))
+      for s in x.steps:
+        walk(s, lambda a: traceprint(a, indent+1))
+
+    for k in f.keys():
+      for h in f[k].keys():
+        if not isinstance(f[k][h], Trace): continue
+        walk(f[k][h], traceprint)
 
     exit()
 

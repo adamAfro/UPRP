@@ -1,7 +1,7 @@
 import os, pickle, json, inspect
 from .log import log
 
-def trail(cls):
+def trail(Tracealike):
 
   def decorator(func):
     def wrapper(*args, **kwargs):
@@ -15,16 +15,18 @@ def trail(cls):
       K0 = {k: v for k, v in kwargs.items() if k not in K}
       A0 = args[len(P):]
 
-      class _Datum(cls):
+      class Leg(Tracealike):
+        name = ''
+        def __repr__(self):
+          if self.name:
+            return f"{self.name}: {Tracealike.__name__}({func.__name__})"
+          else:
+            return f"{Tracealike.__name__}({func.__name__})"
 
-        def __init__(self):
-          super().__init__(*A0, **K0)
+      Leg.__name__ = func.__name__
+      Leg.__doc__ = func.__doc__
 
-        def run(self):
-          return func(*[lazy(x) for x in A], **{k: lazy(v) for k, v in K.items()})
-
-      _Datum.__name__ = func.__name__
-      return _Datum()
+      return Leg(*A0, callback=func, input=list(A), kwinput=K, **K0)
 
     return wrapper
   return decorator
@@ -38,38 +40,53 @@ def lazy(x):
       return {k: v.footprint() for k, v in x.items()}
   return x.footprint() if isinstance(x, Step) else x
 
+def walk(x, f):
+  if isinstance(x, list):
+    if x and isinstance(x[0], Step):
+      return [f(v) for v in x]
+  if isinstance(x, dict):
+    if x and isinstance(x[next(iter(x))], Step):
+      return {k: f(v) for k, v in x.items()}
+  return f(x) if isinstance(x, Step) else None
+
 class Trace:
 
-  def __getattribute__(self, name):
-    return lazy(super().__getattribute__(name))
+  def __init__(self, callback, input, kwinput):
+
+    self.callback = callback
+    self.input = input
+    self.kwinput = kwinput
+
+  @property
+  def steps(self):
+    return self.input + [v for v in self.kwinput.values()]
 
   def run(self):
-    raise NotImplementedError()
+    return self.callback( *[lazy(x) for x in self.input], 
+                         **{k: lazy(v) for k, v in self.kwinput.items()})
 
   def endpoint(self):
-    log(f"🔚 {self.__class__.__name__}")
+    log(f"🔚")
     Y = self.run()
     return Y
 
 class Step(Trace):
 
-  EXT = ['pkl', 'json', 'csv']
+  def __init__(self, outpath:str, skipable=True, *args, **kwargs):
 
-  def __init__(self, outpath:str, skipable=True):
-
-    super().__init__()
+    super().__init__(*args, **kwargs)
 
     self.skipable: bool = skipable
     self.outpath = outpath
     self._ext = outpath.split('.')[-1].lower()
-    if self._ext in self.EXT: 
+    if self._ext in ['pkl', 'json', 'csv']: 
        self.outpath = outpath[:-len(self._ext)-1]
     else: self._ext = 'pkl'
 
     self._loaded = None
 
   def endpoint(self):
-    log(f"🔚 {self.__class__.__name__}")
+    log(f"🔚 {self.outpath}.{self._ext}")
     Y = self.footprint(True)
     return Y
 
@@ -87,7 +104,7 @@ class Step(Trace):
 
   def _dump(self, Y):
 
-    log(f"💾 {self.__class__.__name__} {self.outpath}.{self._ext}")
+    log(f"💾 {self.outpath}.{self._ext}")
     p = f"{self.outpath}.{self._ext}"
     if self._ext == 'pkl':
       with open(p, 'wb') as f: pickle.dump(Y, f)
@@ -102,7 +119,7 @@ class Step(Trace):
 
   def _load(self):
 
-    log(f"📂 {self.__class__.__name__} {self.outpath}.{self._ext}")
+    log(f"📂 {self.outpath}.{self._ext}")
     if self._loaded is not None:
       return self._loaded
     try:
@@ -127,9 +144,9 @@ class Step(Trace):
 
   def restart(self):
 
-    log(f"🗑 {self.__class__.__name__} {self.outpath}.{self._ext}")
+    log(f"🗑 {self.outpath}.{self._ext}")
     p = f"{self.outpath}.{self._ext}"
     if os.path.exists(p):
       os.remove(p)
 
-    log(f"✅ {self.__class__.__name__}")
+    log(f"✅")
