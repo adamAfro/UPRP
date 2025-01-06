@@ -36,7 +36,7 @@ def Profiling(dir:str, kind:str, assignpath:str, aliaspath:str,  profargs:dict={
     x = re.sub(r'\W+', '_', x)
     return x
 
-  L = simplify(H, norm=Profiling.pathnorm)
+  L = simplify(H, norm=pathnorm)
   H = { L['frames'][h0]: X.set_index(["id", "doc"])\
         .rename(columns=L['columns'][h0]) for h0, X in H.items() if not X.empty }
 
@@ -430,8 +430,8 @@ def Geoloc(storage:Storage, geodata:pandas.DataFrame, assignpath:str):
     x = unicodedata.normalize('NFD', text)
     return ''.join([c for c in x if unicodedata.category(c) != 'Mn'])
   C = C[ ~ C.index.isin(Y['name']) ]
-  C.index = C.index.to_series().apply(Geoloc.plremove).values
-  L.index = L.index.to_series().apply(Geoloc.plremove).values
+  C.index = C.index.to_series().apply(plremove).values
+  L.index = L.index.to_series().apply(plremove).values
 
   J = C.join(L, how='inner')
   J = J.reset_index().dropna(axis=1)
