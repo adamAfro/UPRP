@@ -520,23 +520,57 @@ def Classify(storage:Storage, assignpath:str):
 
   return Y
 
-@trail(Step)
-def Bundle(matches:dict[str, cudf.DataFrame],
-           storages:dict[str, Storage],
-           geo: dict[str, pandas.DataFrame], 
-           time:dict[str, pandas.DataFrame], 
-           clsf:dict[str, pandas.DataFrame]):
+@trail(Trace)
+def Bundle(dir:str,
+  
+           matches:   dict[str, cudf.DataFrame],
+           geo:       dict[str, pandas.DataFrame], 
+           time:      dict[str, pandas.DataFrame], 
+           clsf:      dict[str, pandas.DataFrame],
 
-  U0, S, G, T, C = matches, storages, geo, time, clsf
+                                                  ):
 
-  for h, M in U0.items():
-    M[('', '', '', 'repo')] = h
-  M = pandas.concat([M.reset_index().to_pandas() for M in U0.values()], axis=0)
-  M = M.sort_values([('', '', '', 'level'), ('', '', '', 'score')])
-  M = M.drop_duplicates(subset=[('entry', '', '', '')], keep='first')
-  M = M.set_index([('entry', '', '', '')])
+  "Zapisuje połączone wyniki przetwarzania do plików CSV."
 
-  return M
+  M0, G0, T0, C0 = matches, geo, time, clsf
+
+  for k in M0.keys():
+    for X in [G0, T0, C0]: assert k in X
+
+  #reindex
+  for M in M0.values():
+    if M.empty: continue
+    M.columns = ['::'.join(map(str, col)).strip('::') for col in M.columns.values]
+
+  for G in G0.values():
+    if G.empty: continue
+    G.set_index('doc', inplace=True)
+
+  for C in C0.values(): 
+    if C.empty: continue
+    C.reset_index(inplace=True)
+    C.set_index('doc', inplace=True)
+    C.drop(columns='id', inplace=True)
+
+  T0 #ok
+
+  #merge
+  for k in M0.keys():
+
+    M, G, T, C = M0[k], G0[k], T0[k], C0[k]
+    for X in [M, G, T, C]:
+      X['docrepo'] = k
+      X.set_index('docrepo', append=True, inplace=True)
+
+  M0 = cudf.concat(list(M0.values()), axis=0).to_pandas()
+  G0 = pandas.concat(list(G0.values()), axis=0)
+  T0 = pandas.concat(list(T0.values()), axis=0)
+  C0 = pandas.concat(list(C0.values()), axis=0)
+
+  M0.to_csv(f'{dir}/matches.csv')
+  G0.to_csv(f'{dir}/geo.csv')
+  T0.to_csv(f'{dir}/time.csv')
+  C0.to_csv(f'{dir}/clsf.csv')
 
 @trail(Step)
 def GMLParse(path:str):
@@ -680,12 +714,12 @@ try:
   f['Google']['fetch'] = Fetch(f['All']['drop'], 'https://patents.google.com/patent',
                               outdir=D['Google']+'/web', )
 
-  f['All']['bundle'] = Bundle(matches={ k: f[k]['narrow'] for k in D.keys() },
-                              storages={ k: f[k]['profile'] for k in D.keys() },
+  D = { k: f[k] for k in D.keys() if k != 'Google' }
+  f['All']['bundle'] = Bundle('bundle',
+                              matches={ k: f[k]['narrow'] for k in D.keys() },
                               geo={ k: f[k]['geoloc'] for k in D.keys() },
                               time={ k: f[k]['timeloc'] for k in D.keys() },
-                              clsf={ k: f[k]['classify'] for k in D.keys() },
-                              outpath='bundle.pkl')
+                              clsf={ k: f[k]['classify'] for k in D.keys() })
 
   if sys.argv[1] == 'restart':
 
