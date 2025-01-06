@@ -456,7 +456,7 @@ def Geoloc(storage:Storage, geodata:pandas.DataFrame, assignpath:str):
 @trail(Step)
 def Timeloc(storage:Storage, assignpath:str):
 
-  "Wybiera daty z patentów"
+  "Wybiera najwcześniejsze daty dla każdego patentu"
 
   S = storage
   with open(assignpath, 'r') as f:
@@ -468,8 +468,16 @@ def Timeloc(storage:Storage, assignpath:str):
                                   format='mixed', 
                                   dayfirst=False)
 
+  C = C.dropna(subset=['value'])
   C = C.drop_duplicates(subset=['doc', 'value'])
   C = C.set_index('doc')
+  C = C.sort_values(by='value').groupby('doc').first().reset_index()
+
+  C['year'] = C['value'].dt.year.astype(str)
+  C['month'] = C['value'].dt.month.astype(str)
+  C['day'] = C['value'].dt.day.astype(str)
+  C['delay'] = (C['value'] - C['value'].min()).dt.days.astype(int)
+  C = C.drop(columns='value')
 
   return C
 
@@ -544,7 +552,7 @@ def Bundle(dir:str,
   #reindex
   for M in M0.values():
     if M.empty: continue
-    M.columns = ['::'.join(map(str, col)).strip('::') for col in M.columns.values]
+    M.columns = ['::'.join(map(str, k)).strip('::') for k in M.columns.values]
 
   for G in G0.values():
     if G.empty: continue
@@ -556,7 +564,9 @@ def Bundle(dir:str,
     C.set_index('doc', inplace=True)
     C.drop(columns='id', inplace=True)
 
-  T0 #ok
+  for T in T0.values():
+    if T.empty: continue
+    T.set_index('doc', inplace=True)
 
   #merge
   for k in M0.keys():
