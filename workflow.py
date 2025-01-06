@@ -105,7 +105,19 @@ def Profiling(dir:str, kind:str, assignpath:str, aliaspath:str,  profargs:dict={
 @trail(Step)
 def Indexing(storage:Storage, assignpath:str) -> tuple[Digital, Ngrams, Exact, Words, Ngrams]:
 
-  "Indeksowanie danych z profili."
+  """
+  Indeksowanie danych z profili, jest wymagane do przeprowadzenia
+  wyszukiwania w optymalny komputacyjnie sposób.
+
+  Indeksowanie to etap po profilowaniu, który fragmentuje dane na
+  ustalone typy: ciągy cyfrowe, daty, słowa kluczowe, n-gramy słów i ciągów.
+  W zależności od typu, ilości powtórzeń w danych i ich długości posiadaja
+  inne punktacje, które mogą być dalej wykorzystane w procesie wyszukiwania.
+
+  Wartości danych to indeksy i są opisane przez ich źródło, tj.:
+  repozytorium, ramkę, kolumnę i rolę. Takie przypisanie zapewnia
+  klarowność wyszukiwania i możliwość określenia poziomu dopasowania.
+  """
 
   S = storage
   a = assignpath
