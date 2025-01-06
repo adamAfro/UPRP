@@ -240,6 +240,7 @@ def Narrow(queries:pandas.Series, indexes:tuple[Digital, Ngrams, Exact, Words, N
     for i in progress(range(0, QP.shape[0], b))]).reset_index()
 
   m0P = cudf.concat([mP0, mP]).set_index('entry')
+  m0P = m0P.query('score > 0.75')
 
   Q = m0P.join(cudf.from_pandas(Q.astype(str)))\
   [['doc', 'value', 'kind']].to_pandas()
