@@ -24,3 +24,5 @@ nohup*.out
 .vscode
 
 geoportal.gov.pl/*
+
+workflow.md

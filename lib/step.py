@@ -41,13 +41,16 @@ def lazy(x):
   return x.footprint() if isinstance(x, Step) else x
 
 def walk(x, f):
+
   if isinstance(x, list):
-    if x and isinstance(x[0], Step):
-      return [f(v) for v in x]
+    if x and isinstance(x[0], Trace):
+      for v in x: f(v)
+
   if isinstance(x, dict):
-    if x and isinstance(x[next(iter(x))], Step):
-      return {k: f(v) for k, v in x.items()}
-  return f(x) if isinstance(x, Step) else None
+    if x and isinstance(x[next(iter(x))], Trace):
+      for k, v in x.items(): f(v)
+
+  if isinstance(x, Trace): f(x)
 
 class Trace:
 

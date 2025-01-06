@@ -766,6 +766,38 @@ try:
 
     exit()
 
+  if sys.argv[1] == 'docsgen':
+
+    D = set()
+    L = set()
+    for k in f.keys():
+      for h in f[k].keys():
+        f[k][h].name = f"{k}.{h}"
+
+    def traceprint(x:Trace, target=None):
+      global Y
+      if target:
+        L.add(f'{x.name}["{x}"]')
+        L.add(f'{x.name} --> {target.name}')
+        L.add(f'click {x.name} "#{x.__class__.__name__.lower().replace(".", "-")}"')
+        D.add((x.__class__.__name__, x.__class__.__doc__))
+      for s in x.steps:
+        walk(s, lambda a: traceprint(a, x))
+
+    u = f['All']['bundle']
+    walk(u, traceprint)
+    L.add(f'{u.name}["{u}"]')
+    L.add(f'click {u.name} "#{u.__class__.__name__.lower().replace(".", "-")}"')
+
+    D = [(k, re.sub(r'\n\s+', r'\n', d)) for k, d in D if d] #unindent
+    P = '\n'.join([f"{k}\n{'-'*len(k)}\n\n{d}\n" for k, d in D])
+
+    Y = f"```mermaid\ngraph LR\n{'\n'.join(list(L))}\n```"
+    with open('workflow.md', 'w') as f:
+      f.write(Y + '\n'*3 + P)
+
+    exit()
+
   E = []
   for a in sys.argv[1:]:
 
