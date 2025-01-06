@@ -14,7 +14,56 @@ from pyproj import Transformer
 @trail(Step)
 def Profiling(dir:str, kind:str, assignpath:str, aliaspath:str,  profargs:dict={}):
 
-  "Profilowanie danych z różnych źródeł do ramek danych relacyjnych."
+  """
+  Profilowanie danych, z różnych źródeł, do relacyjnych ramek danych.
+
+  Profilowanie składa się z 2 etapów parsowania danych, 
+  etapu normalizacji nazw oraz etapu manualnego przypisywania ról
+  dla kolumn w wytworzonych ramkach danych.
+
+  Dane wejściowe to heterogeniczna struktura 
+  zagnieżdżonych obiektów z parametrami, które mogą być zarówno
+  obiektami, listami obiektów oraz wartościami skalarnymi.
+
+  To jak zagnieżdżony jest obiekt jest tutaj nazwane ścieżką,
+  przykładowo dla obiektu `"krzesła"` w stukturze 
+  `{ "dom": "pokój": { "krzesła": 3 } }`, ścieżka to "dom/pokój/krzesła".
+
+  Heterogeniczność odnosi się do kilku faktów na temat danych:
+
+  - istnienie parametru dla danej obserwacji nie jest gwarantowane;
+  - typ wartości może różnić się po między obserwacjami mimo identycznej ścieżki;
+  - to samo rzeczywiste zjawisko (np. autorstwo patentu) może być reprezentowane 
+  w różny sposób: z różnymi parametrami, o różnych ścieżkach.
+
+  Różnice w danych wynikają z różnic w wersjach schematu odpowiedniego 
+  dla danego okresu, albo z braków danych.
+
+  **Parsowanie danych** polega na odczytaniu zawartości zadanych plików,
+  zgodnie z ich formatowaniem. Dane przetworzone na strukturę słowników
+  są dalej analizowane pod kątem posiadania list podobnych obiektów.
+
+  Kolejnym etapem jest tworzenie struktury homogenicznejz możliwymi brakami.
+  Obiekty w listach są przetwarzane na oddzielne encje w oddzielnej strukturze,
+  z relacją do obiektu w którym się znajdują. Wszystkie pozostałe wartości są
+  przypisywane bezpośrednio do obiektu, w którym się znajdują niezależnie od
+  poziomu zagnieżdżenia.
+
+  W obu etapach nazwami danych i encji są ich ścieżki. Są one mało czytelne,
+  z powodu ich długości dlatego wymagają normalizacji.
+
+  **Normalizacja nazw** polega na przypisaniu krótkich, czytelnych nazw dla
+  ścieżek w danych. Ścieżki zostają podzielone na pojedyncze fragmenty,
+  czyli kolejne nazwy obiektów w których się znajdują. Z takich ciągów
+  tworzony jest graf drzewa. W iteracjach po wierzchołkach wyciągane są
+  nazwy w sposób, który zapewnia ich krótkość i unikalność. Jeśli pierwsza
+  nazwa nie jest unikalna dodawany jest kolejny wierzchołek od końca, aż
+  zapewni to unikalność. Jeśli cały proces nie odniesie sukcesu dodawane
+  są liczby, aby zapewnić unikalność.
+
+  **Przypisanie ról** polega na ręcznym przypisaniu nazw kolumnom w ramkach.
+  Te nazwy są używane na dalszych etapach wyciągania danych.
+  """
 
   P = Profiler( **profargs )
   
