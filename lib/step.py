@@ -98,7 +98,7 @@ class Step(Trace):
     else:
       raise ValueError()
 
-    log(f"✅ {self.__class__.__name__}")
+    log(f"✅ {self.outpath}.{self._ext}")
 
   def _load(self):
 
@@ -118,11 +118,10 @@ class Step(Trace):
           Y = Y.set_index(Y.columns[0])[Y.columns[1]]
 
       self._loaded = Y
-      log(f"✅ {self.__class__.__name__}")
+      log(f"✅ {self.outpath}.{self._ext}")
 
     except FileNotFoundError: 
       Y = None
-      log(f"🟨 {self.__class__.__name__} {self.outpath}.{self._ext} 404")
 
     return Y
 
