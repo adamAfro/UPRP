@@ -1,18 +1,16 @@
 import pandas
-from pyproj import Transformer
 from geopy.distance import geodesic
 from .log import *
 
 def closest(namedgeo: pandas.DataFrame,
-          group: str, name: str, lat: str, lon: str, 
-          srs: str):
+          group: str, name: str, lat: str, lon: str):
 
   """
   W każdej z grup usuwa powtarzające się nazwy miejscowości wybierając
   kombinacje o najniższej sumie odległości między pozostałymi.
   """
 
-  def f(G): return _closest(G, name, lat, lon, srs)
+  def f(G): return _closest(G, name, lat, lon)
 
   Y = namedgeo.groupby(group)\
      .progress_apply(f).reset_index(drop=True)
@@ -21,7 +19,7 @@ def closest(namedgeo: pandas.DataFrame,
 
 
 def _closest(namedgeo: pandas.DataFrame,
-             name: str, lat: str, lon: str, srs: str, evalkey:str='loceval'):
+             name: str, lat: str, lon: str, evalkey:str='loceval'):
 
   """
   Usuwa powtarzające się nazwy miejscowości wybierając kombinacje
@@ -49,18 +47,18 @@ def _closest(namedgeo: pandas.DataFrame,
   C = [c + U.index.tolist() for c in C]
 
   Y = G.loc[C[0]] 
-  m = distmx(Y, lat, lon, srs).sum().sum()
+  m = distmx(Y, lat, lon).sum().sum()
 
   for c in C[1:]:
 
     X = G.loc[c]
-    t = distmx(X, lat, lon, srs).sum().sum()
+    t = distmx(X, lat, lon).sum().sum()
     if t > m: continue
     Y, m = X, t
 
   return Y
 
-def distmx(geo:pandas.DataFrame, lat:str, lon:str, srs:str):
+def distmx(geo:pandas.DataFrame, lat:str, lon:str):
 
   n = len(geo)
   M = pandas.DataFrame(index=geo.index, columns=geo.index)
@@ -68,9 +66,8 @@ def distmx(geo:pandas.DataFrame, lat:str, lon:str, srs:str):
   for i in range(n):
     for j in range(i, n):
 
-      T = Transformer.from_crs(srs, 'EPSG:4326', always_xy=True)
-      A = T.transform(geo.iloc[i][lon], geo.iloc[i][lat])
-      B = T.transform(geo.iloc[j][lon], geo.iloc[j][lat])
+      A = (geo.iloc[i][lon], geo.iloc[i][lat])
+      B = (geo.iloc[j][lon], geo.iloc[j][lat])
 
       d = geodesic(A, B).kilometers
       M.iloc[i, j] = d

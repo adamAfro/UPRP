@@ -9,6 +9,7 @@ from lib.profile import Profiler
 from lib.alias import simplify
 from lib.index import Exact, Words, Digital, Ngrams, Date
 from lib.geo import closest
+from pyproj import Transformer
 
 @trail(Step)
 def Profiling(dir:str, kind:str, assignpath:str, aliaspath:str,  profargs:dict={}):
@@ -414,18 +415,21 @@ def Geoloc(storage:Storage, geodata:pandas.DataFrame, assignpath:str):
                     .str.replace(r'\W+', ' ', regex=True)\
                     .str.strip()
 
+  T = Transformer.from_crs('EPSG:2180', 'EPSG:4326', always_xy=True)
+  L['latitude'], L['longitude'] = zip(*L.apply(lambda r: T.transform(r['latitude'], r['longitude']), axis=1))
+
   L = L.set_index('NAZWAGLOWNA')
 
   J = C.join(L, how='inner')
   J = J.reset_index().dropna(axis=1)
 
-  J = J[[ 'doc', 'value', 'GMINA', 'POWIAT', 'WOJEWODZTWO', 'latitude', 'longitude', 'srsName' ]]
-  J.columns = ['doc', 'name', 'gmina', 'powiat', 'województwo', 'lat', 'lon', 'srs']
+  J = J[[ 'doc', 'value', 'GMINA', 'POWIAT', 'WOJEWODZTWO', 'latitude', 'longitude' ]]
+  J.columns = ['doc', 'name', 'gmina', 'powiat', 'województwo', 'lat', 'lon']
   J = J.drop_duplicates(subset=['doc', 'name', 'lat', 'lon'])
 
   J['lat'] = pandas.to_numeric(J['lat'])
   J['lon'] = pandas.to_numeric(J['lon'])
-  Y = closest(J, 'doc', 'name', 'lat', 'lon', 'EPSG:2180')
+  Y = closest(J, 'doc', 'name', 'lat', 'lon')
 
   def plremove(text):#ASCII
     x = unicodedata.normalize('NFD', text)
@@ -437,15 +441,15 @@ def Geoloc(storage:Storage, geodata:pandas.DataFrame, assignpath:str):
   J = C.join(L, how='inner')
   J = J.reset_index().dropna(axis=1)
 
-  J = J[[ 'doc', 'index', 'GMINA', 'POWIAT', 'WOJEWODZTWO', 'latitude', 'longitude', 'srsName' ]]
+  J = J[[ 'doc', 'index', 'GMINA', 'POWIAT', 'WOJEWODZTWO', 'latitude', 'longitude' ]]
                   #^WTF: z jakiegoś powodu nie 'value'
 
-  J.columns = ['doc', 'name', 'gmina', 'powiat', 'województwo', 'lat', 'lon', 'srs']
+  J.columns = ['doc', 'name', 'gmina', 'powiat', 'województwo', 'lat', 'lon']
   J = J.drop_duplicates(subset=['doc', 'name', 'lat', 'lon'])
 
   J['lat'] = pandas.to_numeric(J['lat'])
   J['lon'] = pandas.to_numeric(J['lon'])
-  Y = pandas.concat([Y, closest(J, 'doc', 'name', 'lat', 'lon', 'EPSG:2180')])
+  Y = pandas.concat([Y, closest(J, 'doc', 'name', 'lat', 'lon')])
 
   return Y
 
