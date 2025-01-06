@@ -678,13 +678,6 @@ try:
     f[k]['narrow'] = Narrow(f['All']['query'], f[k]['index'],
                             batch=2**14, outpath=p+'/narrow.pkl')
 
-    f[k]['drop'] = Drop(f['All']['query'], [f[k]['narrow']],
-                        outpath=p+'/alien', skipable=False)
-
-    f[k]['preview0'] = Preview(f"{p}/profile.txt", f[k]['profile'])
-    f[k]['preview'] = Preview(f"{p}/profile.txt", f[k]['profile'], 
-                              f[k]['narrow'], f['All']['query'])
-
     f[k]['geoloc'] = Geoloc(f[k]['profile'], assignpath=p+'/assignement.yaml', 
                             geodata=f['Geoportal']['parse'],
                             outpath=p+'/geoloc.pkl', skipable=True)
@@ -715,6 +708,15 @@ try:
   f['Base'] = dict()
   f['Base']['drop'] = Drop(f['All']['query'], [f['UPRP']['narrow'], f['Lens']['narrow']],
                            outpath='alien.base', skipable=False)
+
+  for k, p in D.items():
+
+    f[k]['drop'] = Drop(f['All']['query'], [f[k]['narrow']],
+                        outpath=p+'/alien', skipable=False)
+
+    f[k]['preview0'] = Preview(f"{p}/profile.txt", f[k]['profile'])
+    f[k]['preview'] = Preview(f"{p}/profile.txt", f[k]['profile'], 
+                              f[k]['narrow'], f['All']['query'])
 
   f['Google']['narrow'] = Narrow(f['Base']['drop'], 
                                  f['Google']['index'], batch=2**10, 
