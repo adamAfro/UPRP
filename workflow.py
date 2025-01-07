@@ -286,7 +286,8 @@ class Search:
     return draw
 
 @trail(Step)
-def Narrow(queries:pandas.Series, indexes:tuple[Digital, Ngrams, Exact, Words, Ngrams], batch:int=2**14):
+def Narrow(queries:pandas.Series, indexes:tuple[Digital, Ngrams, Exact, Words, Ngrams], 
+           pbatch:int=2**14, ngram=True):
 
   "Wyszukiwanie ograniczone (patrz: kod) oparte o kody, daty i słowa kluczowe."
 
@@ -297,12 +298,17 @@ def Narrow(queries:pandas.Series, indexes:tuple[Digital, Ngrams, Exact, Words, N
 
   mP0 = P0.match(QP['value'], 'max').reset_index()
 
-  b = batch
-  mP = cudf.concat([P.match(QP.iloc[i:i+b]['value'], 'max', 0.6, ownermatch=mP0)
-    for i in progress(range(0, QP.shape[0], b))]).reset_index()
+  b = pbatch#parial
+  if b is not None:
 
-  m0P = cudf.concat([mP0, mP]).set_index('entry')
-  m0P = m0P.query('score > 0.75')
+    mP = cudf.concat([P.match(QP.iloc[i:i+b]['value'], 'max', 0.6, ownermatch=mP0)
+      for i in progress(range(0, QP.shape[0], b))]).reset_index()
+
+    m0P = cudf.concat([mP0, mP]).set_index('entry')
+    m0P = m0P.query('score > 0.75')
+
+  else:
+    m0P = mP0.set_index('entry')
 
   Q = m0P.join(cudf.from_pandas(Q.astype(str)))\
   [['doc', 'value', 'kind']].to_pandas()
@@ -320,11 +326,17 @@ def Narrow(queries:pandas.Series, indexes:tuple[Digital, Ngrams, Exact, Words, N
   mW0 = W0.match(Q[Q['kind'] == 'word'][['value', 'doc']], 'sum')\
   .reset_index()
 
-  W = W.extend('doc')
-  mW = W.match(Q[Q['kind'] == 'word'][['value', 'doc']], 'sum', ownermatch=mW0)\
-  .reset_index()
+  if ngram:
+    W = W.extend('doc')
+    mW = W.match(Q[Q['kind'] == 'word'][['value', 'doc']], 'sum', ownermatch=mW0)\
+    .reset_index()
 
-  Ms = cudf.concat([mW0, mW]).pivot_table(
+    mW0W = cudf.concat([mW0, mW])
+
+  else:
+    mW0W = mW0
+
+  Ms = mW0W.pivot_table(
     index=['doc', 'entry'],
     columns=['repo', 'frame', 'col', 'assignement'],
     values='score',
@@ -348,6 +360,37 @@ def Narrow(queries:pandas.Series, indexes:tuple[Digital, Ngrams, Exact, Words, N
   #TODO odzyskać insight
 
   return Y
+
+@trail(Step)
+def Family(queries:pandas.Series, matches:cudf.DataFrame, storage:Storage,
+           frame:str, pdquery:str, numgetter=lambda X: None):
+
+  "Podmienia kody w zapytaniach na te znalezione w rodzinie patentowej."
+
+  Q, P = queries
+  M = matches.to_pandas()
+  S = storage
+
+  assert frame in S.data.keys()
+
+  M = M.index.to_frame().reset_index(drop=True).drop_duplicates()
+
+  X = S.data[frame].reset_index().query(pdquery).set_index('doc')
+  P = M.set_index('doc').join(numgetter(X), how='inner')
+  P = P.set_index('entry').rename(columns={"doc_number": "value"})
+  P['kind'] = 'number'
+
+  Q = Q[ Q.index.isin(P.index) ].query('kind != "number"')
+
+  Z = []
+  for i, q0 in P['value'].items():
+    Z.extend([{ 'entry': i, **v } for v in Query.Parse("PL"+q0).codes])
+
+  Z = pandas.DataFrame(Z).set_index('entry')
+
+  return pandas.concat([Q, P]).sort_index(), Z
+
+
 
 @trail(Step)
 def Drop(queries:pandas.Series, matches:list[pandas.DataFrame]):
@@ -737,7 +780,7 @@ try:
                              outpath=p+'/indexes.pkl', skipable=True)
 
     f[k]['narrow'] = Narrow(f['All']['query'], f[k]['index'],
-                            batch=2**14, outpath=p+'/narrow.pkl')
+                            pbatch=2**14, outpath=p+'/narrow.pkl')
 
     f[k]['geoloc'] = Geoloc(f[k]['profile'], assignpath=p+'/assignement.yaml', 
                             geodata=f['Geoportal']['parse'],
@@ -751,19 +794,19 @@ try:
                                 outpath=p+'/classification.pkl')
 
   f['UPRP']['narrow'] = Narrow(f['All']['query'], 
-                               f['UPRP']['index'], batch=2**14, 
+                               f['UPRP']['index'], pbatch=2**14, 
                                outpath=D['UPRP']+'/narrow.pkl')
 
   f['USPG']['narrow'] = Narrow(f['All']['query'], 
-                               f['USPG']['index'], batch=2**14,
+                               f['USPG']['index'], pbatch=2**14,
                                 outpath=D['USPG']+'/narrow.pkl')
 
   f['USPA']['narrow'] = Narrow(f['All']['query'], 
-                               f['USPA']['index'], batch=2**14, 
+                               f['USPA']['index'], pbatch=2**14, 
                                outpath=D['USPA']+'/narrow.pkl')
 
   f['Lens']['narrow'] = Narrow(f['All']['query'], 
-                               f['Lens']['index'], batch=2**12, 
+                               f['Lens']['index'], pbatch=2**12, 
                                outpath=D["Lens"]+'/narrow.pkl')
 
   f['Base'] = dict()
@@ -779,8 +822,36 @@ try:
     f[k]['preview'] = Preview(f"{p}/profile.txt", f[k]['profile'], 
                               f[k]['narrow'], f['All']['query'])
 
+  D['UPRP-Lens'] = 'api.uprp.gov.pl/lens'
+  f['UPRP-Lens'] = dict()
+  f['UPRP-Lens']['query'] = Family(queries=f['All']['query'], 
+                                   matches=f['Lens']['narrow'], 
+                                   storage=f['Lens']['profile'],  
+                                   frame='simple_family_members',
+                                   pdquery='jurisdiction == "PL"',
+                                   numgetter=lambda X: X[['doc_number']],
+                                   outpath=D["UPRP-Lens"]+'/family.pkl')
+
+  for k, p in [(f"UPRP-{k0}", D[f"UPRP-{k0}"]) for k0 in ['Lens']]:
+
+    f[k]['narrow'] = Narrow(queries=f[k]['query'],
+                            indexes=f['UPRP']['index'],
+                            outpath=D[k]+'/narrow.pkl',
+                            pbatch=None, ngram=False)
+
+    f[k]['geoloc'] = Geoloc(f['UPRP']['profile'], assignpath=D['UPRP']+'/assignement.yaml', 
+                            geodata=f['Geoportal']['parse'],
+                            outpath=p+'/geoloc.pkl', skipable=True)
+
+    f[k]['timeloc'] = Timeloc(f['UPRP']['profile'], assignpath=D['UPRP']+'/assignement.yaml',
+                              outpath=p+'/timeloc.pkl', skipable=True)
+
+    f[k]['classify'] = Classify(storage=f['UPRP']['profile'], 
+                                assignpath=D['UPRP']+'/assignement.yaml',
+                                outpath=p+'/classification.pkl')
+
   f['Google']['narrow'] = Narrow(f['Base']['drop'], 
-                                 f['Google']['index'], batch=2**10, 
+                                 f['Google']['index'], pbatch=2**10, 
                                  outpath=D["Google"]+'/narrow.pkl')
 
   f['All']['drop'] = Drop(f['All']['query'], [f[k]['narrow'] for k in D.keys()], 
