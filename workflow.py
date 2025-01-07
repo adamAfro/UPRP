@@ -399,21 +399,34 @@ def Narrow(queries:pandas.Series, indexes:tuple[Digital, Ngrams, Exact, Words, N
   return Y
 
 @trail(Step)
-def Family(queries:pandas.Series, matches:cudf.DataFrame, storage:Storage,
-           frame:str, pdquery:str, numgetter=lambda X: None):
+def Family(queries:pandas.Series, matches:cudf.DataFrame, storage:Storage, assignpath:str):
 
   "Podmienia kody w zapytaniach na te znalezione w rodzinie patentowej."
 
-  Q, P = queries
+  Q, _ = queries
   M = matches.to_pandas()
   S = storage
 
-  assert frame in S.data.keys()
+  with open(assignpath, 'r') as f:
+    S.assignement = yaml.load(f, Loader=yaml.FullLoader)
+
+  A = S.melt('family-number').reset_index()[['id', 'doc', 'value']]
+  B = S.melt('family-jurisdiction').reset_index()[['id', 'doc', 'value']]\
+        .rename(columns={'value': 'jurisdiction'})
+
+  U = S.melt('family')[['doc', 'value']]
+  U['jurisdiction'] = U['value'].str.extract(r'^(\D+)')
+  U['value'] = U['value'].str.extract(r'(\d+)')
+
+  C = pandas.DataFrame()
+  if (not A.empty):
+    C = A.merge(B, on=['id', 'doc']).drop(columns=['id'])
+
+  C = pandas.concat([X for X in [C, U] if not X.empty]).set_index('doc')
+  C = C.query('jurisdiction == "PL"').drop(columns='jurisdiction')
 
   M = M.index.to_frame().reset_index(drop=True).drop_duplicates()
-
-  X = S.data[frame].reset_index().query(pdquery).set_index('doc')
-  P = M.set_index('doc').join(numgetter(X), how='inner')
+  P = M.set_index('doc').join(C['value'], how='inner')
   P = P.set_index('entry').rename(columns={"doc_number": "value"})
   P['kind'] = 'number'
 
@@ -858,17 +871,19 @@ try:
     f[k]['preview'] = Preview(f"{p}/profile.txt", f[k]['profile'], 
                               f[k]['narrow'], f['All']['query'])
 
-  D['UPRP-Lens'] = 'api.uprp.gov.pl/lens'
-  f['UPRP-Lens'] = dict()
-  f['UPRP-Lens']['query'] = Family(queries=f['All']['query'], 
-                                   matches=f['Lens']['narrow'], 
-                                   storage=f['Lens']['profile'],  
-                                   frame='simple_family_members',
-                                   pdquery='jurisdiction == "PL"',
-                                   numgetter=lambda X: X[['doc_number']],
-                                   outpath=D["UPRP-Lens"]+'/family.pkl')
+  for k0 in ['Lens', 'Google']:
 
-  for k, p in [(f"UPRP-{k0}", D[f"UPRP-{k0}"]) for k0 in ['Lens']]:
+    k = f'UPRP-{k0}'
+    f[k] = dict()
+    p = f'{D["UPRP"]}/{D[k0]}'
+    D[k] = p
+
+    f[k] = dict()
+    f[k]['query'] = Family(queries=f['All']['query'], 
+                                   matches=f[k0]['narrow'], 
+                                   storage=f[k0]['profile'],  
+                                   assignpath=D[k0]+'/assignement.yaml',
+                                   outpath=p+'/family.pkl')
 
     f[k]['narrow'] = Narrow(queries=f[k]['query'],
                             indexes=f['UPRP']['index'],
