@@ -54,8 +54,9 @@ class Storage:
 
     return ((h, k)
       for h, X in self.assignement.items()
-      for k, v in X.items()
-      if v == target)
+        for k, v in X.items()
+          if (isinstance(v, str) and v == target) or
+             (isinstance(v, list) and target in v))
 
   def str(self):
     def underline(x:str): return '\n\n\n'+x+'\n'+''.join(['=' for i in x])+'\n\n'
