@@ -114,6 +114,9 @@ def Indexing(storage:Storage, assignpath:str) -> tuple[Digital, Ngrams, Exact, W
   W zależności od typu, ilości powtórzeń w danych i ich długości posiadaja
   inne punktacje, które mogą być dalej wykorzystane w procesie wyszukiwania.
 
+  Indeksowanie korzysta z wcześniej przypisanych ról do określenia tego
+  w jaki sposób przetwarzać dane.
+
   Wartości danych to indeksy i są opisane przez ich źródło, tj.:
   repozytorium, ramkę, kolumnę i rolę. Takie przypisanie zapewnia
   klarowność wyszukiwania i możliwość określenia poziomu dopasowania.
@@ -149,7 +152,14 @@ def Indexing(storage:Storage, assignpath:str) -> tuple[Digital, Ngrams, Exact, W
 @trail(Step)
 def Qdentify(qpath:str, storage:Storage, docsframe:str):
 
-  "Dopasowanie zapytań do dokumentów na podstawie kolumny P."
+  """
+  Dopasowanie zapytań do dokumentów na podstawie nazwy pliku.
+
+  Rozpoznawanie zapytań odbywa się w zupełnie innym kontekście i
+  nie zwraca dla zapytań informacji o tym skąd pochodzą.
+  Identyfikacja korzysta z nazw plików i metadanych samych zapytań
+  to dopasowania ich do odpowiednich danych w zbiorze.
+  """
 
   Q = pandas.read_csv(qpath)
   D = storage.data[docsframe]
@@ -172,6 +182,16 @@ def Qdentify(qpath:str, storage:Storage, docsframe:str):
 
 @trail(Step)
 def Parsing(searches: pandas.Series):
+
+  """
+  Parsowanie zapytań to proces wyciągania z tekstów
+  ciągów przypominających daty i numery patentowe.
+
+  Proces polega na wstępnym podzieleniu całego napisu na
+  części spełniające określone wyrażenia regularne. Później,
+  te są łączone na podstawie tego czy w ich pobliżu są oczekiwane
+  ciągi takie jak ciągi liczbowe albo skrótowce takie jak "PL".
+  """
 
   Q = searches.set_index('entry')['query']
   Q.index = Q.index.astype('str')
@@ -289,7 +309,14 @@ class Search:
 def Narrow(queries:pandas.Series, indexes:tuple[Digital, Ngrams, Exact, Words, Ngrams], 
            pbatch:int=2**14, ngram=True):
 
-  "Wyszukiwanie ograniczone (patrz: kod) oparte o kody, daty i słowa kluczowe."
+  """
+  Wyszukiwanie ograniczone do połączeń kodami patentowymi.
+
+  Wyszukiwanie w zależności od parametrów korzysta z dopasowania
+  kodami patentowymi albo ich częściami. Później w grafie takich
+  połączeń szuka dodatkowych dowodów na istnienie połączenia:
+  wspólnych kluczy (np. imion i nazw miast) oraz dat.
+  """
 
   Q, _ = queries
   P0, P, D0, W0, W = indexes
@@ -394,6 +421,8 @@ def Family(queries:pandas.Series, matches:cudf.DataFrame, storage:Storage,
 
 @trail(Step)
 def Drop(queries:pandas.Series, matches:list[pandas.DataFrame]):
+
+  "Usuwa z wyników zapytań te, które już zostały dopasowane w zadowalający sposób."
 
   Q, P = queries
   M = matches
@@ -588,10 +617,7 @@ def Timeloc(storage:Storage, assignpath:str):
 @trail(Step)
 def Classify(storage:Storage, assignpath:str):
 
-  """
-  Zwraca ramkę z klasyfikacjami, przyporządkowanie może być szczegółowe,
-  np. IPC-section albo ogólne IPC.
-  """
+  "Zwraca ramkę z klasyfikacjami."
 
   H = storage
   a = assignpath
