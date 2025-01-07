@@ -20,3 +20,9 @@ Generowanie dokumentacji:
 ```sh
 python workflow.py docsgen
 ```
+
+
+Wcześniejsze działania
+----------------------
+
+- [Proces OCR](https://github.com/adamAfro/UPRP/tree/OCR);
