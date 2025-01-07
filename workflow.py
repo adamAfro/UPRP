@@ -871,6 +871,12 @@ try:
     f[k]['preview'] = Preview(f"{p}/profile.txt", f[k]['profile'], 
                               f[k]['narrow'], f['All']['query'])
 
+  D['Google'] = 'patents.google.com'
+
+  f['Google']['narrow'] = Narrow(f['Base']['drop'], 
+                                 f['Google']['index'], pbatch=2**10, 
+                                 outpath=D["Google"]+'/narrow.pkl')
+
   for k0 in ['Lens', 'Google']:
 
     k = f'UPRP-{k0}'
@@ -901,15 +907,10 @@ try:
                                 assignpath=D['UPRP']+'/assignement.yaml',
                                 outpath=p+'/classification.pkl')
 
-  f['Google']['narrow'] = Narrow(f['Base']['drop'], 
-                                 f['Google']['index'], pbatch=2**10, 
-                                 outpath=D["Google"]+'/narrow.pkl')
-
   f['All']['drop'] = Drop(f['All']['query'], [f[k]['narrow'] for k in D.keys()], 
                           outpath='alien', skipable=False)
 
 
-  D['Google'] = 'patents.google.com'
   f['Google']['fetch'] = Fetch(f['All']['drop'], 'https://patents.google.com/patent',
                               outdir=D['Google']+'/web', )
 
