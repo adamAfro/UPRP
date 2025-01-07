@@ -29,6 +29,8 @@ def Profiling(dir:str, kind:str, assignpath:str, aliaspath:str,  profargs:dict={
   przykładowo dla obiektu `"krzesła"` w stukturze 
   `{ "dom": "pokój": { "krzesła": 3 } }`, ścieżka to "dom/pokój/krzesła".
 
+  ***
+
   Heterogeniczność odnosi się do kilku faktów na temat danych:
 
   - istnienie parametru dla danej obserwacji nie jest gwarantowane;
@@ -38,6 +40,8 @@ def Profiling(dir:str, kind:str, assignpath:str, aliaspath:str,  profargs:dict={
 
   Różnice w danych wynikają z różnic w wersjach schematu odpowiedniego 
   dla danego okresu, albo z braków danych.
+
+  ***
 
   **Parsowanie danych** polega na odczytaniu zawartości zadanych plików,
   zgodnie z ich formatowaniem. Dane przetworzone na strukturę słowników
@@ -52,6 +56,8 @@ def Profiling(dir:str, kind:str, assignpath:str, aliaspath:str,  profargs:dict={
   W obu etapach nazwami danych i encji są ich ścieżki. Są one mało czytelne,
   z powodu ich długości dlatego wymagają normalizacji.
 
+  ***
+
   **Normalizacja nazw** polega na przypisaniu krótkich, czytelnych nazw dla
   ścieżek w danych. Ścieżki zostają podzielone na pojedyncze fragmenty,
   czyli kolejne nazwy obiektów w których się znajdują. Z takich ciągów
@@ -60,6 +66,8 @@ def Profiling(dir:str, kind:str, assignpath:str, aliaspath:str,  profargs:dict={
   nazwa nie jest unikalna dodawany jest kolejny wierzchołek od końca, aż
   zapewni to unikalność. Jeśli cały proces nie odniesie sukcesu dodawane
   są liczby, aby zapewnić unikalność.
+
+  ***
 
   **Przypisanie ról** polega na ręcznym przypisaniu nazw kolumnom w ramkach.
   Te nazwy są używane na dalszych etapach wyciągania danych.
@@ -113,6 +121,8 @@ def Indexing(storage:Storage, assignpath:str) -> tuple[Digital, Ngrams, Exact, W
   ustalone typy: ciągy cyfrowe, daty, słowa kluczowe, n-gramy słów i ciągów.
   W zależności od typu, ilości powtórzeń w danych i ich długości posiadaja
   inne punktacje, które mogą być dalej wykorzystane w procesie wyszukiwania.
+
+  ***
 
   Indeksowanie korzysta z wcześniej przypisanych ról do określenia tego
   w jaki sposób przetwarzać dane.
@@ -949,6 +959,7 @@ try:
 
     D = [(k, re.sub(r'\n\s+', r'\n', d)) for k, d in D if d] #unindent
     P = '\n'.join([f"{k}\n{'-'*len(k)}\n\n{d}\n" for k, d in D])
+    P = re.sub(r'\*{3}\n', r'\n\n', P)
 
     Y = f"```mermaid\ngraph LR\n{'\n'.join(list(L))}\n```"
     with open('workflow.md', 'w') as f:
