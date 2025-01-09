@@ -1041,6 +1041,8 @@ try:
 
   if sys.argv[1] == 'docsgen':
 
+    n = '\n'
+
     D = set()
     L = set()
     for k in f.keys():
@@ -1066,9 +1068,11 @@ try:
     P = '\n'.join([f"{k}\n{'-'*len(k)}\n\n{d}\n" for k, d in D])
     P = re.sub(r'\*{3}\n', r'\n\n', P)
 
-    Y = f"```mermaid\ngraph LR\n{'\n'.join(list(L))}\n```"
+    V = f'```\npython {sys.version}\npandas {pandas.__version__}\n```\n\n\n'
+
+    Y = f"```mermaid\ngraph LR\n{n.join(list(L))}\n```"
     with open('workflow.md', 'w') as f:
-      f.write(Y + '\n'*3 + P)
+      f.write(V + Y + '\n'*3 + P)
 
     exit()
 
