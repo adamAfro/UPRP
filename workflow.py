@@ -580,6 +580,9 @@ def Personify(storage:Storage, assignpath:str):
 
     P = pandas.concat([P, p]) if not P.empty else p
 
+  if 'fname' not in P.columns:
+    return P, pandas.DataFrame()
+
   N = pandas.concat([
     P['fname'].str.split(' ').explode().dropna().drop_duplicates()\
     .to_frame().assign(assignement='fname').rename(columns={'fname': 'word'}),
@@ -614,9 +617,17 @@ def Personify(storage:Storage, assignpath:str):
   #TODO: gdy imie jest w tabeli przed nazwiskiem może to sprawić
   # że nazwisko nie zostanie rozpoznane, mimo że słownik wskazuje inaczej
 
-  P = P.drop(columns=['word', 'N'])
+  P = P.reset_index().drop(columns=['word', 'N', 'id'])
 
-  return P
+  A = P.dropna(subset=['fname', 'lname']).drop(columns=['name'])\
+  .drop_duplicates(subset=['doc', 'fname', 'lname'])\
+  .set_index(['doc', 'fname', 'lname'])
+
+  B = P.dropna(subset=['name']).drop(columns=['fname', 'lname'])\
+  .drop_duplicates(subset=['doc', 'name'])\
+  .set_index(['name'])
+
+  return A, B
 
 @trail(Step)
 def Geoloc(storage:Storage, geodata:pandas.DataFrame, assignpath:str):
