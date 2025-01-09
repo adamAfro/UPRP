@@ -846,10 +846,10 @@ def Bundle(dir:str,
   P0A = pandas.concat(list(P0A.values()), axis=0)
   P0B = pandas.concat(list(P0B.values()), axis=0)
 
-  M0.to_csv(f'{dir}/matches.csv')
-  G0.to_csv(f'{dir}/geo.csv')
-  T0.to_csv(f'{dir}/time.csv')
-  C0.to_csv(f'{dir}/clsf.csv')
+  M0.to_csv(f'{dir}/pat:pat-raport-ocr.csv')
+  G0.to_csv(f'{dir}/spatial:pat.csv')
+  T0.to_csv(f'{dir}/date:pat.csv')
+  C0.to_csv(f'{dir}/classification.csv')
   P0A.to_csv(f'{dir}/people-signed.csv')
   P0B.to_csv(f'{dir}/people-named.csv')
 
