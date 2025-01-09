@@ -711,16 +711,20 @@ def Timeloc(storage:Storage, assignpath:str):
   with open(assignpath, 'r') as f:
     S.assignement = yaml.load(f, Loader=yaml.FullLoader)
 
-  C = S.melt('date')[['doc', 'value']]
+  C = pandas.concat([S.melt(f'date-{k}')[['doc', 'value', 'assignement']] 
+                     for k in ['fill', 'application', 'office', 'exhibition', 'grant', 
+                               'nogrant', 'decision', 'regional', 'priority']])
+
+  C['assignement'] = C['assignement'].str.split('-').str[1]
   C['value'] = pandas.to_datetime(C['value'], 
                                   errors='coerce', 
                                   format='mixed', 
                                   dayfirst=False)
 
   C = C.dropna(subset=['value'])
-  C = C.drop_duplicates(subset=['doc', 'value'])
+  C = C.drop_duplicates(subset=['doc', 'value', 'assignement'])
   C = C.set_index('doc')
-  C = C.sort_values(by='value').groupby('doc').first().reset_index()
+  C = C.sort_values(by='value')
 
   C['year'] = C['value'].dt.year.astype(str)
   C['month'] = C['value'].dt.month.astype(str)
@@ -829,7 +833,7 @@ def Bundle(dir:str,
 
   for T in T0.values():
     if T.empty: continue
-    T.set_index('doc', inplace=True)
+    pass
 
   #merge
   for k in M0.keys():
