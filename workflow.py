@@ -1024,8 +1024,8 @@ try:
                               outdir=D['Google']+'/web', )
 
   f['All']['bundle'] = Bundle('bundle',
-                              matches={ k: f[k]['narrow'] for k in D.keys() if k != 'Google' },
-                              pull={ k: f[k]['pull'] for k in D.keys() if k != 'Google' })
+                              matches={ k: f[k]['narrow'] for k in D.keys() },
+                              pull={ k: f[k]['pull'] for k in D.keys() if '-' not in k })
 
   if sys.argv[1] == 'emigrate':
 
