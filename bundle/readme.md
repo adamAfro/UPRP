@@ -1,16 +1,16 @@
 ```mermaid
 erDiagram
 
-doc ||--o{ "classification.csv" : "jest zaklafikowany"
-doc ||--o{ "date.csv" : "coś się z nim [wtedy] stało"
+doc ||--o{ "classification:pat.csv" : "jest zaklafikowany"
+doc ||--o{ "event:pat.csv" : "coś się z nim [wtedy] stało"
 "pat:pat-raport-ocr.csv" }o--|| doc : "wymienia w rap."
 "pat:pat-raport-ocr.csv" }o--|| doc : "jest"
 
 "spatial.csv" }o--|| doc : "ktoś związany z pat. był w miejscu"
-doc ||--o{ "people-signed.csv" : "ktoś jest związany z dok"
-"people-named.csv" }o--|| doc : "ktoś jest związany z dok"
+doc ||--o{ "people:pat-signed.csv" : "ktoś jest związany z dok"
+"people:pat-named.csv" }o--|| doc : "ktoś jest związany z dok"
 
-"classification.csv" 
+"classification:pat.csv" 
 { doc idx "odnośnik do dokumentu"
   repo idx "zbiór danych z którego pochodzi"
   classification str "jedno z: IPC, CPC, IPCR"
@@ -20,7 +20,7 @@ doc ||--o{ "people-signed.csv" : "ktoś jest związany z dok"
   group str "grupa reprezentowana przez cyfry"
   subgroup str "podgrupa reprezentowana przez cyfry" }
 
-"date.csv" 
+"event:pat.csv" 
 { doc idx "odnośnik do dokumentu"
   repo idx "zbiór danych z którego pochodzi"
   year int "rok"
@@ -45,13 +45,13 @@ doc ||--o{ "people-signed.csv" : "ktoś jest związany z dok"
   lat float "szerokość geograficzna"
   lon float "długość geograficzna" }
 
-"people-named.csv" 
+"people:pat-named.csv" 
 { doc idx "odnośnik do dokumentu"
   repo idx "zbiór danych z którego pochodzi"
   name str "nazwa albo imię i nazwisko"
   role str "rola" }
 
-"people-signed.csv" 
+"people:pat-signed.csv" 
 { doc idx "odnośnik do dokumentu"
   repo idx "zbiór danych z którego pochodzi"
   fname str "imię"

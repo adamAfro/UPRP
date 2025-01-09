@@ -779,7 +779,7 @@ def Bundle(dir:str,
   P0B = { k: v[3][1] for k, v in U.items() }
 
   for k in M0.keys():
-    for X in [G0, T0, C0]: assert k in X
+    for X in [G0, T0, C0, P0A, P0B]: assert k in X
 
   #reindex
   for M in M0.values():
@@ -803,8 +803,9 @@ def Bundle(dir:str,
   #merge
   for k in M0.keys():
 
-    M, G, T, C = M0[k], G0[k], T0[k], C0[k]
-    for X in [M, G, T, C]:
+    M, G, T, C, PA, PB = M0[k], G0[k], T0[k], C0[k], P0A[k], P0B[k]
+    for X in [M, G, T, C, PA, PB]:
+      if X.empty: continue
       X['docrepo'] = k
       X.set_index('docrepo', append=True, inplace=True)
 
@@ -817,18 +818,18 @@ def Bundle(dir:str,
 
   M0.to_csv(f'{dir}/pat:pat-raport-ocr.csv')
   G0.to_csv(f'{dir}/spatial:pat.csv')
-  T0.to_csv(f'{dir}/date:pat.csv')
-  C0.to_csv(f'{dir}/classification.csv')
-  P0A.to_csv(f'{dir}/people-signed.csv')
-  P0B.to_csv(f'{dir}/people-named.csv')
+  T0.to_csv(f'{dir}/event:pat.csv')
+  C0.to_csv(f'{dir}/classification:pat.csv')
+  P0A.to_csv(f'{dir}/people:pat-signed.csv')
+  P0B.to_csv(f'{dir}/people:pat-named.csv')
 
   with zipfile.ZipFile(f'{dir}/dist.zip', 'w') as z:
     z.write(f'{dir}/pat:pat-raport-ocr.csv', 'pat:pat-raport-ocr.csv')
     z.write(f'{dir}/spatial:pat.csv', 'spatial:pat.csv')
-    z.write(f'{dir}/date:pat.csv', 'date:pat.csv')
-    z.write(f'{dir}/classification.csv', 'classification.csv')
-    z.write(f'{dir}/people-signed.csv', 'people-signed.csv')
-    z.write(f'{dir}/people-named.csv', 'people-named.csv')
+    z.write(f'{dir}/event:pat.csv', 'event:pat.csv')
+    z.write(f'{dir}/classification:pat.csv', 'classification:pat.csv')
+    z.write(f'{dir}/people:pat-signed.csv', 'people:pat-signed.csv')
+    z.write(f'{dir}/people:pat-named.csv', 'people:pat-named.csv')
 
 @trail(Step)
 def GMLParse(path:str):
