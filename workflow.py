@@ -1,4 +1,4 @@
-import sys, pandas, cudf, matplotlib.pyplot as pyplot
+import sys, pandas, matplotlib.pyplot as pyplot
 import yaml, re, os, asyncio, aiohttp, unicodedata
 import xml.etree.ElementTree as ET
 from lib.log import notify, log, progress
@@ -7,7 +7,6 @@ from lib.query import Query
 from lib.step import trail, Trace, Step, walk
 from lib.profile import Profiler
 from lib.alias import simplify
-from lib.index import Exact, Words, Digital, Ngrams, Date
 from lib.geo import closest
 from pyproj import Transformer
 
@@ -111,7 +110,7 @@ def Profiling(dir:str, kind:str, assignpath:str, aliaspath:str,  profargs:dict={
   return Storage(dir, H)
 
 @trail(Step)
-def Indexing(storage:Storage, assignpath:str) -> tuple[Digital, Ngrams, Exact, Words, Ngrams]:
+def Indexing(storage:Storage, assignpath:str):
 
   """
   Indeksowanie danych z profili, jest wymagane do przeprowadzenia
@@ -131,6 +130,8 @@ def Indexing(storage:Storage, assignpath:str) -> tuple[Digital, Ngrams, Exact, W
   repozytorium, ramkę, kolumnę i rolę. Takie przypisanie zapewnia
   klarowność wyszukiwania i możliwość określenia poziomu dopasowania.
   """
+
+  from lib.index import Exact, Words, Digital, Ngrams, Date
 
   S = storage
   a = assignpath
@@ -223,7 +224,7 @@ class Search:
 
   "Klasa z metodami pomocniczymi dla wyszukiwania."
 
-  Levels = cudf.CategoricalDtype([
+  Levels = pandas.CategoricalDtype([
     "weakest", "dated", "partial",
     "supported", "partial-supported",
     "exact", "dated-supported",
@@ -232,11 +233,13 @@ class Search:
     "exact-dated", "exact-dated-supported"
   ], ordered=True)
 
-  def score(matches:cudf.DataFrame):
+  def score(matches):
 
     "Zwraca ramkę z kolumnami 'score' i 'level' i indeksem 'doc' i 'entry'."
 
-    X = matches
+    import cudf
+
+    X: cudf.DataFrame = matches
     S = cudf.DataFrame(index=X.index)
 
     for k0 in ['number', 'date', 'partial-number']:
@@ -260,7 +263,7 @@ class Search:
       (S['name']  * S['city'] > 1.) + \
       (S['title'] * S['city'] > 1.) >= 3.
 
-    L0 = Search.Levels.categories.to_pandas()
+    L0 = Search.Levels.categories
     L['level'] = L0[0]
     for c in L0[1:]:
       try: q = L[c.split('-')].all(axis=1)
@@ -268,7 +271,9 @@ class Search:
       R = L['level'].where(~ q, c)
       L['level'] = R
 
-    Z = cudf.DataFrame({ 'score': S.sum(axis=1), 'level': L['level'].astype(Search.Levels) }, index=S.index)
+    Z = cudf.DataFrame({ 'score': S.sum(axis=1), 
+                         'level': L['level'].astype(cudf.CategoricalDtype.from_pandas(Search.Levels)) }, 
+                        index=S.index)
 
     Y = Z.reset_index().sort_values(['level', 'score'])
     Y = Y.groupby('entry').tail(1).set_index(['doc', 'entry'])
@@ -313,8 +318,7 @@ class Search:
     return draw
 
 @trail(Step)
-def Narrow(queries:pandas.Series, indexes:tuple[Digital, Ngrams, Exact, Words, Ngrams], 
-           pbatch:int=2**14, ngram=True):
+def Narrow(queries:pandas.Series, indexes:tuple, pbatch:int=2**14, ngram=True):
 
   """
   Wyszukiwanie ograniczone do połączeń kodami patentowymi.
@@ -324,6 +328,8 @@ def Narrow(queries:pandas.Series, indexes:tuple[Digital, Ngrams, Exact, Words, N
   połączeń szuka dodatkowych dowodów na istnienie połączenia:
   wspólnych kluczy (np. imion i nazw miast) oraz dat.
   """
+
+  import cudf
 
   Q0, _ = queries
   P0, P, D0, W0, W = indexes
@@ -345,7 +351,7 @@ def Narrow(queries:pandas.Series, indexes:tuple[Digital, Ngrams, Exact, Words, N
     m0P = mP0.set_index('entry')
 
   Q = m0P.join(cudf.from_pandas(Q0.astype(str)))\
-  [['doc', 'value', 'kind']].to_pandas()
+  [['doc', 'value', 'kind']].to_pandas()#indeksy wymagają inputu pandas
 
   D0 = D0.extend('doc')
   mD0 = D0.match(Q[Q['kind'] == 'date'][['value', 'doc']], 'max').reset_index()
@@ -405,15 +411,15 @@ def Narrow(queries:pandas.Series, indexes:tuple[Digital, Ngrams, Exact, Words, N
   Y.columns = cudf.MultiIndex.from_tuples(Y.columns)
   Y = Y[Y.columns[::-1]]
 
-  return Y
+  return Y.to_pandas()
 
 @trail(Step)
-def Family(queries:pandas.Series, matches:cudf.DataFrame, storage:Storage, assignpath:str):
+def Family(queries:pandas.Series, matches:pandas.DataFrame, storage:Storage, assignpath:str):
 
   "Podmienia kody w zapytaniach na te znalezione w rodzinie patentowej."
 
   Q, _ = queries
-  M = matches.to_pandas()
+  M = matches
   S = storage
 
   with open(assignpath, 'r') as f:
@@ -468,7 +474,7 @@ def Drop(queries:pandas.Series, matches:list[pandas.DataFrame]):
     y.columns = ['entry', 'doc', 'level', 'score']
     Y.append(y)
 
-  Y = cudf.concat(Y, axis=0, ignore_index=True)
+  Y = pandas.concat(Y, axis=0, ignore_index=True)
   assert Y['level'].dtype == 'category'
   Y = Y.sort_values(['level', 'score'])
   Y['level'] = Y['level'].astype(Search.Levels)
@@ -511,7 +517,7 @@ def Preview(path:str,
 
       return
 
-    M = matches.to_pandas().sample(n)
+    M = matches.sample(n)
     Q, _ = queries
 
     M = M[M.index.get_level_values('entry').isin(Q.index.values)]
@@ -796,7 +802,7 @@ def Pull(storage:Storage, assignpath:str, geodata:pandas.DataFrame, workdir:str)
 @trail(Trace)
 def Bundle(dir:str,
 
-           matches:   dict[str, cudf.DataFrame],
+           matches:   dict[str, pandas.DataFrame],
            pull:      dict[str, tuple[pandas.DataFrame]],
 
                                                          ):
@@ -840,7 +846,7 @@ def Bundle(dir:str,
       X['docrepo'] = k
       X.set_index('docrepo', append=True, inplace=True)
 
-  M0 = cudf.concat(list(M0.values()), axis=0).to_pandas()
+  M0 = pandas.concat(list(M0.values()), axis=0)
   G0 = pandas.concat(list(G0.values()), axis=0)
   T0 = pandas.concat(list(T0.values()), axis=0)
   C0 = pandas.concat(list(C0.values()), axis=0)
