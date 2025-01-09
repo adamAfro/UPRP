@@ -443,10 +443,10 @@ def Drop(queries:pandas.Series, matches:list[pandas.DataFrame]):
   Y = Y[Y['level'] >= "partial-dated-supported"]
 
   p0 = P.index.astype(str).unique()
-  p = p0[p0.isin(Y['entry'].values_host)]
+  p = p0[p0.isin(Y['entry'])]
 
   q0 = Q.index.astype(str).unique()
-  q = q0[q0.isin(Y['entry'].values_host)]
+  q = q0[q0.isin(Y['entry'])]
 
   return Q[ ~ Q.index.isin(q)], P[ ~ P.index.isin(p) ]
 
