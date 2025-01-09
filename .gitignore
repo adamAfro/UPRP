@@ -23,6 +23,7 @@ prom
 *.pkl
 *.xml
 *.txt
+*.zip
 
 .vscode
 

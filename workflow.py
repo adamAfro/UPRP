@@ -1009,6 +1009,39 @@ try:
                               matches={ k: f[k]['narrow'] for k in D.keys() if k != 'Google' },
                               pull={ k: f[k]['pull'] for k in D.keys() if k != 'Google' })
 
+  if sys.argv[1] == 'emigrate':
+
+    import zipfile
+
+    if os.path.exists('migraton.zip'):
+      os.remove('migraton.zip')
+    with zipfile.ZipFile(f'migraton.zip', 'w') as z:
+
+      for k in ['UPRP', 'Lens', 'USPG', 'USPA', 'Google']:
+
+        z.write(f"{D[k]}/narrow.pkl")
+        z.write(f"{D[k]}/storage.pkl")
+        z.write(f"{D[k]}/assignement.yaml")
+        z.write(f"{D[k]}/alias.yaml")
+
+      for k in ['Lens', 'Google']:
+
+        z.write(f"{D['UPRP']}/{D[k]}/narrow.pkl")
+
+    log('📥', f'{(os.path.getsize('migraton.zip')/ (1024 ** 3)):.2} GB')
+
+    exit()
+
+  if sys.argv[1] == 'imigrate':
+
+    import zipfile
+
+    with zipfile.ZipFile(f'migraton.zip', 'r') as z:
+
+      z.extractall()
+
+    exit()
+
   if sys.argv[1] == 'restart':
 
     for k in f.keys():
