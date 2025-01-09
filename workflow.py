@@ -667,7 +667,7 @@ def Geoloc(storage:Storage, geodata:pandas.DataFrame, assignpath:str):
   L = L.set_index('name')
 
   J = C.join(L, how='inner')
-  J = J.reset_index().dropna(axis=1)
+  J = J.reset_index().dropna(subset=['lat','lon']).dropna(axis=1)
 
   J = J[['doc', 'value', 'gmina', 'powiat', 'województwo', 'lat', 'lon']]
   J.columns = ['doc', 'name', 'gmina', 'powiat', 'województwo', 'lat', 'lon']
@@ -685,7 +685,7 @@ def Geoloc(storage:Storage, geodata:pandas.DataFrame, assignpath:str):
   L.index = L.index.to_series().apply(plremove).values
 
   J = C.join(L, how='inner')
-  J = J.reset_index().dropna(axis=1)
+  J = J.reset_index().dropna(subset=['lat','lon']).dropna(axis=1)
 
   J = J[['doc', 'index', 'gmina', 'powiat', 'województwo', 'lat', 'lon']]
                 #^WTF: z jakiegoś powodu nie 'value'
@@ -889,6 +889,16 @@ def GMLParse(path:str):
 
     return L
 
+@trail(Step)
+def GeoXLSXload(path:str):
+
+    L = pandas.read_excel(path, engine='openpyxl')
+    L.columns = [re.sub(r'\s+', ' ', c).lower() for c in L.columns]
+    L = L[[ 'rodzaj', 'nazwa miejscowości', 'powiat (miasto na prawach powiatu)', 'gmina', 'województwo', 'latitude', 'longitude' ]]
+    L.columns = ['type', 'name', 'gmina', 'powiat', 'województwo', 'lat', 'lon']
+
+    return L
+
 try:
 
   D = { 'UPRP': 'api.uprp.gov.pl',
@@ -903,6 +913,10 @@ try:
   f['Geoportal'] = dict()
   f['Geoportal']['parse'] = GMLParse(path='geoportal.gov.pl/wfs/name.gml', 
                                      outpath='geoportal.gov.pl/wfs/name.pkl')
+
+  f['Misc'] = dict()
+  f['Misc']['geodata'] = GeoXLSXload(path='prom/df_adresses_with_coordinates.xlsx', 
+                                     outpath='prom/df_adresses_with_coordinates.pkl')
 
   f['UPRP']['profile'] = Profiling(D['UPRP']+'/raw/', kind='XML',
                                    assignpath=D['UPRP']+'/assignement.null.yaml', 
@@ -954,8 +968,8 @@ try:
                             pbatch=2**14, outpath=p+'/narrow.pkl')
 
     f[k]['pull'] = Pull(f[k]['profile'], assignpath=p+'/assignement.yaml', 
-                        geodata=f['Geoportal']['parse'],
-                        outpath=p+'/pull.pkl', workdir=p+'/bundle')
+                        geodata=f['Misc']['geodata'],
+                        outpath=p+'/pull.pkl', workdir=p+'/bundle', skipable=False)
 
   f['UPRP']['narrow'] = Narrow(f['All']['query'], 
                                f['UPRP']['index'], pbatch=2**13, 
