@@ -73,6 +73,9 @@ class Trace:
     Y = self.run()
     return Y
 
+  def __call__(self, *args, **kwds):
+    return self.run(*args, **kwds)
+
 class Step(Trace):
 
   def __init__(self, outpath:str, skipable=True, *args, **kwargs):
@@ -87,6 +90,9 @@ class Step(Trace):
     else: self._ext = 'pkl'
 
     self._loaded = None
+
+  def __call__(self, *args, **kwds):
+    return self.footprint(*args, **kwds)
 
   def endpoint(self):
     log(f"🔚 {self.outpath}.{self._ext}")

@@ -618,6 +618,7 @@ def Personify(storage:Storage, assignpath:str):
 
   return P
 
+@trail(Step)
 def Geoloc(storage:Storage, geodata:pandas.DataFrame, assignpath:str):
 
   """
@@ -690,6 +691,7 @@ def Geoloc(storage:Storage, geodata:pandas.DataFrame, assignpath:str):
 
   return Y
 
+@trail(Step)
 def Timeloc(storage:Storage, assignpath:str):
 
   "Wybiera najwcześniejsze daty dla każdego patentu"
@@ -717,6 +719,7 @@ def Timeloc(storage:Storage, assignpath:str):
 
   return C
 
+@trail(Step)
 def Classify(storage:Storage, assignpath:str):
 
   "Zwraca ramkę z klasyfikacjami."
@@ -765,13 +768,17 @@ def Classify(storage:Storage, assignpath:str):
   return Y
 
 @trail(Step)
-def Pull(storage:Storage, assignpath:str, geodata:pandas.DataFrame):
+def Pull(storage:Storage, assignpath:str, geodata:pandas.DataFrame, workdir:str):
 
   "Wyciąga dane zgodnie z przypisanymi rolami."
 
-  return Geoloc(storage, geodata, assignpath),\
-         Timeloc(storage, assignpath),\
-         Classify(storage, assignpath)
+  os.makedirs(workdir, exist_ok=True)
+
+  G = Geoloc(storage, geodata, assignpath, outpath=f'{workdir}/geo.pkl')
+  T = Timeloc(storage, assignpath, outpath=f'{workdir}/time.pkl')
+  C = Classify(storage, assignpath, outpath=f'{workdir}/clsf.pkl')
+
+  return G(), T(), C()
 
 @trail(Trace)
 def Bundle(dir:str,
@@ -922,7 +929,7 @@ try:
 
     f[k]['pull'] = Pull(f[k]['profile'], assignpath=p+'/assignement.yaml', 
                         geodata=f['Geoportal']['parse'],
-                        outpath=p+'/pull.pkl', skipable=True)
+                        outpath=p+'/pull.pkl', skipable=True, workdir=p+'/bundle')
 
     f[k]['personify'] = Personify(f[k]['profile'], assignpath=p+'/assignement.yaml',
                                   outpath=p+'/people.pkl')
@@ -983,6 +990,7 @@ try:
 
     f[k]['pull'] = Pull(f['UPRP']['profile'], assignpath=D['UPRP']+'/assignement.yaml', 
                         geodata=f['Geoportal']['parse'],
+                        workdir=p+'/bundle',
                         outpath=p+'/pull.pkl', skipable=True)
 
   f['All']['drop'] = Drop(f['All']['query'], [f[k]['narrow'] for k in D.keys()], 
