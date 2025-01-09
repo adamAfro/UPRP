@@ -547,6 +547,77 @@ def Fetch(queries:pandas.Series, URL:str, outdir:str):
   _, P = queries
   asyncio.run(scrap(P))
 
+@trail(Step)
+def Personify(storage:Storage, assignpath:str):
+
+  """
+  Zwraca ramkę z danymi osobowymi.
+
+  Identyfikuje imiona osób na podstawie słownika imion o ile
+  każde słowo w nazwie dłusze niż 2 znaki jest w słowniku.
+
+  Działa tylko na wewnętrnzym zbiorze - do porpawnia
+  """
+
+  S = storage
+  with open(assignpath, 'r') as f:
+    S.assignement = yaml.load(f, Loader=yaml.FullLoader)
+
+  K0 = ['name', 'fname', 'lname']
+  P = pandas.DataFrame()
+
+  for h in ['assignee', 'applicant', 'inventor']:
+
+    K = [f'{k0}-{h}' for k0 in K0]
+    p = pandas.concat([S.melt(f'{k}').reset_index() for k in K])
+    p = p[['id', 'doc', 'value', 'assignement']]
+    p['value'] = p['value'].str.upper().str.replace(r'\W+', ' ', regex=True).str.strip()
+    p = p.pivot_table(index=['id', 'doc'], columns='assignement',
+                      values='value', aggfunc='first')
+
+    p.columns = [k.split('-')[0] for k in p.columns]
+    p['role'] = h
+
+    P = pandas.concat([P, p]) if not P.empty else p
+
+  N = pandas.concat([
+    P['fname'].str.split(' ').explode().dropna().drop_duplicates()\
+    .to_frame().assign(assignement='fname').rename(columns={'fname': 'word'}),
+    P['lname'].str.split(' ').explode().dropna().drop_duplicates()\
+    .to_frame().assign(assignement='lname').rename(columns={'lname': 'word'})
+  ], ignore_index=True).drop_duplicates(subset='word').set_index('word')
+
+  P['word'] = P['name'].str.replace(r'\b\w{,2}\b', '', regex=True)\
+  .str.strip().dropna().apply(lambda x: ' '.join([y for y in set(x.split())]))
+
+  P['N'] = P['word'].str.count(' ') + 1
+  P['word'] = P['word'].str.split(' ')
+
+  # ustalenie że nazwy stają się imieniem i nazwiskiem o ile
+  # wszystkie (każde!) słowa w nazwie są w bazie słów imion i nazwisk
+  Z = P.explode('word').dropna(subset='word')\
+  .reset_index().set_index('word').join(N).dropna(subset='assignement')
+  G = Z.groupby(['id', 'doc']).agg(n=('N', 'size'), N=('N', 'first'))\
+  .reset_index().query('n == N')
+
+  Z = Z.reset_index().set_index(['id', 'doc'])\
+  .join(G[['id', 'doc']].set_index(['id', 'doc']), how='right')
+  Z = Z.reset_index() # jeśli jest za dużo imion
+  Z = Z.drop_duplicates(subset=['id', 'doc', 'assignement'])
+  Z = Z.set_index(['id', 'doc'])
+
+  fN = Z.query('assignement == "fname"')['word']
+  lN = Z.query('assignement == "lname"')['word']
+  P['fname'] = P['fname'].combine_first(fN)
+  P['lname'] = P['lname'].combine_first(lN)
+
+  #TODO: gdy imie jest w tabeli przed nazwiskiem może to sprawić
+  # że nazwisko nie zostanie rozpoznane, mimo że słownik wskazuje inaczej
+
+  P = P.drop(columns=['word', 'N'])
+
+  return P
+
 def Geoloc(storage:Storage, geodata:pandas.DataFrame, assignpath:str):
 
   """
@@ -852,6 +923,9 @@ try:
     f[k]['pull'] = Pull(f[k]['profile'], assignpath=p+'/assignement.yaml', 
                         geodata=f['Geoportal']['parse'],
                         outpath=p+'/pull.pkl', skipable=True)
+
+    f[k]['personify'] = Personify(f[k]['profile'], assignpath=p+'/assignement.yaml',
+                                  outpath=p+'/people.pkl')
 
   f['UPRP']['narrow'] = Narrow(f['All']['query'], 
                                f['UPRP']['index'], pbatch=2**13, 
