@@ -788,8 +788,9 @@ def Pull(storage:Storage, assignpath:str, geodata:pandas.DataFrame, workdir:str)
   G = Geoloc(storage, geodata, assignpath, outpath=f'{workdir}/geo.pkl')
   T = Timeloc(storage, assignpath, outpath=f'{workdir}/time.pkl')
   C = Classify(storage, assignpath, outpath=f'{workdir}/clsf.pkl')
+  P = Personify(storage, assignpath, outpath=f'{workdir}/people.pkl')
 
-  return G(), T(), C()
+  return G(), T(), C(), P()
 
 @trail(Trace)
 def Bundle(dir:str,
@@ -805,6 +806,8 @@ def Bundle(dir:str,
   G0 = { k: v[0] for k, v in U.items() }
   T0 = { k: v[1] for k, v in U.items() }
   C0 = { k: v[2] for k, v in U.items() }
+  P0A = { k: v[3][0] for k, v in U.items() }
+  P0B = { k: v[3][1] for k, v in U.items() }
 
   for k in M0.keys():
     for X in [G0, T0, C0]: assert k in X
@@ -840,11 +843,15 @@ def Bundle(dir:str,
   G0 = pandas.concat(list(G0.values()), axis=0)
   T0 = pandas.concat(list(T0.values()), axis=0)
   C0 = pandas.concat(list(C0.values()), axis=0)
+  P0A = pandas.concat(list(P0A.values()), axis=0)
+  P0B = pandas.concat(list(P0B.values()), axis=0)
 
   M0.to_csv(f'{dir}/matches.csv')
   G0.to_csv(f'{dir}/geo.csv')
   T0.to_csv(f'{dir}/time.csv')
   C0.to_csv(f'{dir}/clsf.csv')
+  P0A.to_csv(f'{dir}/people-signed.csv')
+  P0B.to_csv(f'{dir}/people-named.csv')
 
 @trail(Step)
 def GMLParse(path:str):
@@ -940,10 +947,7 @@ try:
 
     f[k]['pull'] = Pull(f[k]['profile'], assignpath=p+'/assignement.yaml', 
                         geodata=f['Geoportal']['parse'],
-                        outpath=p+'/pull.pkl', skipable=True, workdir=p+'/bundle')
-
-    f[k]['personify'] = Personify(f[k]['profile'], assignpath=p+'/assignement.yaml',
-                                  outpath=p+'/people.pkl')
+                        outpath=p+'/pull.pkl', workdir=p+'/bundle')
 
   f['UPRP']['narrow'] = Narrow(f['All']['query'], 
                                f['UPRP']['index'], pbatch=2**13, 
