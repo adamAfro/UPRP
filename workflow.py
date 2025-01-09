@@ -563,7 +563,7 @@ def Personify(storage:Storage, assignpath:str):
   with open(assignpath, 'r') as f:
     S.assignement = yaml.load(f, Loader=yaml.FullLoader)
 
-  K0 = ['name', 'fname', 'lname']
+  K0 = ['name', 'fname', 'lname', 'city']
   P = pandas.DataFrame()
 
   for h in ['assignee', 'applicant', 'inventor']:
