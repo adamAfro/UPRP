@@ -17,9 +17,12 @@ __pycache__
 
 nohup*.out
 
+prom
+
 *.csv
 *.pkl
 *.xml
+*.txt
 
 .vscode
 
