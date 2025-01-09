@@ -185,8 +185,7 @@ def Qdentify(qpath:str, storage:Storage, docsframe:str):
   Y = Q.join(D['doc'], how='left').reset_index()
   if Y['doc'].isna().any(): raise ValueError()
 
-  Y['entry'] = Y['doc']
-  Y = Y.drop(columns=['P', 'doc'])
+  Y = Y.drop(columns=['P'])
 
   return Y
 
@@ -203,21 +202,19 @@ def Parsing(searches: pandas.Series):
   ciągi takie jak ciągi liczbowe albo skrótowce takie jak "PL".
   """
 
-  Q = searches.set_index('entry')['query']
-  Q.index = Q.index.astype('str')
-
+  Q = searches
   Y, P = [], []
 
-  for i, q0 in Q.items():
+  for i, q0 in Q.iterrows():
 
-    q = Query.Parse(q0)
+    q = Query.Parse(q0['query'])
 
-    P.extend([{ 'entry': i, **v } for v in q.codes])
+    P.extend([{ 'entrydoc': q0['doc'], 'entry': i, **v } for v in q.codes])
 
-    Y.extend([{ 'entry': i, 'value': v, 'kind': 'number' } for v in q.numbers])
-    Y.extend([{ 'entry': i, 'value': v, 'kind': 'date' } for v in q.dates])
-    Y.extend([{ 'entry': i, 'value': v, 'kind': 'year' } for v in q.years])
-    Y.extend([{ 'entry': i, 'value': v, 'kind': 'word' } for v in q.words])
+    Y.extend([{ 'entrydoc': q0['doc'], 'entry': i, 'value': v, 'kind': 'number' } for v in q.numbers])
+    Y.extend([{ 'entrydoc': q0['doc'], 'entry': i, 'value': v, 'kind': 'date' } for v in q.dates])
+    Y.extend([{ 'entrydoc': q0['doc'], 'entry': i, 'value': v, 'kind': 'year' } for v in q.years])
+    Y.extend([{ 'entrydoc': q0['doc'], 'entry': i, 'value': v, 'kind': 'word' } for v in q.words])
 
   return pandas.DataFrame(Y).set_index('entry'),\
          pandas.DataFrame(P).set_index('entry')
@@ -328,31 +325,31 @@ def Narrow(queries:pandas.Series, indexes:tuple[Digital, Ngrams, Exact, Words, N
   wspólnych kluczy (np. imion i nazw miast) oraz dat.
   """
 
-  Q, _ = queries
+  Q0, _ = queries
   P0, P, D0, W0, W = indexes
 
-  QP = Q.query('kind == "number"')
+  QP = Q0.query('kind == "number"')
 
   mP0 = P0.match(QP['value'], 'max').reset_index()
+  mP0['entry'] = mP0['entry'].astype('int64')
 
   b = pbatch#parial
   if b is not None:
 
-    mP = cudf.concat([P.match(QP.iloc[i:i+b]['value'], 'max', 0.6, ownermatch=mP0)
+    mP = cudf.concat([P.match(QP.iloc[i:i+b]['value'], 'max', 0.751, ownermatch=mP0)
       for i in progress(range(0, QP.shape[0], b))]).reset_index()
 
     m0P = cudf.concat([mP0, mP]).set_index('entry')
-    m0P = m0P.query('score > 0.75')
 
   else:
     m0P = mP0.set_index('entry')
 
-  Q = m0P.join(cudf.from_pandas(Q.astype(str)))\
+  Q = m0P.join(cudf.from_pandas(Q0.astype(str)))\
   [['doc', 'value', 'kind']].to_pandas()
 
   D0 = D0.extend('doc')
-  mD0 = D0.match(Q[Q['kind'] == 'date'][['value', 'doc']], 'max')\
-  .reset_index()
+  mD0 = D0.match(Q[Q['kind'] == 'date'][['value', 'doc']], 'max').reset_index()
+  if not mD0.empty: mD0['entry'] = mD0['entry'].astype('int64')
 
   M = cudf.concat([m0P.reset_index(), mD0]).pivot_table(
     index=['doc', 'entry'],
@@ -360,8 +357,8 @@ def Narrow(queries:pandas.Series, indexes:tuple[Digital, Ngrams, Exact, Words, N
     values='score', aggfunc='max') if not mP0.empty else cudf.DataFrame()
 
   W0 = W0.extend('doc')
-  mW0 = W0.match(Q[Q['kind'] == 'word'][['value', 'doc']], 'sum')\
-  .reset_index()
+  mW0 = W0.match(Q[Q['kind'] == 'word'][['value', 'doc']], 'sum').reset_index()
+  mW0['entry'] = mW0['entry'].astype('int64')
 
   if ngram:
     W = W.extend('doc')
@@ -395,6 +392,18 @@ def Narrow(queries:pandas.Series, indexes:tuple[Digital, Ngrams, Exact, Words, N
   Y = Y[Y[('', '', '', 'level')] >= "partial-supported"]
 
   #TODO odzyskać insight
+
+  Y = Y.reset_index().set_index(('entry', '', '', ''))
+
+  E = Q0['entrydoc'].reset_index().drop_duplicates().set_index('entry')
+  E = cudf.Series.from_pandas(E['entrydoc'])
+
+  Y = Y.join(E, how='left')
+  Y = Y.set_index(['entrydoc', ('doc', '', '', '')], append=True)
+  Y.index.names = ['entry', 'entrydoc', 'doc']
+  Y = Y.sort_index()
+  Y.columns = cudf.MultiIndex.from_tuples(Y.columns)
+  Y = Y[Y.columns[::-1]]
 
   return Y
 
@@ -505,11 +514,13 @@ def Preview(path:str,
     M = matches.to_pandas().sample(n)
     Q, _ = queries
 
-    M = M[M.index.get_level_values(1).isin(Q.index.values)]
+    M = M[M.index.get_level_values('entry').isin(Q.index.values)]
     M = M.sample(min(M.shape[0], n))
 
     for i, m in M.iterrows():
-      Y += str(Q.loc[ i[1] ]) + '\n\n' + str(m.to_frame().T) + '\n\n' + H.strdocs([ i[0] ])
+      Y += str(Q.loc[ i[M.index.names.index('entry')] ].T) + \
+      '\n\n' + str(m.to_frame().T) + '\n\n' + \
+      H.strdocs([ i[M.index.names.index('doc')] ])
 
     with open(path, 'w') as f: f.write(Y)
 
