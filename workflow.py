@@ -549,7 +549,7 @@ def Personify(storage:Storage, assignpath:str):
     P = pandas.concat([P, p]) if not P.empty else p
 
   if 'fname' not in P.columns:
-    return P, pandas.DataFrame()
+    return pandas.DataFrame(), P.reset_index().drop(columns=['id']).set_index(['doc', 'name'])
 
   N = pandas.concat([
     P['fname'].str.split(' ').explode().dropna().drop_duplicates()\
@@ -593,7 +593,7 @@ def Personify(storage:Storage, assignpath:str):
 
   B = P.dropna(subset=['name']).drop(columns=['fname', 'lname'])\
   .drop_duplicates(subset=['doc', 'name'])\
-  .set_index(['name'])
+  .set_index(['doc', 'name'])
 
   return A, B
 
@@ -778,9 +778,6 @@ def Bundle(dir:str,
   P0A = { k: v[3][0] for k, v in U.items() }
   P0B = { k: v[3][1] for k, v in U.items() }
 
-  for k in M0.keys():
-    for X in [G0, T0, C0, P0A, P0B]: assert k in X
-
   #reindex
   for M in M0.values():
     if M.empty: continue
@@ -803,18 +800,30 @@ def Bundle(dir:str,
   #merge
   for k in M0.keys():
 
-    M, G, T, C, PA, PB = M0[k], G0[k], T0[k], C0[k], P0A[k], P0B[k]
-    for X in [M, G, T, C, PA, PB]:
-      if X.empty: continue
-      X['docrepo'] = k
-      X.set_index('docrepo', append=True, inplace=True)
+    M = M0[k]
+    M['docrepo'] = k
+    M.set_index('docrepo', append=True, inplace=True)
 
-  M0 = pandas.concat(list(M0.values()), axis=0)
-  G0 = pandas.concat(list(G0.values()), axis=0)
-  T0 = pandas.concat(list(T0.values()), axis=0)
-  C0 = pandas.concat(list(C0.values()), axis=0)
-  P0A = pandas.concat(list(P0A.values()), axis=0)
-  P0B = pandas.concat(list(P0B.values()), axis=0)
+    try:
+      G, T, C, PA, PB = G0[k], T0[k], C0[k], P0A[k], P0B[k]
+      for X in [G, T, C, PA, PB]:
+        X['docrepo'] = k
+        X.set_index('docrepo', append=True, inplace=True)
+    except KeyError: continue
+
+  M0 = [X for X in M0.values() if not X.empty]
+  G0 = [X for X in G0.values() if not X.empty]
+  T0 = [X for X in T0.values() if not X.empty]
+  C0 = [X for X in C0.values() if not X.empty]
+  P0A = [X for X in P0A.values() if not X.empty]
+  P0B = [X for X in P0B.values() if not X.empty]
+
+  M0 = pandas.concat(M0, axis=0)
+  G0 = pandas.concat(G0, axis=0)
+  T0 = pandas.concat(T0, axis=0)
+  C0 = pandas.concat(C0, axis=0)
+  P0A = pandas.concat(P0A, axis=0)
+  P0B = pandas.concat(P0B, axis=0)
 
   M0.to_csv(f'{dir}/pat:pat-raport-ocr.csv')
   G0.to_csv(f'{dir}/spatial:pat.csv')
