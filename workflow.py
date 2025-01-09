@@ -1005,10 +1005,9 @@ try:
   f['Google']['fetch'] = Fetch(f['All']['drop'], 'https://patents.google.com/patent',
                               outdir=D['Google']+'/web', )
 
-  D = { k: f[k] for k in D.keys() if k != 'Google' }
   f['All']['bundle'] = Bundle('bundle',
-                              matches={ k: f[k]['narrow'] for k in D.keys() },
-                              pull={ k: f[k]['pull'] for k in D.keys() })
+                              matches={ k: f[k]['narrow'] for k in D.keys() if k != 'Google' },
+                              pull={ k: f[k]['pull'] for k in D.keys() if k != 'Google' })
 
   if sys.argv[1] == 'restart':
 
