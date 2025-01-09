@@ -547,7 +547,6 @@ def Fetch(queries:pandas.Series, URL:str, outdir:str):
   _, P = queries
   asyncio.run(scrap(P))
 
-@trail(Step)
 def Geoloc(storage:Storage, geodata:pandas.DataFrame, assignpath:str):
 
   """
@@ -620,7 +619,6 @@ def Geoloc(storage:Storage, geodata:pandas.DataFrame, assignpath:str):
 
   return Y
 
-@trail(Step)
 def Timeloc(storage:Storage, assignpath:str):
 
   "Wybiera najwcześniejsze daty dla każdego patentu"
@@ -648,7 +646,6 @@ def Timeloc(storage:Storage, assignpath:str):
 
   return C
 
-@trail(Step)
 def Classify(storage:Storage, assignpath:str):
 
   "Zwraca ramkę z klasyfikacjami."
@@ -696,19 +693,29 @@ def Classify(storage:Storage, assignpath:str):
 
   return Y
 
+@trail(Step)
+def Pull(storage:Storage, assignpath:str, geodata:pandas.DataFrame):
+
+  "Wyciąga dane zgodnie z przypisanymi rolami."
+
+  return Geoloc(storage, geodata, assignpath),\
+         Timeloc(storage, assignpath),\
+         Classify(storage, assignpath)
+
 @trail(Trace)
 def Bundle(dir:str,
-  
-           matches:   dict[str, cudf.DataFrame],
-           geo:       dict[str, pandas.DataFrame], 
-           time:      dict[str, pandas.DataFrame], 
-           clsf:      dict[str, pandas.DataFrame],
 
-                                                  ):
+           matches:   dict[str, cudf.DataFrame],
+           pull:      dict[str, tuple[pandas.DataFrame]],
+
+                                                         ):
 
   "Zapisuje połączone wyniki przetwarzania do plików CSV."
 
-  M0, G0, T0, C0 = matches, geo, time, clsf
+  M0, U = matches, pull
+  G0 = { k: v[0] for k, v in U.items() }
+  T0 = { k: v[1] for k, v in U.items() }
+  C0 = { k: v[2] for k, v in U.items() }
 
   for k in M0.keys():
     for X in [G0, T0, C0]: assert k in X
@@ -842,19 +849,12 @@ try:
     f[k]['narrow'] = Narrow(f['All']['query'], f[k]['index'],
                             pbatch=2**14, outpath=p+'/narrow.pkl')
 
-    f[k]['geoloc'] = Geoloc(f[k]['profile'], assignpath=p+'/assignement.yaml', 
-                            geodata=f['Geoportal']['parse'],
-                            outpath=p+'/geoloc.pkl', skipable=True)
-
-    f[k]['timeloc'] = Timeloc(f[k]['profile'], assignpath=p+'/assignement.yaml',
-                              outpath=p+'/timeloc.pkl', skipable=True)
-
-    f[k]['classify'] = Classify(storage=f[k]['profile'], 
-                                assignpath=p+'/assignement.yaml',
-                                outpath=p+'/classification.pkl')
+    f[k]['pull'] = Pull(f[k]['profile'], assignpath=p+'/assignement.yaml', 
+                        geodata=f['Geoportal']['parse'],
+                        outpath=p+'/pull.pkl', skipable=True)
 
   f['UPRP']['narrow'] = Narrow(f['All']['query'], 
-                               f['UPRP']['index'], pbatch=2**14, 
+                               f['UPRP']['index'], pbatch=2**13, 
                                outpath=D['UPRP']+'/narrow.pkl')
 
   f['USPG']['narrow'] = Narrow(f['All']['query'], 
@@ -907,16 +907,9 @@ try:
                             outpath=D[k]+'/narrow.pkl',
                             pbatch=None, ngram=False)
 
-    f[k]['geoloc'] = Geoloc(f['UPRP']['profile'], assignpath=D['UPRP']+'/assignement.yaml', 
-                            geodata=f['Geoportal']['parse'],
-                            outpath=p+'/geoloc.pkl', skipable=True)
-
-    f[k]['timeloc'] = Timeloc(f['UPRP']['profile'], assignpath=D['UPRP']+'/assignement.yaml',
-                              outpath=p+'/timeloc.pkl', skipable=True)
-
-    f[k]['classify'] = Classify(storage=f['UPRP']['profile'], 
-                                assignpath=D['UPRP']+'/assignement.yaml',
-                                outpath=p+'/classification.pkl')
+    f[k]['pull'] = Pull(f['UPRP']['profile'], assignpath=D['UPRP']+'/assignement.yaml', 
+                        geodata=f['Geoportal']['parse'],
+                        outpath=p+'/pull.pkl', skipable=True)
 
   f['All']['drop'] = Drop(f['All']['query'], [f[k]['narrow'] for k in D.keys()], 
                           outpath='alien', skipable=False)
@@ -928,9 +921,7 @@ try:
   D = { k: f[k] for k in D.keys() if k != 'Google' }
   f['All']['bundle'] = Bundle('bundle',
                               matches={ k: f[k]['narrow'] for k in D.keys() },
-                              geo={ k: f[k]['geoloc'] for k in D.keys() },
-                              time={ k: f[k]['timeloc'] for k in D.keys() },
-                              clsf={ k: f[k]['classify'] for k in D.keys() })
+                              pull={ k: f[k]['pull'] for k in D.keys() })
 
   if sys.argv[1] == 'restart':
 
