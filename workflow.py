@@ -972,7 +972,7 @@ try:
     def traceprint(x:Trace, target=None):
       global Y
       if target:
-        L.add(f'{x.name}["{x}"]')
+        L.add(f'{x.name}["{str(x).replace(": ", ":<br>")}"]')
         L.add(f'{x.name} --> {target.name}')
         L.add(f'click {x.name} "#{x.__class__.__name__.lower().replace(".", "-")}"')
         D.add((x.__class__.__name__, x.__class__.__doc__))
