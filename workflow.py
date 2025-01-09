@@ -1,5 +1,4 @@
-import sys, pandas, matplotlib.pyplot as pyplot
-import yaml, re, os, asyncio, aiohttp, unicodedata
+import sys, pandas, yaml, re, os, asyncio, aiohttp, unicodedata
 import xml.etree.ElementTree as ET
 from lib.log import notify, log, progress
 from lib.storage import Storage
@@ -279,43 +278,6 @@ class Search:
     Y = Y.groupby('entry').tail(1).set_index(['doc', 'entry'])
 
     return Y
-
-  def insight(matches:pandas.DataFrame):
-
-    M = matches
-    K = [('', '', '', 'level'), ('', '', '', 'score')] +\
-        [k for r in ['api.uprp.gov.pl', 'api.lens.org', 'api.openalex.org']
-          for k0 in ['date', 'number', 'name', 'city', 'title']
-          for k in M.columns if (k[0] == r) and (k[3] == k0)]
-
-    M = M[K].sort_values(by=[('', '', '', 'level'),
-                             ('', '', '', 'score')], ascending=False)
-
-    Y = M.reset_index()[[('entry', '', '', ''), 
-                         ('doc', '', '', ''),
-                         ('', '', '', 'level'),
-                         ('', '', '', 'score')]]
-
-    Y.columns = ['entry', 'doc', 'level', 'score']
-    Y = Y.drop_duplicates(subset='entry')
-
-    F, A = pyplot.subplots(1, 2, figsize=(14, 4))
-
-    (Y['level'] >= 'exact-dated')\
-    .replace({True: 'dokładne', False: 'niedokładne'})\
-    .value_counts()\
-    .plot.pie(title=f'Dokładność dopasowania n={Y.shape[0]}', 
-              ylabel='', xlabel='', colors=['y', 'g'], autopct='%1.1f%%', ax=A[0]);
-
-    Y.value_counts('level').sort_index()\
-    .plot.barh(title='Rozkład poziomów dopasowania', ylabel='', xlabel='', ax=A[1],
-               color=[k for k in 'rrrryyyyyggg']);
-
-    def draw(path:str):
-      F.savefig(path, format='png')
-      pyplot.close()
-
-    return draw
 
 @trail(Step)
 def Narrow(queries:pandas.Series, indexes:tuple, pbatch:int=2**14, ngram=True):
