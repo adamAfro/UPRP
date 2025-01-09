@@ -659,20 +659,17 @@ def Geoloc(storage:Storage, geodata:pandas.DataFrame, assignpath:str):
   C = C.set_index('value')
 
   L = geodata
-  L = L[ L['RODZAJOBIEKTU'] == 'miasto' ].copy()
-  L['NAZWAGLOWNA'] = L['NAZWAGLOWNA'].str.upper()\
+  L = L[ L['type'] == 'miasto' ].copy()
+  L['name'] = L['name'].str.upper()\
                     .str.replace(r'\W+', ' ', regex=True)\
                     .str.strip()
 
-  T = Transformer.from_crs('EPSG:2180', 'EPSG:4326', always_xy=True)
-  L['latitude'], L['longitude'] = zip(*L.apply(lambda r: T.transform(r['latitude'], r['longitude']), axis=1))
-
-  L = L.set_index('NAZWAGLOWNA')
+  L = L.set_index('name')
 
   J = C.join(L, how='inner')
   J = J.reset_index().dropna(axis=1)
 
-  J = J[[ 'doc', 'value', 'GMINA', 'POWIAT', 'WOJEWODZTWO', 'latitude', 'longitude' ]]
+  J = J[['doc', 'value', 'gmina', 'powiat', 'województwo', 'lat', 'lon']]
   J.columns = ['doc', 'name', 'gmina', 'powiat', 'województwo', 'lat', 'lon']
   J = J.drop_duplicates(subset=['doc', 'name', 'lat', 'lon'])
 
@@ -690,8 +687,8 @@ def Geoloc(storage:Storage, geodata:pandas.DataFrame, assignpath:str):
   J = C.join(L, how='inner')
   J = J.reset_index().dropna(axis=1)
 
-  J = J[[ 'doc', 'index', 'GMINA', 'POWIAT', 'WOJEWODZTWO', 'latitude', 'longitude' ]]
-                  #^WTF: z jakiegoś powodu nie 'value'
+  J = J[['doc', 'index', 'gmina', 'powiat', 'województwo', 'lat', 'lon']]
+                #^WTF: z jakiegoś powodu nie 'value'
 
   J.columns = ['doc', 'name', 'gmina', 'powiat', 'województwo', 'lat', 'lon']
   J = J.drop_duplicates(subset=['doc', 'name', 'lat', 'lon'])
@@ -883,7 +880,14 @@ def GMLParse(path:str):
 
       Y.append(E)
 
-    return pandas.DataFrame(Y)
+    L = pandas.DataFrame(Y)
+    T = Transformer.from_crs('EPSG:2180', 'EPSG:4326', always_xy=True)
+    L['longitude'], L['latitude'] = zip(*L.apply(lambda r: T.transform(r['latitude'], r['longitude']), axis=1))
+
+    L = L[[ 'RODZAJOBIEKTU', 'NAZWAGLOWNA', 'GMINA', 'POWIAT', 'WOJEWODZTWO', 'latitude', 'longitude' ]]
+    L.columns = ['type', 'name', 'gmina', 'powiat', 'województwo', 'lat', 'lon']
+
+    return L
 
 try:
 
