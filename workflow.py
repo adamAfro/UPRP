@@ -1,4 +1,4 @@
-import sys, pandas, yaml, re, os, asyncio, aiohttp, unicodedata
+import sys, pandas, yaml, re, os, asyncio, aiohttp, unicodedata, zipfile
 import xml.etree.ElementTree as ET
 from lib.log import notify, log, progress
 from lib.storage import Storage
@@ -822,6 +822,14 @@ def Bundle(dir:str,
   P0A.to_csv(f'{dir}/people-signed.csv')
   P0B.to_csv(f'{dir}/people-named.csv')
 
+  with zipfile.ZipFile(f'{dir}/dist.zip', 'w') as z:
+    z.write(f'{dir}/pat:pat-raport-ocr.csv', 'pat:pat-raport-ocr.csv')
+    z.write(f'{dir}/spatial:pat.csv', 'spatial:pat.csv')
+    z.write(f'{dir}/date:pat.csv', 'date:pat.csv')
+    z.write(f'{dir}/classification.csv', 'classification.csv')
+    z.write(f'{dir}/people-signed.csv', 'people-signed.csv')
+    z.write(f'{dir}/people-named.csv', 'people-named.csv')
+
 @trail(Step)
 def GMLParse(path:str):
 
@@ -1010,8 +1018,6 @@ try:
                               pull={ k: f[k]['pull'] for k in D.keys() if k != 'Google' })
 
   if sys.argv[1] == 'emigrate':
-
-    import zipfile
 
     if os.path.exists('migraton.zip'):
       os.remove('migraton.zip')
