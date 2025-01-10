@@ -359,8 +359,6 @@ def Narrow(queries:pandas.Series, indexes:tuple, pbatch:int=2**14, ngram=True):
   Y = J[J.index.isin(L.index)].join(L)
   Y = Y[Y[('', '', '', 'level')] >= "partial-supported"]
 
-  #TODO odzyskać insight
-
   Y = Y.reset_index().set_index(('entry', '', '', ''))
 
   E = Q0['entrydoc'].reset_index().drop_duplicates().set_index('entry')
