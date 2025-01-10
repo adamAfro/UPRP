@@ -928,12 +928,12 @@ try:
   f['UPRP']['profile'] = Profiling(D['UPRP']+'/raw/', kind='XML',
                                    assignpath=D['UPRP']+'/assignement.null.yaml', 
                                    aliaspath=D['UPRP']+'/alias.yaml',
-                                   outpath=D['UPRP']+'/storage.pkl')
+                                   outpath=D['UPRP']+'/storage.pkl', skipable=True)
 
   f['Lens']['profile'] = Profiling(D['Lens']+'/res/', kind='JSONL',
                                    assignpath=D['Lens']+'/assignement.null.yaml', 
                                    aliaspath=D['Lens']+'/alias.yaml',
-                                   outpath=D['Lens']+'/storage.pkl')
+                                   outpath=D['Lens']+'/storage.pkl', skipable=True)
 
   # f['Open']['profile'] = Profiling(D['Open']+'/raw/', kind='JSON',
   #                                  profargs=dict(excluded=["abstract_inverted_index", "updated_date", "created_date"]),
@@ -945,18 +945,18 @@ try:
                                    profargs=dict(only=['developer.uspto.gov/grant/raw/us-patent-grant/us-bibliographic-data-grant/']),
                                    assignpath=D['USPG']+'/assignement.null.yaml',
                                    aliaspath=D['USPG']+'/alias.yaml',
-                                   outpath=D['USPG']+'/storage.pkl')
+                                   outpath=D['USPG']+'/storage.pkl', skipable=True)
 
   f['USPA']['profile'] = Profiling(D['USPA']+'/raw/', kind='XML',
                                    profargs=dict(only=['developer.uspto.gov/application/raw/us-patent-application/us-bibliographic-data-application/']),
                                    assignpath=D['USPA']+'/assignement.null.yaml', 
                                    aliaspath=D['USPA']+'/alias.yaml',
-                                   outpath=D['USPA']+'/storage.pkl')
+                                   outpath=D['USPA']+'/storage.pkl', skipable=True)
 
   f['Google']['profile'] = Profiling(D['Google']+'/web/', kind='HTMLmicrodata',
                                      assignpath=D['Google']+'/assignement.null.yaml', 
                                      aliaspath=D['Google']+'/alias.yaml',
-                                     outpath=D['Google']+'/storage.pkl')
+                                     outpath=D['Google']+'/storage.pkl', skipable=True)
 
   f['UPRP']['identify'] = Qdentify(qpath='raport.uprp.gov.pl.csv',
                                    storage=f['UPRP']['profile'], docsframe='raw',
@@ -972,36 +972,36 @@ try:
                              outpath=p+'/indexes.pkl', skipable=True)
 
     f[k]['narrow'] = Narrow(f['All']['query'], f[k]['index'],
-                            pbatch=2**14, outpath=p+'/narrow.pkl')
+                            pbatch=2**14, outpath=p+'/narrow.pkl', skipable=True)
 
     f[k]['pull'] = Pull(f[k]['profile'], assignpath=p+'/assignement.yaml', 
                         geodata=f['Misc']['geodata'],
-                        outpath=p+'/pull.pkl', workdir=p+'/bundle', skipable=False)
+                        outpath=p+'/pull.pkl', workdir=p+'/bundle')
 
   f['UPRP']['narrow'] = Narrow(f['All']['query'], 
                                f['UPRP']['index'], pbatch=2**13, 
-                               outpath=D['UPRP']+'/narrow.pkl')
+                               outpath=D['UPRP']+'/narrow.pkl', skipable=True)
 
   f['USPG']['narrow'] = Narrow(f['All']['query'], 
                                f['USPG']['index'], pbatch=2**14,
-                                outpath=D['USPG']+'/narrow.pkl')
+                                outpath=D['USPG']+'/narrow.pkl', skipable=True)
 
   f['USPA']['narrow'] = Narrow(f['All']['query'], 
                                f['USPA']['index'], pbatch=2**14, 
-                               outpath=D['USPA']+'/narrow.pkl')
+                               outpath=D['USPA']+'/narrow.pkl', skipable=True)
 
   f['Lens']['narrow'] = Narrow(f['All']['query'], 
                                f['Lens']['index'], pbatch=2**12, 
-                               outpath=D["Lens"]+'/narrow.pkl')
+                               outpath=D["Lens"]+'/narrow.pkl', skipable=True)
 
   f['Base'] = dict()
   f['Base']['drop'] = Drop(f['All']['query'], [f['UPRP']['narrow'], f['Lens']['narrow']],
-                           outpath='alien.base', skipable=False)
+                           outpath='alien.base')
 
   for k, p in D.items():
 
     f[k]['drop'] = Drop(f['All']['query'], [f[k]['narrow']],
-                        outpath=p+'/alien', skipable=False)
+                        outpath=p+'/alien')
 
     f[k]['preview0'] = Preview(f"{p}/profile.txt", f[k]['profile'])
     f[k]['preview'] = Preview(f"{p}/profile.txt", f[k]['profile'], 
@@ -1011,7 +1011,7 @@ try:
 
   f['Google']['narrow'] = Narrow(f['Base']['drop'], 
                                  f['Google']['index'], pbatch=2**10, 
-                                 outpath=D["Google"]+'/narrow.pkl')
+                                 outpath=D["Google"]+'/narrow.pkl', skipable=True)
 
   for k0 in ['Lens', 'Google']:
 
@@ -1030,19 +1030,19 @@ try:
     f[k]['narrow'] = Narrow(queries=f[k]['query'],
                             indexes=f['UPRP']['index'],
                             outpath=D[k]+'/narrow.pkl',
-                            pbatch=None, ngram=False)
+                            pbatch=None, ngram=False, skipable=True)
 
     f[k]['pull'] = Pull(f['UPRP']['profile'], assignpath=D['UPRP']+'/assignement.yaml', 
                         geodata=f['Geoportal']['parse'],
                         workdir=p+'/bundle',
-                        outpath=p+'/pull.pkl', skipable=True)
+                        outpath=p+'/pull.pkl')
 
   f['All']['drop'] = Drop(f['All']['query'], [f[k]['narrow'] for k in D.keys()], 
-                          outpath='alien', skipable=False)
+                          outpath='alien')
 
 
   f['Google']['fetch'] = Fetch(f['All']['drop'], 'https://patents.google.com/patent',
-                              outdir=D['Google']+'/web', )
+                              outdir=D['Google']+'/web')
 
   f['All']['bundle'] = Bundle('bundle',
                               matches={ k: f[k]['narrow'] for k in D.keys() },
