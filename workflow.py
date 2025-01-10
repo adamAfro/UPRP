@@ -515,6 +515,10 @@ def Fetch(queries:pandas.Series, URL:str, outdir:str):
   _, P = queries
   asyncio.run(scrap(P))
 
+def txtnorm(input_str):
+  nfkd_form = unicodedata.normalize('NFKD', input_str)
+  return ''.join([c for c in nfkd_form if not unicodedata.combining(c)])
+
 @trail(Step)
 def LoadOSM(path:str):
 
@@ -665,12 +669,9 @@ def Geoloc(storage:Storage, geodata:pandas.DataFrame, assignpath:str):
   J['lon'] = pandas.to_numeric(J['lon'])
   Y = closest(J, 'doc', 'name', 'lat', 'lon')
 
-  def plremove(text):#ASCII
-    x = unicodedata.normalize('NFD', text)
-    return ''.join([c for c in x if unicodedata.category(c) != 'Mn'])
   C = C[ ~ C.index.isin(Y['name']) ]
-  C.index = C.index.to_series().apply(plremove).values
-  L.index = L.index.to_series().apply(plremove).values
+  C.index = C.index.to_series().apply(txtnorm).values
+  L.index = L.index.to_series().apply(txtnorm).values
 
   J = C.join(L, how='inner')
   J = J.reset_index().dropna(subset=['lat','lon']).dropna(axis=1)
