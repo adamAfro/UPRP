@@ -28,5 +28,6 @@ prom
 .vscode
 
 geoportal.gov.pl/*
+overpass-turbo/*
 
 workflow.md
