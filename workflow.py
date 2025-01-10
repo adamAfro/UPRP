@@ -1,4 +1,4 @@
-import sys, pandas, yaml, re, os, asyncio, aiohttp, unicodedata, zipfile
+import sys, pandas, yaml, json, re, os, asyncio, aiohttp, unicodedata, zipfile
 import xml.etree.ElementTree as ET
 from lib.log import notify, log, progress
 from lib.storage import Storage
@@ -514,6 +514,26 @@ def Fetch(queries:pandas.Series, URL:str, outdir:str):
 
   _, P = queries
   asyncio.run(scrap(P))
+
+@trail(Step)
+def LoadOSM(path:str):
+
+  with open(path) as f:
+    X = json.load(f)
+
+  Y = []
+  for H in X['features']:
+    try: k = H['properties']['name']
+    except KeyError: continue
+    c = H['geometry']['coordinates']
+    Y.append({'name': re.sub(r'\W+', ' ', k).upper().strip(), 
+              'lat': c[1], 'lon': c[0]})
+
+  Y = pandas.DataFrame(Y)
+
+  Y['norm'] = Y['name'].apply(txtnorm)
+
+  return Y
 
 @trail(Step)
 def Personify(storage:Storage, assignpath:str):
