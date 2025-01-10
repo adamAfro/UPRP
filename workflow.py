@@ -1108,6 +1108,8 @@ try:
 
   if sys.argv[1] == 'docsgen':
 
+    from lib.notebook import gen
+
     n = '\n'
 
     D = set()
@@ -1131,15 +1133,16 @@ try:
     L.add(f'{u.name}["{u}"]')
     L.add(f'click {u.name} "#{u.__class__.__name__.lower().replace(".", "-")}"')
 
+    with open('bundle/readme.md') as f: S = f.read()
+
     D = [(k, re.sub(r'\n\s+', r'\n', d)) for k, d in D if d] #unindent
-    P = '\n'.join([f"{k}\n{'-'*len(k)}\n\n{d}\n" for k, d in D])
-    P = re.sub(r'\*{3}\n', r'\n\n', P)
+    D = [f"{k}\n{'-'*len(k)}\n\n{d}\n" for k, d in D]
+    D = [re.sub(r'\*{3}\n', r'\n\n', d) for d in D]
 
     V = f'```\npython {sys.version}\npandas {pandas.__version__}\n```\n\n\n'
 
     Y = f"```mermaid\ngraph LR\n{n.join(list(L))}\n```"
-    with open('workflow.md', 'w') as f:
-      f.write(V + Y + '\n'*3 + P)
+    gen('insight.py', 'raport.ipynb', [S], [V, Y] + D)
 
     exit()
 
