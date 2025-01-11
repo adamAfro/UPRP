@@ -1,4 +1,4 @@
-import pandas as pd, matplotlib.pyplot as plt, numpy as np
+import pandas as pd, matplotlib.pyplot as plt, numpy as np, geopandas as gpd
 import matplotlib.ticker as ticker
 
 
@@ -150,26 +150,57 @@ f.savefig(figdir+'/pat:classification.png')
 
 
 
-f, ax = plt.subplot_mosaic([['A', 'B'], ['C', 'D']], 
+mondo = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
+f, ax = plt.subplot_mosaic([['A', 'C'], ['B', 'D']], 
                            gridspec_kw={'width_ratios': [1, 1]}, 
                            figsize=(12, 8))
+
+ax['A'].sharex(ax['B'])
 
 f.set_constrained_layout(True)
 
 G = pd.read_csv(bundledir+'/spatial:pat.csv')
-G['name'].value_counts().head(16).plot.barh(title='Najczęściej występujące nazwy\nw rejestrach patentowych', 
-                                           ax=ax['A'], color='green', ylabel='liczba');
+G = gpd.GeoDataFrame(G, geometry=gpd.points_from_xy(G.lon, G.lat))
+G['name'].value_counts().head(16).plot.barh(title='Najczęściej występujące nazwy w rejestrach patentowych', 
+                                           ax=ax['A'], ylabel='liczba');
 
-G['województwo'].value_counts().plot.barh(title='Liczba patentów w zależności\nod województwa',
-                                         ax=ax['B'], color='green', ylabel='liczba');
+G['województwo'].value_counts().plot.barh(title='Liczba patentów w zależności od województwa',
+                                         ax=ax['B'], ylabel='liczba');
 
 G['loceval'].value_counts().plot.pie(title='Sposób określenia geolokalizacji patentu na podstawie nazwy',
                                      ax=ax['C'], ylabel='', autopct='%1.1f%%', colors=['green', 'darkred']);
 
-G.plot.scatter(x='lat', y='lon', title=f'Rozkład geolokalizacji patentów ({G["name"].nunique()} punktów)',
-               ax=ax['D'], color='green', s=1, alpha=.05, xlabel='szerokość', ylabel='długość');
+mondo.plot(ax=ax['D'], color='lightgrey')
+ax['D'].set_xlim(14, 25); ax['D'].set_ylim(49, 55)
+G.plot(ax=ax['D'], markersize=5, alpha=0.1)
+ax['D'].set_title(f'Rozrzut geolokalizacji patentów ({G["name"].nunique()} punktów)')
 
 f.savefig(figdir+'/spatial.png')
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+
+
+n = 20
+Gi = G[['doc', 'docrepo']].sample(n, random_state=0)
+Gg = G.loc[G['doc'].isin(Gi['doc'])]
+
+f, ax = plt.subplots(5, 4, figsize=(fsize.width, fsize.width), constrained_layout=True)
+f.suptitle(f'Geolokalizacje osób powiązanych z losowymi patentami')
+ax = ax.flatten()
+for i in range(n):
+
+  d = Gi['doc'].iloc[i]
+  g = Gg.loc[Gg['doc'] == d]
+
+  a = ax[i]
+  a.axis('off')
+  mondo.plot(ax=a, color='lightgrey')
+  a.set_xlim(14, 25); a.set_ylim(49, 55)
+  g.query(f'doc == {d}').plot(ax=a, markersize=100)
+
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
