@@ -207,7 +207,7 @@ for i in range(n):
 
 
 
-f, ax = plt.subplot_mosaic([['A', 'B', 'C'], ['D', 'D', 'E'], ['G', 'G', 'F']], figsize=(12, 12))
+f, ax = plt.subplot_mosaic([['A', 'B', 'C'], ['D', 'D', 'E']], figsize=(12, 12))
 f.set_constrained_layout(True)
 
 P0A = pd.read_csv(bundledir+'/people:pat-signed.csv', index_col=0)
@@ -231,18 +231,8 @@ P0B.assign(name=P0B['name'].str[:10]+'...')['name'].value_counts().head(16)\
 					.plot.barh(title='Najczęściej występujące nazwy w rejestrach patentowych',
 									 	 ax=ax['D'], color='orange', ylabel='liczba');
 
-pd.Series({ 'imie i nazwisko': P0A.shape[0], 'ogólna nazwa': P0B.shape[0] })\
-	.plot.pie(title=f'Liczba osób\nw rejestrach patentowych\nw zależności\nod dostępności nazwiska (n={P0A.shape[0]+P0B.shape[0]})',
-						ax=ax['E'], ylabel='', autopct='%1.1f%%', colors=['orange', 'darkred']);
-
-pd.Series({ 
-  'z lokacją': (~P0A['city'].isna()).sum() + (~P0B['city'].isna()).sum(), 
-  'bez': P0A['city'].isna().sum() + P0B['city'].isna().sum() })\
-	.plot.pie(title=f'Liczba osób ze wskazaną lokacją\ni bez niej (n={P0A.shape[0]+P0B.shape[0]})',
-						ax=ax['F'], ylabel='', autopct='%1.1f%%', colors=['orange', 'darkred']);
-
 P0A['docrepo'].value_counts().add(P0B['docrepo'].value_counts(), fill_value=0)\
-	.plot.barh(title='Liczba osób\nw zależności od repozytorium',
-						ax=ax['G'], color='orange', ylabel='liczba');
+	.plot.barh(title='Liczba nazw w zależności\nod repozytorium',
+						ax=ax['E'], color='orange', ylabel='liczba');
 
 f.savefig(figdir+'/people.png')
