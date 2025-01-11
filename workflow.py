@@ -700,7 +700,7 @@ def Timeloc(storage:Storage, assignpath:str):
 
   C = pandas.concat([S.melt(f'date-{k}')[['doc', 'value', 'assignement']] 
                      for k in ['fill', 'application', 'office', 'exhibition', 'grant', 
-                               'nogrant', 'decision', 'regional', 'priority']])
+                               'nogrant', 'decision', 'regional', 'priority', 'publication']])
 
   C['assignement'] = C['assignement'].str.split('-').str[1]
   C['value'] = pandas.to_datetime(C['value'], 
