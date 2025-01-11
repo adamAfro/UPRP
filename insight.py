@@ -9,6 +9,7 @@ class fsize:
 
 plt.rcParams['figure.figsize'] = [fsize.width, fsize.height]
 bundledir = 'bundle'
+figdir = 'raport-fig'
 
 
 
@@ -35,10 +36,13 @@ f, ax = plt.subplots(9, figsize=fsize.high, constrained_layout=True, sharex=True
 Tg.plot.bar(title=f'Wydarzenia dotyczące patentów na dany $T={t0}\cdot{t0f}$ dni okres od początku rejestrów', 
 					  legend=False, xlabel=f'dzień początku okresu', stacked=False, subplots=True, ax=ax)
 
+f.savefig(figdir+'/event.png')
+
 f, ax = plt.subplots(figsize=fsize.wide)
 T.value_counts('assignement').plot.barh(title='Ogólna liczba wydarzeń w zależności od typu',
                                        ylabel='liczba', ax=ax);
 
+f.savefig(figdir+'/event-n.png')
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -52,6 +56,8 @@ f, ax = plt.subplots(9, figsize=fsize.high, constrained_layout=True, sharex=True
 for k, a in zip(TaN.columns, ax): TaN[k].value_counts().plot.barh(ax=a)
 ax[0].set_title("Liczba patentów o danej ilości wydarzeń powiązanych")
 ax[-1].set_xlabel('ilość wydarzeń powiązanych');
+
+f.savefig(figdir+'/event:pat-n.png')
 
 
 
@@ -74,6 +80,8 @@ for i in range(n):
   ax[i].yaxis.set_major_locator(ticker.MaxNLocator(nbins=9))
   ax[i].xaxis.set_major_locator(ticker.MaxNLocator(nbins=3))
 
+f.savefig(figdir+'/pat:event.png')
+
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -89,9 +97,12 @@ Cg = C.groupby(['section', 'classification']).size().unstack(fill_value=0)
 Cg.plot.bar(title='Liczność sekcji patentowych w poszczególnych klasyfikacjach', sharex=True, color='blue',
             xlabel='sekcja', stacked=False, subplots=True, legend=False, ax=[ax[str(i)] for i in range(3)]);
 
+f.savefig(figdir+'/classification.png')
+
 C.value_counts('classification').plot.bar(title='Ogólna liczba klasyfikacji\nw danym typie',
                                           ax=ax['bar'], ylabel='liczba', color='blue');
 
+f.savefig(figdir+'/classification-n.png')
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -117,6 +128,7 @@ G['loceval'].value_counts().plot.pie(title='Sposób określenia geolokalizacji p
 G.plot.scatter(x='lat', y='lon', title=f'Rozkład geolokalizacji patentów ({G["name"].nunique()} punktów)',
                ax=ax['D'], color='green', s=1, alpha=.05, xlabel='szerokość', ylabel='długość');
 
+f.savefig(figdir+'/spatial.png')
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -160,3 +172,5 @@ pd.Series({
 P0A['docrepo'].value_counts().add(P0B['docrepo'].value_counts(), fill_value=0)\
 	.plot.barh(title='Liczba osób\nw zależności od repozytorium',
 						ax=ax['G'], color='orange', ylabel='liczba');
+
+f.savefig(figdir+'/people.png')
