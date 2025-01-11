@@ -1,4 +1,11 @@
-import pandas as pd, matplotlib.pyplot as plt
+import pandas as pd, matplotlib.pyplot as plt, numpy as np
+
+class fsize: 
+  width = 8; height = 8
+  wide = (8, 4)
+  high = (8, 10)
+
+plt.rcParams['figure.figsize'] = [fsize.width, fsize.height]
 bundledir = 'bundle'
 
 
@@ -7,20 +14,28 @@ bundledir = 'bundle'
 
 
 
-f, ax = plt.subplot_mosaic([[str(i), 'bar'] for i in range(9)],
-                           gridspec_kw={'width_ratios': [3, 1]}, 
-                           figsize=(12, 8))
+t0 = 365
+t0f = 3
 
 T = pd.read_csv(bundledir+'/event:pat.csv').set_index(['doc', 'docrepo'])
 
-T['date'] = pd.to_datetime(T['year'].astype(str) + '-' + T['month'].astype(str) + '-' + T['day'].astype(str))
-Tg = T.groupby(['delay', 'assignement']).size().unstack(fill_value=0)
-Tg.plot.line(marker='o', linestyle='', markersize=1, alpha=.05, color='orange',
-             title='Wydarzenia dotyczące patentów na dany dzień od początku rejestrów', sharex=True,
-             xlabel='dzień', stacked=False, subplots=True, ax=[ax[str(i)] for i in range(9)]);
+T['assignement'] = pd.Categorical(T['assignement'], ordered=True,
+																	categories=['exhibition', 'office', 'priority', 'regional', 'fill', 'application', 'decision', 'nogrant', 'grant'])#TODO publ fix
 
-T.value_counts('assignement').plot.bar(title='Ogólna liczba wydarzeń\nw zależności od typu',
-                                       ax=ax['bar'], ylabel='liczba', color='orange');
+
+T['date'] = pd.to_datetime(T['year'].astype(str) + '-' + T['month'].astype(str) + '-' + T['day'].astype(str))
+T['delay'] = np.floor(T['delay']/(t0*t0f))*(t0*t0f)
+T['delay'] = T['delay'].astype(int)
+Tg = T.groupby(['delay', 'assignement']).size().unstack(fill_value=0)
+
+
+f, ax = plt.subplots(9, figsize=fsize.high, constrained_layout=True, sharex=True, sharey=True)
+Tg.plot.bar(title=f'Wydarzenia dotyczące patentów na dany $T={t0}\cdot{t0f}$ dni okres od początku rejestrów', 
+					  legend=False, xlabel=f'dzień początku okresu', stacked=False, subplots=True, ax=ax)
+
+f, ax = plt.subplots(figsize=fsize.wide)
+T.value_counts('assignement').plot.barh(title='Ogólna liczba wydarzeń w zależności od typu',
+                                       ylabel='liczba', ax=ax);
 
 
 
