@@ -88,21 +88,62 @@ f.savefig(figdir+'/pat:event.png')
 
 
 
-f, ax = plt.subplot_mosaic([[str(i), 'bar'] for i in range(3)], 
-                           gridspec_kw={'width_ratios': [3, 1]}, 
-                           figsize=(12, 8))
-
-C = pd.read_csv(bundledir+'/classification:pat.csv')
+C = pd.read_csv(bundledir+'/classification:pat.csv', dtype=str)
 Cg = C.groupby(['section', 'classification']).size().unstack(fill_value=0)
-Cg.plot.bar(title='Liczność sekcji patentowych w poszczególnych klasyfikacjach', sharex=True, color='blue',
-            xlabel='sekcja', stacked=False, subplots=True, legend=False, ax=[ax[str(i)] for i in range(3)]);
+
+f, ax = plt.subplots(3, figsize=fsize.high, constrained_layout=True, sharex=True)
+Cg.plot.bar(title='Liczność sekcji patentowych w poszczególnych klasyfikacjach', sharex=True,
+            xlabel='sekcja', stacked=False, subplots=True, legend=False, ax=ax);
 
 f.savefig(figdir+'/classification.png')
 
-C.value_counts('classification').plot.bar(title='Ogólna liczba klasyfikacji\nw danym typie',
-                                          ax=ax['bar'], ylabel='liczba', color='blue');
 
-f.savefig(figdir+'/classification-n.png')
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+
+
+NC0 = pd.get_dummies(C[['doc', 'docrepo', 'classification']], columns=['classification'], 
+                     prefix='', prefix_sep='').groupby(['doc', 'docrepo']).sum()
+f, ax = plt.subplots(figsize=fsize.wide)
+NC0.reset_index().set_index('doc').groupby('docrepo').sum()\
+   .plot.bar(title='Ilość klasyfikacji o w zbiorach danych', ax=ax)
+
+f.savefig(figdir+'/classification.png')
+
+
+NC0 = (NC0 > 0).astype(int)
+
+f, ax = plt.subplots(figsize=fsize.wide)
+NC0.reset_index().set_index('doc').groupby('docrepo').sum()\
+   .plot.bar(title='Ilość patentów o poszczególnych klasyfikacjach w zbiorach danych', ax=ax)
+
+f.savefig(figdir+'/pat:classification-n.png')
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+
+
+n = 10
+Ci = C[['doc', 'docrepo']].sample(n, random_state=0)
+Cs = C.loc[C['doc'].isin(Ci['doc'])].fillna('')
+Cs = Cs.sample(44, random_state=42).sort_index().set_index('doc')
+
+f, ax = plt.subplots(figsize=fsize.high, constrained_layout=True)
+ax.axis('off')
+f.suptitle('Losowe klasyfikacje patentów dla losowej próbki patentów')
+tab = ax.table(cellText=Cs.values, 
+               colLabels=Cs.columns, 
+               rowLabels=Cs.index, loc='center')
+
+for k, u in tab.get_celld().items():
+  u.set_facecolor('none')
+  u.set_edgecolor('lightgray')
+
+f.savefig(figdir+'/pat:classification.png')
+
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
