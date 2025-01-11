@@ -23,7 +23,7 @@ t0f = 3
 T = pd.read_csv(bundledir+'/event:pat.csv').set_index(['doc', 'docrepo'])
 
 T['assignement'] = pd.Categorical(T['assignement'], ordered=True,
-																	categories=['exhibition', 'office', 'priority', 'regional', 'fill', 'application', 'decision', 'nogrant', 'grant'])#TODO publ fix
+																	categories=['exhibition', 'office', 'priority', 'regional', 'fill', 'application', 'nogrant', 'grant', 'decision'])#TODO publ fix
 
 
 T['date'] = pd.to_datetime(T['year'].astype(str) + '-' + T['month'].astype(str) + '-' + T['day'].astype(str))
