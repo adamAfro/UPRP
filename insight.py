@@ -43,6 +43,20 @@ T.value_counts('assignement').plot.barh(title='Ogólna liczba wydarzeń w zależ
 
 
 
+TaN = T.groupby(level=['doc', 'docrepo'])['assignement'].value_counts().unstack(fill_value=0)
+TaN.sort_values(by=[k for k in T['assignement'].dtype.categories], ascending=False)
+
+f, ax = plt.subplots(9, figsize=fsize.high, constrained_layout=True, sharex=True)
+for k, a in zip(TaN.columns, ax): TaN[k].value_counts().plot.barh(ax=a)
+ax[0].set_title("Liczba patentów o danej ilości wydarzeń powiązanych")
+ax[-1].set_xlabel('ilość wydarzeń powiązanych');
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+
+
 f, ax = plt.subplot_mosaic([[str(i), 'bar'] for i in range(3)], 
                            gridspec_kw={'width_ratios': [3, 1]}, 
                            figsize=(12, 8))
