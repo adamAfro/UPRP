@@ -1,4 +1,6 @@
 import pandas as pd, matplotlib.pyplot as plt, numpy as np
+import matplotlib.ticker as ticker
+
 
 class fsize: 
   width = 8; height = 8
@@ -50,6 +52,27 @@ f, ax = plt.subplots(9, figsize=fsize.high, constrained_layout=True, sharex=True
 for k, a in zip(TaN.columns, ax): TaN[k].value_counts().plot.barh(ax=a)
 ax[0].set_title("Liczba patentów o danej ilości wydarzeń powiązanych")
 ax[-1].set_xlabel('ilość wydarzeń powiązanych');
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+
+
+n = 20
+Ti = T.index.to_series().sample(n, random_state=42).index
+Gt = T.loc[Ti].groupby(level=['doc', 'docrepo'])
+
+f, ax = plt.subplots(5, 4, sharey=True, figsize=fsize.high, tight_layout=True)
+f.suptitle('Wydarzenia i ich daty dla losowej próbki patentów')
+ax = ax.flatten()
+for i in range(n):
+  g = Gt.get_group(Ti[i]).set_index('date')['assignement'].sort_index()
+  g.cat.codes.plot.line(ax=ax[i], marker='o')
+for i in range(n):
+  ax[i].set_yticklabels(T['assignement'].dtype.categories)
+  ax[i].yaxis.set_major_locator(ticker.MaxNLocator(nbins=9))
+  ax[i].xaxis.set_major_locator(ticker.MaxNLocator(nbins=3))
 
 
 
