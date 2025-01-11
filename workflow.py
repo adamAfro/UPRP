@@ -570,6 +570,9 @@ def Personify(storage:Storage, assignpath:str):
 
     P = pandas.concat([P, p]) if not P.empty else p
 
+  if P.empty:
+    return pandas.DataFrame(), pandas.DataFrame()
+
   if 'fname' not in P.columns:
     return pandas.DataFrame(), P.reset_index().drop(columns=['id']).set_index(['doc', 'name'])
 
@@ -1063,7 +1066,7 @@ try:
 
         z.write(f"{D['UPRP']}/{D[k]}/narrow.pkl")
 
-    log('📥', f'{(os.path.getsize('migraton.zip')/ (1024 ** 3)):.2} GB')
+    log('📥', f'{(os.path.getsize("migraton.zip")/ (1024 ** 3)):.2} GB')
 
     exit()
 
