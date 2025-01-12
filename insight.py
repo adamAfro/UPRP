@@ -201,6 +201,8 @@ for i in range(n):
   a.set_xlim(14, 25); a.set_ylim(49, 55)
   g.query(f'doc == {d}').plot(ax=a, markersize=100)
 
+f.savefig(figdir+'/pat:spatial.png')
+
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
