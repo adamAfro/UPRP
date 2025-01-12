@@ -23,7 +23,7 @@ t0f = 3
 T = pd.read_csv(bundledir+'/event:pat.csv').set_index(['doc', 'docrepo'])
 
 T['assignement'] = pd.Categorical(T['assignement'], ordered=True,
-																	categories=['exhibition', 'office', 'priority', 'regional', 'fill', 'application', 'nogrant', 'grant', 'decision', 'publication'])
+																	categories=['exhibition', 'priority', 'regional', 'fill', 'application', 'nogrant', 'grant', 'decision', 'publication'])
 
 
 T['date'] = pd.to_datetime(T['year'].astype(str) + '-' + T['month'].astype(str) + '-' + T['day'].astype(str))
@@ -32,7 +32,7 @@ T['delay'] = T['delay'].astype(int)
 Tg = T.groupby(['delay', 'assignement']).size().unstack(fill_value=0)
 
 
-f, ax = plt.subplots(10, figsize=fsize.high, constrained_layout=True, sharex=True, sharey=True)
+f, ax = plt.subplots(9, figsize=fsize.high, constrained_layout=True, sharex=True, sharey=True)
 Tg.plot.bar(title=f'Wydarzenia dotyczące patentów na dany $T={t0}\cdot{t0f}$ dni okres od początku rejestrów', 
 					  legend=False, xlabel=f'dzień początku okresu', stacked=False, subplots=True, ax=ax)
 
@@ -52,7 +52,7 @@ f.savefig(figdir+'/event-n.png')
 TaN = T.groupby(level=['doc', 'docrepo'])['assignement'].value_counts().unstack(fill_value=0)
 TaN.sort_values(by=[k for k in T['assignement'].dtype.categories], ascending=False)
 
-f, ax = plt.subplots(10, figsize=fsize.high, constrained_layout=True, sharex=True)
+f, ax = plt.subplots(9, figsize=fsize.high, constrained_layout=True, sharex=True)
 for k, a in zip(TaN.columns, ax): TaN[k].value_counts().plot.barh(ax=a)
 ax[0].set_title("Liczba patentów o danej ilości wydarzeń powiązanych")
 ax[-1].set_xlabel('ilość wydarzeń powiązanych');

@@ -699,7 +699,7 @@ def Timeloc(storage:Storage, assignpath:str):
     S.assignement = yaml.load(f, Loader=yaml.FullLoader)
 
   C = pandas.concat([S.melt(f'date-{k}')[['doc', 'value', 'assignement']] 
-                     for k in ['fill', 'application', 'office', 'exhibition', 'grant', 
+                     for k in ['fill', 'application', 'exhibition', 'grant', 
                                'nogrant', 'decision', 'regional', 'priority', 'publication']])
 
   C['assignement'] = C['assignement'].str.split('-').str[1]
