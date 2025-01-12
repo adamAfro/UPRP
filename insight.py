@@ -74,7 +74,7 @@ f.suptitle('Wydarzenia i ich daty dla losowej próbki patentów')
 ax = ax.flatten()
 for i in range(n):
   g = Gt.get_group(Ti[i]).set_index('date')['assignement'].sort_index()
-  g.cat.codes.plot.line(ax=ax[i], marker='o')
+  (g.cat.codes+1).plot.line(ax=ax[i], marker='o')
 for i in range(n):
   ax[i].set_yticklabels(T['assignement'].dtype.categories)
   ax[i].yaxis.set_major_locator(ticker.MaxNLocator(nbins=9))
