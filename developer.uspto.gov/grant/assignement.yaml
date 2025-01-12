@@ -1,0 +1,42 @@
+agent:
+  first_name: name
+  last_name: name
+  orgname: name
+assignee:
+  addressbook_first_name: name
+  addressbook_last_name: name
+  addressbook_orgname: name
+  city: city
+  first_name: name
+  last_name: name
+  orgname: name
+classification_cpc: {}
+classification_ipcr: {}
+classification_national: {}
+combination_rank: {}
+combination_set: {}
+continuation: {}
+continuation_in_part: {}
+division: {}
+inventor:
+  city: city
+  first_name: name
+  last_name: name
+priority_claim: {}
+raw:
+  filename: label
+  date: date
+  doc_number: number
+  document_id_date: date
+  document_id_doc_number: number
+  text: title
+related_publication: {}
+us_applicant:
+  city: city
+  first_name: name
+  last_name: name
+  orgname: name
+us_citation: {}
+us_provisional_application:
+  date: date
+  doc_number: number

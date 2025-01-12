@@ -1,0 +1,172 @@
+abstract:
+  '&res': null
+  doc_: null
+  id: null
+  lang: null
+  text: null
+agents:
+  '&res': null
+  doc_: null
+  extracted_address: null
+  extracted_country: null
+  id: null
+  value: null
+applicants:
+  '&res': null
+  doc_: null
+  extracted_address: [city, city-applicant]
+  id: null
+  residence: [country, country-applicant]
+  value: [name, name-applicant]
+citations:
+  '&res': null
+  category: null
+  cited_phase: null
+  date: null
+  doc_: null
+  doc_number: null
+  external_ids: null
+  id: null
+  jurisdiction: null
+  kind: null
+  lens_id: null
+  nplcit_lens_id: null
+  sequence: null
+  text: null
+claims:
+  '&res': null
+  doc_: null
+  id: null
+  lang: null
+claims_claims:
+  '&claims': null
+  claim_text: null
+  doc_: null
+  id: null
+classifications:
+  '&res': null
+  classification_symbol_position: null
+  classification_value: null
+  doc_: null
+  id: null
+  symbol: CPC
+classifications_ipcr_classifications:
+  '&res': null
+  classification_symbol_position: null
+  classification_value: null
+  doc_: null
+  id: null
+  symbol: IPCR
+classifications_national_classifications:
+  '&res': null
+  doc_: null
+  id: null
+  symbol: null
+invention_title:
+  '&res': null
+  doc_: null
+  id: null
+  lang: null
+  text: title
+inventors:
+  '&res': null
+  doc_: null
+  extracted_address: [city, city-inventor]
+  id: null
+  orcid: null
+  residence: [country, country-inventor]
+  sequence: null
+  value: [name, name-inventor]
+members:
+  '&res': null
+  date: null
+  doc_: null
+  doc_number: null
+  id: null
+  jurisdiction: null
+  kind: null
+  lens_id: null
+organisms:
+  '&res': null
+  doc_: null
+  id: null
+  name: null
+  tax_id: null
+owners_all:
+  '&res': null
+  doc_: null
+  execution_date: null
+  extracted_address: [city, city-assignee]
+  extracted_country: null
+  id: null
+  recorded_date: null
+  value: [name, name-assignee]
+patents:
+  '&res': null
+  doc_: null
+  doc_number: null
+  id: null
+  jurisdiction: null
+  kind: null
+  lens_id: null
+priority_claims_claims:
+  '&res': null
+  date: null
+  doc_: null
+  doc_number: null
+  id: null
+  jurisdiction: null
+  kind: null
+  sequence: null
+res:
+  anticipated_term_date: null
+  application_expiry_date: null
+  application_reference_date: [date, date-application]
+  application_reference_doc_number: number
+  application_reference_jurisdiction: null
+  application_reference_kind: null
+  assistant_examiner_value: null
+  calculation_log: null
+  count: null
+  date: [date, date-publication]
+  date_published: [date, date-publication]
+  department: null
+  description_lang: null
+  discontinuation_date: null
+  doc_: null
+  doc_key: label
+  doc_number: number
+  docdb_id: null
+  extended_family_size: null
+  grant_date: [date, date-grant]
+  granted: null
+  has_disclaimer: null
+  id: null
+  jurisdiction: null
+  kind: null
+  lang: null
+  length_buckets: null
+  lens_id: null
+  npl_count: null
+  npl_resolved_count: null
+  patent_count: null
+  patent_status: null
+  priority_claims_date: [date, date-priority]
+  publication_reference_doc_number: number
+  publication_reference_jurisdiction: null
+  publication_reference_kind: null
+  publication_type: null
+  references_cited_patent_count: null
+  sequence_types: null
+  size: null
+  text: null
+  value: null
+simple_family_members:
+  '&res': null
+  date: null
+  doc_: null
+  doc_number: "family-number"
+  id: null
+  jurisdiction: "family-jurisdiction"
+  kind: null
+  lens_id: null

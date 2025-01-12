@@ -1,0 +1,230 @@
+addition:
+  '&raw': null
+  doc_: null
+  extidappli: null
+  id: null
+  parent_doc_extidappli: null
+addressbook:
+  '&assignee': null
+  city: [city, city-assignee]
+  country: null
+  doc_: null
+  id: null
+  lang: null
+  name_type: [type-name]
+  text: [name, name-assignee]
+agent:
+  '&raw': null
+  city: null
+  country: null
+  doc_: null
+  first_name: null
+  id: null
+  last_name: null
+  orgname: null
+  postcode: null
+  rep_type: null
+  sequence: null
+applicant:
+  '&raw': null
+  app_type: null
+  country: null
+  designated_states_country: null
+  designation: null
+  doc_: null
+  id: null
+  residence_country: null
+  sequence: null
+applicants_addressbook:
+  '&applicant': null
+  city: [city, city-applicant]
+  country: null
+  doc_: null
+  id: null
+  lang: null
+  name: [name, name-applicant]
+assignee:
+  '&raw': null
+  doc_: null
+  id: null
+citation:
+  '&raw': null
+  atl: null
+  author_name: null
+  category: null
+  country: null
+  doc_: null
+  doc_number: null
+  hostno: null
+  hosttitle: null
+  id: null
+  inprint_name: null
+  kind: null
+  name: null
+  online_name: null
+  passage: null
+  pub_date: null
+  refno: null
+  rel_claims: null
+  rel_passage_category: null
+  rel_passage_rel_claims: null
+  sertitle: null
+  text: null
+classification_ipcr:
+  '&raw': null
+  class: IPCR-class
+  date: IPCR-date
+  doc_: null
+  id: null
+  main_group: IPCR-group
+  section: IPCR-section
+  subclass: IPCR-subclass
+  subgroup: IPCR-subgroup
+  text: IPCR
+comment:
+  '&raw': null
+  date: null
+  doc_: null
+  id: null
+  text: null
+division:
+  '&raw': null
+  doc_: null
+  extidappli: null
+  id: null
+  parent_doc_extidappli: null
+from_invention:
+  '&raw': null
+  doc_: null
+  extidappli: null
+  id: null
+  parent_doc_extidappli: null
+gazette_reference:
+  '&raw': null
+  date: null
+  doc_: null
+  gazette_nosect: null
+  gazette_num: null
+  gazette_uri: null
+  id: null
+  kind: null
+invention_title:
+  '&raw': null
+  doc_: null
+  id: null
+  lang: null
+  text: title
+inventor:
+  '&raw': null
+  doc_: null
+  id: null
+  sequence: null
+inventors_addressbook:
+  '&inventor': null
+  city: [city, city-inventor]
+  country: [country, country-inventor]
+  doc_: null
+  first_name: [name, fname-inventor]
+  id: null
+  lang: null
+  last_name: [name, lname-inventor]
+other_doc:
+  '&raw': null
+  doc_: null
+  document_code: null
+  document_uri: null
+  id: null
+priority_claim:
+  '&raw': null
+  country: null
+  date: null
+  doc_: null
+  doc_number: null
+  id: null
+  kind: null
+  sequence: null
+publication_reference:
+  '&raw': null
+  country: null
+  date: null
+  date_publ: null
+  doc_: null
+  doc_number: null
+  document_id_country: null
+  document_id_date: null
+  document_id_doc_number: null
+  document_id_kind: null
+  id: null
+  kind: null
+raw:
+  filename: label
+  abstract_lang: null
+  application_reference_country: null
+  application_reference_date: [date, date-application]
+  application_reference_doc_number: number
+  application_reference_kind: null
+  begin_date: null
+  child_doc_country: null
+  child_doc_date: null
+  child_doc_doc_number: number
+  child_doc_kind: null
+  claim_num: null
+  claim_text: null
+  claims_lang: null
+  classification_cpc_further_classification: CPC
+  classification_cpc_main_classification: CPC
+  cntrenew: null
+  code: null
+  country: null
+  date: [date, date-exhibition]
+  date_exhibition_filed_text: null
+  date_of_grant: [date, date-grant]
+  date_publ: [date, date-publication]
+  dates_of_public_availability_country: null
+  dates_of_public_availability_date: [date, date-nogrant]
+  dates_of_public_availability_doc_number: null
+  decision_date: [date, date-decision]
+  decision_name: null
+  description_lang: null
+  doc_: null
+  doc_number: number
+  document_id_child_doc_country: null
+  document_id_child_doc_date: null
+  document_id_child_doc_doc_number: number
+  document_id_child_doc_kind: null
+  document_id_country: null
+  document_id_date: [date, date-regional]
+  document_id_doc_number: number
+  document_id_parent_doc_country: null
+  document_id_parent_doc_date: null
+  document_id_parent_doc_doc_number: number
+  document_id_parent_doc_kind: null
+  dtptexpi: null
+  edition: null
+  end_date: null
+  extidappli: number
+  extidpatent: number
+  further_classification: IPC
+  gazette_num: null
+  gazette_reference_date: null
+  id: null
+  kind: null
+  lang: null
+  main_classification: IPC
+  num: null
+  p_num: null
+  p_text: null
+  parent_doc_country: null
+  parent_doc_date: null
+  parent_doc_doc_number: number
+  parent_doc_kind: null
+  pct_or_regional_filing_data_country: null
+  pct_or_regional_filing_data_date: null
+  pct_or_regional_filing_data_doc_number: null
+  pendingfee_dtdupay: null
+  pendingfee_mtftocol: null
+  source: null
+  status_description: null
+  status_id: null
+  text: null
+  timestamp: null
