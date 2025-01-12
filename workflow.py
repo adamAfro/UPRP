@@ -538,6 +538,109 @@ def LoadOSM(path:str):
   return Y
 
 @trail(Step)
+def Nameread(asnstores:dict[Storage, str]):
+
+  """
+  Odróżnia w danych imiona, nazwiska i nazwy organizacji.
+  Zwraca zbiór słów imienniczych (imię albo nazwisko), 
+  samych imion, samych nazwisk, nazw organizacji.
+  Nazwy bez jednoznacznej klasyfikacji są pomijane.
+  """
+
+  K0 = ['name', 'fname', 'lname', 'city']
+  P = pandas.DataFrame()
+  T = pandas.DataFrame()
+
+  for assignpath, S in asnstores.items():
+
+    with open(assignpath, 'r') as f:
+      S.assignement = yaml.load(f, Loader=yaml.FullLoader)
+
+    T = pandas.concat([T, S.melt('type-name').reset_index()])
+
+    for h in ['assignee', 'applicant', 'inventor']:
+
+      K = [f'{k0}-{h}' for k0 in K0]
+      p = pandas.concat([S.melt(f'{k}').reset_index() for k in K] + [T])
+      p = p[['id', 'doc', 'value', 'assignement']]
+      p['value'] = p['value'].str.upper().str.replace(r'\s+', ' ', regex=True).str.strip()
+      p = p.pivot_table(index=['id', 'doc'], columns='assignement',
+                        values='value', aggfunc='first')
+
+      p.columns = [k.split('-')[0] for k in p.columns]
+      p['role'] = h
+
+      P = pandas.concat([P, p]) if not P.empty else p
+
+  P = P.reset_index(drop=True).drop_duplicates()
+
+  Y = P.query('type == "LEGAL"').assign(kind='org')[['name', 'kind']]
+  P = P.drop(columns='type')
+
+  Nf = P['fname'].dropna().str.split(' ').explode().dropna()
+  Nf = pandas.concat([Nf.str.split(' ').explode().dropna()]).drop_duplicates()
+  Nf = Nf[ Nf.str.len() > 2 ].rename('name')
+
+  Nl = P['lname'].dropna().str.split(' ').explode().dropna()
+  Nl = pandas.concat([Nl.str.split(' ').explode().dropna()]).drop_duplicates()
+  Nl = Nl[ Nl.str.len() > 2 ].rename('name')
+
+  N = pandas.concat([Nf, Nl])
+  N = N[ N.duplicated(keep=False) ]
+  N = N.drop_duplicates()
+  Nf = Nf[ ~ Nf.isin(N) ]
+  Nl = Nl[ ~ Nl.isin(N) ]
+
+  Y = pandas.concat([Y,
+    N.to_frame().assign(kind='flname'),
+    Nf.to_frame().assign(kind='fname'),
+    Nl.to_frame().assign(kind='lname'),
+  ])
+
+  P = P.drop(columns=['fname', 'lname']).dropna(subset='name')
+  P['norm'] = P['name'].str.replace(r'\W+', ' ', regex=True).str.strip()
+  
+  # wyrzucanie imion i nazwisk o ile to możliwe mimo że są jako nazwy (tylko dłuższe od 2 znaków)
+  P['word'] = P['norm'].str.replace(r'\b\w{,2}\b', '', regex=True)\
+                       .str.strip().dropna()\
+                       .apply(lambda x: ' '.join([y for y in set(x.split())]))
+
+  P['N'] = P['word'].str.count(' ') + 1
+  P['word'] = P['word'].str.split(' ')
+
+  # ustalenie że nazwy stają się imieniem i nazwiskiem o ile
+  # wszystkie (każde!) słowa w nazwie są w bazie słów imion i nazwisk
+  Z = P[['N', 'word']].explode('word').dropna(subset='word')\
+       .reset_index().set_index('word').join(Y.set_index('name'), how='inner')\
+       .set_index('index')
+
+  G = Z.groupby(level=0).agg(n=('N', 'size'), N=('N', 'first')).query('n == N')[[]]
+  P = P.loc[P.index.difference(Z.join(G, how='inner').index)]
+
+  Q = [x for X in [ 'COMPANY PRZEDSIĘBIORSTWO PRZEDSIEBIORSTWO FUNDACJA INSTYTUT INSTITUTE',
+                    'HOSPITAL SZPITAL'
+                    'COMPANY LTD SPÓŁKA LIMITED GMBH ZAKŁAD PPHU',
+                    'KOPALNIA SPÓŁDZIELNIA SPOLDZIELNIA FABRYKA',
+                    'ENTERPRISE TECHNOLOGY',
+                    'LLC CORPORATION INC',
+                    'MIASTO GMINA URZĄD',
+                    'GOVERNMENT RZĄÐ',
+                    'AKTIENGESELLSCHAFT KOMMANDITGESELLSCHAFT',
+                    'UNIWERSYTET UNIVERSITY AKADEMIA ACADEMY',
+                    'POLITECHNIKA'] for x in X.split()]
+
+  P['kind'] = P['norm'].apply(lambda y: 'org' if any(x in y for x in Q) else None)
+  for k in ['&', 'INTERNAZIO', 'INTERNATIO', 'INC.', 'ING.', 'SP. Z O. O.']:
+    P.loc[ P['name'].str.contains(k), 'kind' ] = 'org'
+
+  Y = pandas.concat([Y, P.query('kind == "org"')[['kind', 'name', 'norm']]\
+                         .drop_duplicates('name')])
+
+  P = P.query('kind != "org"').drop(columns='kind')
+
+  return Y
+
+@trail(Step)
 def Personify(storage:Storage, assignpath:str):
 
   """
@@ -998,6 +1101,12 @@ try:
   f['Base'] = dict()
   f['Base']['drop'] = Drop(f['All']['query'], [f['UPRP']['narrow'], f['Lens']['narrow']],
                            outpath='alien.base')
+
+  f["Base"]['nameread'] = Nameread({ 
+    D['Google']+'/assignement.yaml': f['Google']['profile'],
+    D['Lens']+'/assignement.yaml': f['Lens']['profile'],
+    D['UPRP']+'/assignement.yaml': f['UPRP']['profile'] 
+  }, outpath=p+'/names.pkl')
 
   for k, p in D.items():
 
