@@ -7,6 +7,7 @@ from lib.step import trail, Trace, Step, walk
 from lib.profile import Profiler
 from lib.alias import simplify
 from lib.geo import closest
+from lib.name import distinguish, classify
 from pyproj import Transformer
 
 @trail(Step)
@@ -574,92 +575,23 @@ def Nameread(asnstores:dict[Storage, str]):
 
   P = P.reset_index(drop=True).drop_duplicates()
 
-  Y = P.query('type == "LEGAL"').assign(kind='org')[['name', 'kind']]
-  P = P.loc[ P.index.difference(Y.index) ]
-  P = P.drop(columns='type')
-
-  Nf = P['fname'].dropna().str.split(' ').explode().dropna()
-  Nf = pandas.concat([Nf.str.split(' ').explode().dropna()]).drop_duplicates()
-  Nf = Nf[ Nf.str.len() > 2 ].rename('name')
-
-  Nl = P['lname'].dropna().str.split(' ').explode().dropna()
-  Nl = pandas.concat([Nl.str.split(' ').explode().dropna()]).drop_duplicates()
-  Nl = Nl[ Nl.str.len() > 2 ].rename('name')
-
-  N = pandas.concat([Nf, Nl])
-  N = N[ N.duplicated(keep=False) ]
-  N = N.drop_duplicates()
-  Nf = Nf[ ~ Nf.isin(N) ]
-  Nl = Nl[ ~ Nl.isin(N) ]
-
-  Y = pandas.concat([Y,
-    N.to_frame().assign(kind='flname'),
-    Nf.to_frame().assign(kind='fname'),
-    Nl.to_frame().assign(kind='lname'),
-  ])
-
-  I = P.query('role == "inventor"').assign(kind='flname')[['name', 'kind']]
-  I['name'] = I['name'].str.replace(r'\W+', ' ', regex=True).str.strip().dropna()\
-               .str.replace(r'\b\w{,2}\b', '', regex=True).str.strip().dropna()\
-               .str.split()
-
-  I = I.explode('name').dropna(subset='name').drop_duplicates(subset='name')
-
-  Y = pandas.concat([Y, I])
-  P = P.loc[ P.index.difference(Y.index) ]
-
-  P = P.drop(columns=['fname', 'lname']).dropna(subset='name')
-  P['norm'] = P['name'].str.replace(r'\W+', ' ', regex=True).str.strip()
-  
-  # wyrzucanie imion i nazwisk o ile to możliwe mimo że są jako nazwy (tylko dłuższe od 2 znaków)
-  P['word'] = P['norm'].str.replace(r'\b\w{,2}\b', '', regex=True)\
-                       .str.strip().dropna()\
-                       .apply(lambda x: ' '.join([y for y in set(x.split())]))
-
-  P['N'] = P['word'].str.count(' ') + 1
-  P['word'] = P['word'].str.split(' ')
-
-  # ustalenie że nazwy stają się imieniem i nazwiskiem o ile
-  # wszystkie (każde!) słowa w nazwie są w bazie słów imion i nazwisk
-  Z = P[['N', 'word']].explode('word').dropna(subset='word')\
-       .reset_index().set_index('word').join(Y.set_index('name'), how='inner')\
-       .set_index('index')
-
-  G = Z.groupby(level=0).agg(n=('N', 'size'), N=('N', 'first')).query('n == N')[[]]
-  P = P.loc[P.index.difference(Z.join(G, how='inner').index)]
-
-  Q = [x for X in [ 'COMPANY PRZEDSIĘBIORSTWO PRZEDSIEBIORSTWO FUNDACJA INSTYTUT INSTITUTE',
-                    'HOSPITAL SZPITAL'
-                    'COMPANY LTD SPÓŁKA LIMITED GMBH ZAKŁAD PPHU',
-                    'KOPALNIA SPÓŁDZIELNIA SPOLDZIELNIA FABRYKA',
-                    'ENTERPRISE TECHNOLOGY',
-                    'LLC CORPORATION INC',
-                    'MIASTO GMINA URZĄD',
-                    'GOVERNMENT RZĄÐ',
-                    'AKTIENGESELLSCHAFT KOMMANDITGESELLSCHAFT',
-                    'UNIWERSYTET UNIVERSITY AKADEMIA ACADEMY',
-                    'POLITECHNIKA'] for x in X.split()]
-
-  P['kind'] = P['norm'].apply(lambda y: 'org' if any(x in y for x in Q) else None)
-  for k in ['&', 'INTERNAZIO', 'INTERNATIO', 'INC.', 'ING.', 'SP. Z O. O.']:
-    P.loc[ P['name'].str.contains(k), 'kind' ] = 'org'
-
-  Y = pandas.concat([Y, P.query('kind == "org"')[['kind', 'name', 'norm']]\
-                         .drop_duplicates('name')])
-
-  P = P.query('kind != "org"').drop(columns='kind')
-
-  Y = Y.dropna(subset="name")
-
-
-  a = Y.query('kind == "flname"')
-  b = Y.query('kind.isin(["fname", "lname"])')
-  c = a['name'].isin(b['name'])
-  c = c[c].index
-
-  Y = Y.drop(c).drop_duplicates(subset='name')
-
-  return Y
+  return distinguish(P, valuekey='name', kindkey='kind', normkey='norm',
+                     firstname='fname', lastname='lname', commonname='flname',
+                     orgname='org',
+                     orgqueries=['type == "LEGAL"'],
+                     namequeries=['role == "inventor"'],
+                     orgkeysubstr=['&', 'INTERNAZIO', 'INTERNATIO', 'INC.', 'ING.', 'SP. Z O. O.'],
+                     orgkeywords=[x for X in ['COMPANY PRZEDSIĘBIORSTWO PRZEDSIEBIORSTWO FUNDACJA INSTYTUT INSTITUTE',
+                                              'HOSPITAL SZPITAL'
+                                              'COMPANY LTD SPÓŁKA LIMITED GMBH ZAKŁAD PPHU',
+                                              'KOPALNIA SPÓŁDZIELNIA SPOLDZIELNIA FABRYKA',
+                                              'ENTERPRISE TECHNOLOGY',
+                                              'LLC CORPORATION INC',
+                                              'MIASTO GMINA URZĄD',
+                                              'GOVERNMENT RZĄÐ',
+                                              'AKTIENGESELLSCHAFT KOMMANDITGESELLSCHAFT',
+                                              'UNIWERSYTET UNIVERSITY AKADEMIA ACADEMY',
+                                              'POLITECHNIKA'] for x in X.split()])
 
 @trail(Step)
 def Personify(storage:Storage, assignpath:str, nameset:pandas.DataFrame):
@@ -697,74 +629,10 @@ def Personify(storage:Storage, assignpath:str, nameset:pandas.DataFrame):
   if P.empty:
     return pandas.DataFrame(), pandas.DataFrame()
 
-  # na wypadek gdy 2 nazwy różnych typów są w jednym obiekcie
-  P = P.reset_index()
-  P.index.name = 'index'
-  P = P.set_index(['id', 'doc'], append=True)
-
-  N = pandas.concat([
-    nameset.query(f'kind == "{k}"')['name']\
-           .str.split(' ').explode().dropna().drop_duplicates()\
-           .to_frame().assign(kind=k).rename(columns={'name': 'word'}) for k in ['flname', 'fname', 'lname']
-  ], ignore_index=True).drop_duplicates(subset='word')
-
-  N['word'] = N['word'].str.replace(r'\W+', ' ', regex=True)
-  N = N.set_index('word')
-  P['word'] = P['name'].str.replace(r'\b\w{,2}\b', '', regex=True)\
-                       .str.strip().dropna().str.replace(r'\W+', ' ', regex=True)\
-                       .apply(lambda x: ' '.join([y for y in set(x.split())]))
-
-  P['N'] = P['word'].str.count(' ') + 1
-  P['word'] = P['word'].str.split(' ')
-
-  # ustalenie że nazwy stają się imieniem i nazwiskiem o ile
-  # wszystkie (każde!) słowa w nazwie są w bazie słów imion i nazwisk
-  Z = P.explode('word').dropna(subset='word')\
-  .reset_index().set_index('word').join(N).dropna(subset='kind')
-  G = Z.groupby(['index', 'id', 'doc']).agg(n=('N', 'size'), N=('N', 'first'))\
-  .reset_index().query('n == N')
-
-  Z = Z.reset_index().set_index(['index', 'id', 'doc'])\
-  .join(G[['index', 'id', 'doc']].set_index(['index', 'id', 'doc']), how='right')
-  Z = Z.reset_index() # jeśli jest za dużo imion
-  Z = Z.drop_duplicates(subset=['index', 'id', 'doc', 'kind'])
-  Z = Z.set_index(['index', 'id', 'doc'])
-
-  if 'fname' not in P.columns: P['fname'] = None
-  P['fname'] = P['fname'].combine_first(Z.query('kind == "fname"')['word'])
-  P['fname'] = P['fname'].combine_first(Z.query('kind == "flname"')['word'])
-
-  if 'lname' not in P.columns: P['lname'] = None
-  P['lname'] = P['lname'].combine_first(Z.query('kind == "lname"')['word'])
-  P['lname'] = P['lname'].combine_first(Z.query('kind == "flname"')['word'])
-
-  #TODO: gdy imie jest w tabeli przed nazwiskiem może to sprawić
-  # że nazwisko nie zostanie rozpoznane, mimo że słownik wskazuje inaczej
-
-  P = P.reset_index().drop(columns=['word', 'N', 'id'])
-
-  A = P.dropna(subset=['fname', 'lname']).drop(columns=['name'])\
-       .drop_duplicates(subset=['doc', 'fname', 'lname'])
-
-  B = P.loc[P.index.difference(A.index)].dropna(subset='name')\
-       .drop(columns=['fname', 'lname'])\
-       .drop_duplicates(subset=['doc', 'name'])
-
-  B['norm'] = B['name'].str.replace(r'\W+', ' ', regex=True).str.strip()
-  Z = nameset
-  Z['norm'] = Z['name'].str.replace(r'\W+', ' ', regex=True).str.strip()
-
-  B = B.set_index('norm').join(Z.query('kind=="org"').set_index('norm')[['kind']], how='left')
-  B['role'] = B['kind'].fillna(B['role'])
-
-  A = A.drop_duplicates(subset=['fname', 'lname'])\
-       .set_index(['doc', 'fname', 'lname'])[['role']]
-  B = B.drop_duplicates(subset='name').dropna(subset='name')\
-       .set_index(['doc', 'name'])[['role']]
-
-  #TODO nie wszyscy inventorzy są kwalifikowani jako flname a powinni
-
-  return A, B
+  return classify(P, nameset, valuekey='name', kindkey='kind', normkey='norm',
+                  firstname='fname', lastname='lname', commonname='flname',
+                  orgname='org', idkey='id', dockey='doc', rolekey='role', 
+                  indexkey='index')
 
 @trail(Step)
 def Geoloc(storage:Storage, geodata:pandas.DataFrame, assignpath:str):
