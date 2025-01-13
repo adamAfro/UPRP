@@ -9,6 +9,7 @@ def classify(entries: pandas.DataFrame, nameset:pandas.DataFrame,
              idkey:str,
              dockey:str,
              rolekey:str,
+             evalkey:str,
              indexkey: str = 'index'):
 
   X = entries
@@ -24,8 +25,12 @@ def classify(entries: pandas.DataFrame, nameset:pandas.DataFrame,
            .to_frame().assign(kind=k).rename(columns={valuekey: wordkey}) for k in [commonname, firstname, lastname]
   ], ignore_index=True).drop_duplicates(subset=wordkey)
 
+  X[evalkey] = None
   for k in [firstname, lastname, commonname]:
-    if k not in X.columns: X[k] = None
+    if k in X.columns:
+      X.loc[ ~X[k].isna(), evalkey ] = 'source'
+    else:
+      X[k] = None
 
   X.update(namefill(X, N, firstname, lastname, commonname, 
                     idkey, dockey, kindkey, normkey, valuekey, nchar=2, wordkey=wordkey))
@@ -35,6 +40,7 @@ def classify(entries: pandas.DataFrame, nameset:pandas.DataFrame,
 
   a = (~X[[firstname, lastname, commonname]].isna()).sum(axis=1) > 0
   A = X[a].reset_index().drop(columns=[valuekey])
+  A[evalkey] = A[evalkey].fillna('nameset')
   A = A.drop_duplicates(subset=[dockey, firstname, lastname])
 
   B = X[~a].dropna(subset=valuekey).drop(columns=[firstname, lastname, commonname])
@@ -46,12 +52,14 @@ def classify(entries: pandas.DataFrame, nameset:pandas.DataFrame,
   Z[normkey] = Z[valuekey].str.replace(r'\W+', ' ', regex=True).str.strip()
 
   O = Z.query(f'{kindkey}=="{orgname}"').set_index(normkey)[[kindkey]]
-  B = B.set_index(normkey).join(O, how='left')
+  O[evalkey] = 'nameset'
+  if B[evalkey].count() != 0: raise NotImplementedError()
+  B = B.drop(columns=[evalkey]).set_index(normkey).join(O, how='left')
   B[rolekey] = B[kindkey].fillna(B[rolekey])
 
-  A = A.set_index([dockey, firstname, lastname, commonname])[[rolekey]]
+  A = A.set_index([dockey, firstname, lastname, commonname])[[rolekey, evalkey]]
   B = B.drop_duplicates(subset=[dockey, valuekey]).dropna(subset=valuekey)\
-       .set_index([dockey, valuekey])[[rolekey]]
+       .set_index([dockey, valuekey])[[rolekey, evalkey]]
 
   return A, B
 

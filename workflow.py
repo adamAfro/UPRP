@@ -632,7 +632,7 @@ def Personify(storage:Storage, assignpath:str, nameset:pandas.DataFrame):
   return classify(P, nameset, valuekey='name', kindkey='kind', normkey='norm',
                   firstname='fname', lastname='lname', commonname='flname',
                   orgname='org', idkey='id', dockey='doc', rolekey='role', 
-                  indexkey='index')
+                  indexkey='index', evalkey='evalname')
 
 @trail(Step)
 def Geoloc(storage:Storage, geodata:pandas.DataFrame, assignpath:str):
