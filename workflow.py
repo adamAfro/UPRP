@@ -641,7 +641,7 @@ def Nameread(asnstores:dict[Storage, str]):
   return Y
 
 @trail(Step)
-def Personify(storage:Storage, assignpath:str):
+def Personify(storage:Storage, assignpath:str, nameset:pandas.DataFrame):
 
   """
   Zwraca ramkę z danymi osobowymi.
@@ -680,10 +680,9 @@ def Personify(storage:Storage, assignpath:str):
     return pandas.DataFrame(), P.reset_index().drop(columns=['id']).set_index(['doc', 'name'])
 
   N = pandas.concat([
-    P['fname'].str.split(' ').explode().dropna().drop_duplicates()\
-    .to_frame().assign(assignement='fname').rename(columns={'fname': 'word'}),
-    P['lname'].str.split(' ').explode().dropna().drop_duplicates()\
-    .to_frame().assign(assignement='lname').rename(columns={'lname': 'word'})
+    nameset.query(f'kind == "{k}"')['name']\
+           .str.split(' ').explode().dropna().drop_duplicates()\
+           .to_frame().assign(kind=k).rename(columns={'name': 'word'}) for k in ['fname', 'lname']
   ], ignore_index=True).drop_duplicates(subset='word').set_index('word')
 
   P['word'] = P['name'].str.replace(r'\b\w{,2}\b', '', regex=True)\
@@ -695,18 +694,18 @@ def Personify(storage:Storage, assignpath:str):
   # ustalenie że nazwy stają się imieniem i nazwiskiem o ile
   # wszystkie (każde!) słowa w nazwie są w bazie słów imion i nazwisk
   Z = P.explode('word').dropna(subset='word')\
-  .reset_index().set_index('word').join(N).dropna(subset='assignement')
+  .reset_index().set_index('word').join(N).dropna(subset='kind')
   G = Z.groupby(['id', 'doc']).agg(n=('N', 'size'), N=('N', 'first'))\
   .reset_index().query('n == N')
 
   Z = Z.reset_index().set_index(['id', 'doc'])\
   .join(G[['id', 'doc']].set_index(['id', 'doc']), how='right')
   Z = Z.reset_index() # jeśli jest za dużo imion
-  Z = Z.drop_duplicates(subset=['id', 'doc', 'assignement'])
+  Z = Z.drop_duplicates(subset=['id', 'doc', 'kind'])
   Z = Z.set_index(['id', 'doc'])
 
-  fN = Z.query('assignement == "fname"')['word']
-  lN = Z.query('assignement == "lname"')['word']
+  fN = Z.query('kind == "fname"')['word']
+  lN = Z.query('kind == "lname"')['word']
   P['fname'] = P['fname'].combine_first(fN)
   P['lname'] = P['lname'].combine_first(lN)
 
@@ -873,7 +872,7 @@ def Classify(storage:Storage, assignpath:str):
   return Y
 
 @trail(Step)
-def Pull(storage:Storage, assignpath:str, geodata:pandas.DataFrame, workdir:str):
+def Pull(storage:Storage, assignpath:str, geodata:pandas.DataFrame, nameset:pandas.DataFrame, workdir:str):
 
   "Wyciąga dane zgodnie z przypisanymi rolami."
 
@@ -882,7 +881,7 @@ def Pull(storage:Storage, assignpath:str, geodata:pandas.DataFrame, workdir:str)
   G = Geoloc(storage, geodata, assignpath, outpath=f'{workdir}/geo.pkl')
   T = Timeloc(storage, assignpath, outpath=f'{workdir}/time.pkl')
   C = Classify(storage, assignpath, outpath=f'{workdir}/clsf.pkl')
-  P = Personify(storage, assignpath, outpath=f'{workdir}/people.pkl')
+  P = Personify(storage, assignpath, nameset, outpath=f'{workdir}/people.pkl', skipable=False)
 
   return G(), T(), C(), P()
 
@@ -1066,6 +1065,13 @@ try:
                                    storage=f['UPRP']['profile'], docsframe='raw',
                                    outpath=D['UPRP']+'/identify.pkl')
 
+  f['Base'] = dict()
+  f["Base"]['nameread'] = Nameread({ 
+    D['Google']+'/assignement.yaml': f['Google']['profile'],
+    D['Lens']+'/assignement.yaml': f['Lens']['profile'],
+    D['UPRP']+'/assignement.yaml': f['UPRP']['profile'] 
+  }, outpath='names.pkl')
+
   f['All'] = dict()
 
   f['All']['query'] = Parsing(f['UPRP']['identify'], outpath='queries.pkl')
@@ -1080,6 +1086,7 @@ try:
 
     f[k]['pull'] = Pull(f[k]['profile'], assignpath=p+'/assignement.yaml', 
                         geodata=f['Misc']['geodata'],
+                        nameset=f['Base']['nameread'],
                         outpath=p+'/pull.pkl', workdir=p+'/bundle')
 
   f['UPRP']['narrow'] = Narrow(f['All']['query'], 
@@ -1098,15 +1105,8 @@ try:
                                f['Lens']['index'], pbatch=2**12, 
                                outpath=D["Lens"]+'/narrow.pkl', skipable=True)
 
-  f['Base'] = dict()
   f['Base']['drop'] = Drop(f['All']['query'], [f['UPRP']['narrow'], f['Lens']['narrow']],
                            outpath='alien.base')
-
-  f["Base"]['nameread'] = Nameread({ 
-    D['Google']+'/assignement.yaml': f['Google']['profile'],
-    D['Lens']+'/assignement.yaml': f['Lens']['profile'],
-    D['UPRP']+'/assignement.yaml': f['UPRP']['profile'] 
-  }, outpath=p+'/names.pkl')
 
   for k, p in D.items():
 
@@ -1143,7 +1143,8 @@ try:
                             pbatch=None, ngram=False, skipable=True)
 
     f[k]['pull'] = Pull(f['UPRP']['profile'], assignpath=D['UPRP']+'/assignement.yaml', 
-                        geodata=f['Geoportal']['parse'],
+                        geodata=f['Misc']['geodata'],
+                        nameset=f['Base']['nameread'],
                         workdir=p+'/bundle',
                         outpath=p+'/pull.pkl')
 
