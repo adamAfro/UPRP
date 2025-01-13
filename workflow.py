@@ -603,6 +603,8 @@ def Personify(storage:Storage, assignpath:str, nameset:pandas.DataFrame):
   każde słowo w nazwie dłusze niż 2 znaki jest w słowniku.
 
   Działa tylko na wewnętrnzym zbiorze - do porpawnia
+
+  Normalizacja nie jest jeszcze poprawnie zaimplementowana
   """
 
   S = storage

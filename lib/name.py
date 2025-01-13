@@ -35,9 +35,6 @@ def classify(entries: pandas.DataFrame, nameset:pandas.DataFrame,
   X.update(namefill(X, N, firstname, lastname, commonname, 
                     idkey, dockey, kindkey, normkey, valuekey, nchar=2, wordkey=wordkey))
 
-  #TODO: gdy imie jest w tabeli przed nazwiskiem może to sprawić
-  # że nazwisko nie zostanie rozpoznane, mimo że słownik wskazuje inaczej
-
   a = (~X[[firstname, lastname, commonname]].isna()).sum(axis=1) > 0
   A = X[a].reset_index().drop(columns=[valuekey])
   A[evalkey] = A[evalkey].fillna('nameset')
