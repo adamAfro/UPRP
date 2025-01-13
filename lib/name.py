@@ -17,8 +17,6 @@ def classify(entries: pandas.DataFrame, nameset:pandas.DataFrame,
   X = X.set_index([idkey, dockey], append=True)
 
   wordkey = '__word__'
-  n0key = '__N__'
-  nkey = '__n__'
 
   N = pandas.concat([
     nameset.query(f'{kindkey} == "{k}"')[valuekey]\
@@ -26,65 +24,79 @@ def classify(entries: pandas.DataFrame, nameset:pandas.DataFrame,
            .to_frame().assign(kind=k).rename(columns={valuekey: wordkey}) for k in [commonname, firstname, lastname]
   ], ignore_index=True).drop_duplicates(subset=wordkey)
 
-  N[wordkey] = N[wordkey].str.replace(r'\W+', ' ', regex=True)
-  N = N.set_index(wordkey)
-  X[wordkey] = X[valuekey].str.replace(r'\b\w{,2}\b', '', regex=True)\
-                       .str.strip().dropna().str.replace(r'\W+', ' ', regex=True)\
-                       .apply(lambda x: ' '.join([y for y in set(x.split())]))
+  for k in [firstname, lastname, commonname]:
+    if k not in X.columns: X[k] = None
 
-  X[n0key] = X[wordkey].str.count(' ') + 1
-  X[wordkey] = X[wordkey].str.split(' ')
-
-  # ustalenie że nazwy stają się imieniem i nazwiskiem o ile
-  # wszystkie (każde!) słowa w nazwie są w bazie słów imion i nazwisk
-  Z = X.explode(wordkey).dropna(subset=wordkey)\
-  .reset_index().set_index(wordkey).join(N).dropna(subset=kindkey)
-
-  G = Z.groupby([indexkey, idkey, dockey]).agg({n0key: ['size', 'first']})
-  G.columns = [nkey, n0key]
-  G = G[ G[nkey] == G[n0key] ].reset_index()
-
-  Z = Z.reset_index().set_index([indexkey, idkey, dockey])\
-  .join(G[[indexkey, idkey, dockey]].set_index([indexkey, idkey, dockey]), how='right')
-  Z = Z.reset_index() # jeśli jest za dużo imion
-  Z = Z.drop_duplicates(subset=[indexkey, idkey, dockey, kindkey])
-  Z = Z.set_index([indexkey, idkey, dockey])
-
-  if firstname not in X.columns: X[firstname] = None
-  X[firstname] = X[firstname].combine_first(Z.query(f'{kindkey} == "{firstname}"')[wordkey])
-  X[firstname] = X[firstname].combine_first(Z.query(f'{kindkey} == "{commonname}"')[wordkey])
-
-  if lastname not in X.columns: X[lastname] = None
-  X[lastname] = X[lastname].combine_first(Z.query(f'{kindkey} == "{lastname}"')[wordkey])
-  X[lastname] = X[lastname].combine_first(Z.query(f'{kindkey} == "{commonname}"')[wordkey])
+  X.update(namefill(X, N, firstname, lastname, commonname, 
+                    idkey, dockey, kindkey, normkey, valuekey, nchar=2, wordkey=wordkey))
 
   #TODO: gdy imie jest w tabeli przed nazwiskiem może to sprawić
   # że nazwisko nie zostanie rozpoznane, mimo że słownik wskazuje inaczej
 
-  X = X.reset_index().drop(columns=[wordkey, n0key, idkey])
+  a = (~X[[firstname, lastname, commonname]].isna()).sum(axis=1) > 0
+  A = X[a].reset_index().drop(columns=[valuekey])
+  A = A.drop_duplicates(subset=[dockey, firstname, lastname])
 
-  A = X.dropna(subset=[firstname, lastname]).drop(columns=[valuekey])\
-       .drop_duplicates(subset=[dockey, firstname, lastname])
-
-  B = X.loc[X.index.difference(A.index)].dropna(subset=valuekey)\
-       .drop(columns=[firstname, lastname])\
-       .drop_duplicates(subset=[dockey, valuekey])
+  B = X[~a].dropna(subset=valuekey).drop(columns=[firstname, lastname, commonname])
+  B = B.reset_index().dropna(subset=valuekey)
+  B = B.drop_duplicates(subset=[dockey, valuekey])
 
   B[normkey] = B[valuekey].str.replace(r'\W+', ' ', regex=True).str.strip()
   Z = nameset
   Z[normkey] = Z[valuekey].str.replace(r'\W+', ' ', regex=True).str.strip()
 
-  B = B.set_index(normkey).join(Z.query(f'{kindkey}=="{orgname}"').set_index(normkey)[[kindkey]], how='left')
+  O = Z.query(f'{kindkey}=="{orgname}"').set_index(normkey)[[kindkey]]
+  B = B.set_index(normkey).join(O, how='left')
   B[rolekey] = B[kindkey].fillna(B[rolekey])
 
-  A = A.drop_duplicates(subset=[firstname, lastname])\
-       .set_index([dockey, firstname, lastname])[[rolekey]]
-  B = B.drop_duplicates(subset=valuekey).dropna(subset=valuekey)\
+  A = A.set_index([dockey, firstname, lastname, commonname])[[rolekey]]
+  B = B.drop_duplicates(subset=[dockey, valuekey]).dropna(subset=valuekey)\
        .set_index([dockey, valuekey])[[rolekey]]
 
-  #TODO nie wszyscy inventorzy są kwalifikowani jako flname a powinni
-
   return A, B
+
+def namefill(entries:pandas.DataFrame, fill:pandas.DataFrame,
+             firstname:str, lastname:str, commonname:str,
+             idkey:str, dockey:str, kindkey:str,
+             normkey:str, valuekey:str, nchar:int, indexkey:str='index', 
+             n0key:str = '__N__', nkey:str = '__n__', wordkey:str = '__word__'):
+
+  X = entries
+  N = fill
+
+  N[wordkey] = N[wordkey].str.replace(r'\W+', ' ', regex=True)
+  N = N.set_index(wordkey)
+
+  X[wordkey] = X[valuekey].str.replace(rf'\b\w{{,{nchar}}}\b', '', regex=True)
+  X[wordkey] = X[wordkey].str.replace(r'\W+', ' ', regex=True).str.strip()
+  X = X.dropna(subset=wordkey).copy()
+  X[wordkey] = X[wordkey].apply(lambda x: ' '.join([y for y in set(x.split())]))
+
+  X[n0key] = X[wordkey].str.count(' ') + 1
+  X[wordkey] = X[wordkey].str.split(' ')
+
+  Z = X[[n0key, wordkey]].explode(wordkey).dropna(subset=wordkey)
+  Z = Z.reset_index().set_index(wordkey).join(N, how='inner')
+
+  G = Z.groupby([indexkey, idkey, dockey]).agg({n0key: ['size', 'first']})
+  G.columns = [nkey, n0key]
+  G = G[ G[nkey] == G[n0key] ].reset_index()
+
+  Z = Z.reset_index().set_index([indexkey, idkey, dockey])
+  Z = Z.join(G[[indexkey, idkey, dockey]].set_index([indexkey, idkey, dockey]), how='right')
+  Z = Z.pivot_table(index=[indexkey, idkey, dockey], 
+                columns=kindkey, values=wordkey, 
+                aggfunc=lambda x: ' '.join(x)).reset_index()
+
+  Z = Z.set_index([indexkey, idkey, dockey])
+
+  for k in [firstname, lastname, commonname]:
+    X[k] = X[k].fillna(Z[k])
+
+  X = X.reset_index().drop(columns=[wordkey, n0key])
+  X = X.set_index([indexkey, idkey, dockey])
+
+  return X
 
 def distinguish(entries: pandas.DataFrame,
                 valuekey: str, kindkey: str, normkey:str,
@@ -141,7 +153,7 @@ def distinguish(entries: pandas.DataFrame,
   X[normkey] = X[valuekey].str.replace(r'\W+', ' ', regex=True).str.strip()
 
   X = X.drop(columns=[firstname, lastname]).dropna(subset=valuekey)
-  X = namefilter(X, Y, normkey, valuekey, nchar=2)
+  X = namedrop(X, Y, normkey, valuekey, nchar=2)
 
   X[kindkey] = X[normkey].apply(lambda y: orgname if any(x in y for x in orgkeywords) else None)
   for k in orgkeysubstr:
@@ -164,9 +176,9 @@ def distinguish(entries: pandas.DataFrame,
 
   return Y
 
-def namefilter(entries:pandas.DataFrame, drop:pandas.DataFrame,
-               normkey:str, valuekey:str, nchar:int = 2, indexkey:str='index', 
-               n0key:str = '__N__', nkey:str = '__n__', wordkey:str = '__word__'):
+def namedrop(entries:pandas.DataFrame, drop:pandas.DataFrame,
+             normkey:str, valuekey:str, nchar:int = 2, indexkey:str='index', 
+             n0key:str = '__N__', nkey:str = '__n__', wordkey:str = '__word__'):
 
   X = entries
   D = drop
