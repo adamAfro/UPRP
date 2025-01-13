@@ -588,7 +588,7 @@ def Nameread(asnstores:dict[Storage, str]):
                                               'ENTERPRISE TECHNOLOGY',
                                               'LLC CORPORATION INC',
                                               'MIASTO GMINA URZĄD',
-                                              'GOVERNMENT RZĄÐ',
+                                              'GOVERNMENT RZĄD',
                                               'AKTIENGESELLSCHAFT KOMMANDITGESELLSCHAFT',
                                               'UNIWERSYTET UNIVERSITY AKADEMIA ACADEMY',
                                               'POLITECHNIKA'] for x in X.split()])
