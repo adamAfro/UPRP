@@ -806,20 +806,22 @@ def Codepull(storage:Storage, assignpath:str):
 
   return Y
 
-@trail(Trace)
-def Pull(storage:Storage, assignpath:str, geodata:pandas.DataFrame, nameset:pandas.DataFrame, workdir:str):
+def Pull(storage:Step|Storage, assignpath:str, 
+         geodata:Step|pandas.DataFrame, 
+         nameset:Step|pandas.DataFrame, 
+         workdir:str):
 
   "Wyciąga dane zgodnie z przypisanymi rolami."
 
   os.makedirs(workdir, exist_ok=True)
 
-  Z = Codepull(storage, assignpath, outpath=f'{workdir}/pat.pkl', skipable=False)
+  Z = Codepull(storage, assignpath, outpath=f'{workdir}/pat.pkl')
   G = Geoloc(storage, geodata, assignpath, outpath=f'{workdir}/geo.pkl')
   T = Timeloc(storage, assignpath, outpath=f'{workdir}/time.pkl')
   C = Classify(storage, assignpath, outpath=f'{workdir}/clsf.pkl')
   P = Personify(storage, assignpath, nameset, outpath=f'{workdir}/people.pkl')
 
-  return Z(), G(), T(), C(), P()
+  return Trace(callback=lambda *z: z, input=[Z, G, T, C, P], kwinput={})
 
 @trail(Trace)
 def Bundle(dir:str,
