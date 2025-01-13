@@ -575,6 +575,7 @@ def Nameread(asnstores:dict[Storage, str]):
   P = P.reset_index(drop=True).drop_duplicates()
 
   Y = P.query('type == "LEGAL"').assign(kind='org')[['name', 'kind']]
+  P = P.loc[ P.index.difference(Y.index) ]
   P = P.drop(columns='type')
 
   Nf = P['fname'].dropna().str.split(' ').explode().dropna()
@@ -596,6 +597,16 @@ def Nameread(asnstores:dict[Storage, str]):
     Nf.to_frame().assign(kind='fname'),
     Nl.to_frame().assign(kind='lname'),
   ])
+
+  I = P.query('role == "inventor"').assign(kind='flname')[['name', 'kind']]
+  I['name'] = I['name'].str.replace(r'\W+', ' ', regex=True).str.strip().dropna()\
+               .str.replace(r'\b\w{,2}\b', '', regex=True).str.strip().dropna()\
+               .str.split()
+
+  I = I.explode('name').dropna(subset='name').drop_duplicates(subset='name')
+
+  Y = pandas.concat([Y, I])
+  P = P.loc[ P.index.difference(Y.index) ]
 
   P = P.drop(columns=['fname', 'lname']).dropna(subset='name')
   P['norm'] = P['name'].str.replace(r'\W+', ' ', regex=True).str.strip()
@@ -638,6 +649,16 @@ def Nameread(asnstores:dict[Storage, str]):
 
   P = P.query('kind != "org"').drop(columns='kind')
 
+  Y = Y.dropna(subset="name")
+
+
+  a = Y.query('kind == "flname"')
+  b = Y.query('kind.isin(["fname", "lname"])')
+  c = a['name'].isin(b['name'])
+  c = c[c].index
+
+  Y = Y.drop(c).drop_duplicates(subset='name')
+
   return Y
 
 @trail(Step)
@@ -664,7 +685,7 @@ def Personify(storage:Storage, assignpath:str, nameset:pandas.DataFrame):
     K = [f'{k0}-{h}' for k0 in K0]
     p = pandas.concat([S.melt(f'{k}').reset_index() for k in K])
     p = p[['id', 'doc', 'value', 'assignement']]
-    p['value'] = p['value'].str.upper().str.replace(r'\W+', ' ', regex=True).str.strip()
+    p['value'] = p['value'].str.upper().str.replace(r'\s+', ' ', regex=True).str.strip()
     p = p.pivot_table(index=['id', 'doc'], columns='assignement',
                       values='value', aggfunc='first')
 
@@ -676,17 +697,22 @@ def Personify(storage:Storage, assignpath:str, nameset:pandas.DataFrame):
   if P.empty:
     return pandas.DataFrame(), pandas.DataFrame()
 
-  if 'fname' not in P.columns:
-    return pandas.DataFrame(), P.reset_index().drop(columns=['id']).set_index(['doc', 'name'])
+  # na wypadek gdy 2 nazwy różnych typów są w jednym obiekcie
+  P = P.reset_index()
+  P.index.name = 'index'
+  P = P.set_index(['id', 'doc'], append=True)
 
   N = pandas.concat([
     nameset.query(f'kind == "{k}"')['name']\
            .str.split(' ').explode().dropna().drop_duplicates()\
-           .to_frame().assign(kind=k).rename(columns={'name': 'word'}) for k in ['fname', 'lname']
-  ], ignore_index=True).drop_duplicates(subset='word').set_index('word')
+           .to_frame().assign(kind=k).rename(columns={'name': 'word'}) for k in ['flname', 'fname', 'lname']
+  ], ignore_index=True).drop_duplicates(subset='word')
 
+  N['word'] = N['word'].str.replace(r'\W+', ' ', regex=True)
+  N = N.set_index('word')
   P['word'] = P['name'].str.replace(r'\b\w{,2}\b', '', regex=True)\
-  .str.strip().dropna().apply(lambda x: ' '.join([y for y in set(x.split())]))
+                       .str.strip().dropna().str.replace(r'\W+', ' ', regex=True)\
+                       .apply(lambda x: ' '.join([y for y in set(x.split())]))
 
   P['N'] = P['word'].str.count(' ') + 1
   P['word'] = P['word'].str.split(' ')
@@ -695,19 +721,22 @@ def Personify(storage:Storage, assignpath:str, nameset:pandas.DataFrame):
   # wszystkie (każde!) słowa w nazwie są w bazie słów imion i nazwisk
   Z = P.explode('word').dropna(subset='word')\
   .reset_index().set_index('word').join(N).dropna(subset='kind')
-  G = Z.groupby(['id', 'doc']).agg(n=('N', 'size'), N=('N', 'first'))\
+  G = Z.groupby(['index', 'id', 'doc']).agg(n=('N', 'size'), N=('N', 'first'))\
   .reset_index().query('n == N')
 
-  Z = Z.reset_index().set_index(['id', 'doc'])\
-  .join(G[['id', 'doc']].set_index(['id', 'doc']), how='right')
+  Z = Z.reset_index().set_index(['index', 'id', 'doc'])\
+  .join(G[['index', 'id', 'doc']].set_index(['index', 'id', 'doc']), how='right')
   Z = Z.reset_index() # jeśli jest za dużo imion
-  Z = Z.drop_duplicates(subset=['id', 'doc', 'kind'])
-  Z = Z.set_index(['id', 'doc'])
+  Z = Z.drop_duplicates(subset=['index', 'id', 'doc', 'kind'])
+  Z = Z.set_index(['index', 'id', 'doc'])
 
-  fN = Z.query('kind == "fname"')['word']
-  lN = Z.query('kind == "lname"')['word']
-  P['fname'] = P['fname'].combine_first(fN)
-  P['lname'] = P['lname'].combine_first(lN)
+  if 'fname' not in P.columns: P['fname'] = None
+  P['fname'] = P['fname'].combine_first(Z.query('kind == "fname"')['word'])
+  P['fname'] = P['fname'].combine_first(Z.query('kind == "flname"')['word'])
+
+  if 'lname' not in P.columns: P['lname'] = None
+  P['lname'] = P['lname'].combine_first(Z.query('kind == "lname"')['word'])
+  P['lname'] = P['lname'].combine_first(Z.query('kind == "flname"')['word'])
 
   #TODO: gdy imie jest w tabeli przed nazwiskiem może to sprawić
   # że nazwisko nie zostanie rozpoznane, mimo że słownik wskazuje inaczej
@@ -715,12 +744,25 @@ def Personify(storage:Storage, assignpath:str, nameset:pandas.DataFrame):
   P = P.reset_index().drop(columns=['word', 'N', 'id'])
 
   A = P.dropna(subset=['fname', 'lname']).drop(columns=['name'])\
-  .drop_duplicates(subset=['doc', 'fname', 'lname'])\
-  .set_index(['doc', 'fname', 'lname'])
+       .drop_duplicates(subset=['doc', 'fname', 'lname'])
 
-  B = P.dropna(subset=['name']).drop(columns=['fname', 'lname'])\
-  .drop_duplicates(subset=['doc', 'name'])\
-  .set_index(['doc', 'name'])
+  B = P.loc[P.index.difference(A.index)].dropna(subset='name')\
+       .drop(columns=['fname', 'lname'])\
+       .drop_duplicates(subset=['doc', 'name'])
+
+  B['norm'] = B['name'].str.replace(r'\W+', ' ', regex=True).str.strip()
+  Z = nameset
+  Z['norm'] = Z['name'].str.replace(r'\W+', ' ', regex=True).str.strip()
+
+  B = B.set_index('norm').join(Z.query('kind=="org"').set_index('norm')[['kind']], how='left')
+  B['role'] = B['kind'].fillna(B['role'])
+
+  A = A.drop_duplicates(subset=['fname', 'lname'])\
+       .set_index(['doc', 'fname', 'lname'])[['role']]
+  B = B.drop_duplicates(subset='name').dropna(subset='name')\
+       .set_index(['doc', 'name'])[['role']]
+
+  #TODO nie wszyscy inventorzy są kwalifikowani jako flname a powinni
 
   return A, B
 
