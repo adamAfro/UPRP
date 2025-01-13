@@ -783,7 +783,7 @@ def Classify(storage:Storage, assignpath:str):
 
   return Y
 
-@trail(Step)
+@trail(Trace)
 def Pull(storage:Storage, assignpath:str, geodata:pandas.DataFrame, nameset:pandas.DataFrame, workdir:str):
 
   "Wyciąga dane zgodnie z przypisanymi rolami."
@@ -999,7 +999,7 @@ try:
     f[k]['pull'] = Pull(f[k]['profile'], assignpath=p+'/assignement.yaml', 
                         geodata=f['Misc']['geodata'],
                         nameset=f['Base']['nameread'],
-                        outpath=p+'/pull.pkl', workdir=p+'/bundle')
+                        workdir=p+'/bundle')
 
   f['UPRP']['narrow'] = Narrow(f['All']['query'], 
                                f['UPRP']['index'], pbatch=2**13, 
@@ -1057,8 +1057,7 @@ try:
     f[k]['pull'] = Pull(f['UPRP']['profile'], assignpath=D['UPRP']+'/assignement.yaml', 
                         geodata=f['Misc']['geodata'],
                         nameset=f['Base']['nameread'],
-                        workdir=p+'/bundle',
-                        outpath=p+'/pull.pkl')
+                        workdir=p+'/bundle')
 
   f['All']['drop'] = Drop(f['All']['query'], [f[k]['narrow'] for k in D.keys()], 
                           outpath='alien')
