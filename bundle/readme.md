@@ -1,6 +1,7 @@
 ```mermaid
 erDiagram
 
+doc ||--o{ "pat.csv" : "posiada kod"
 doc ||--o{ "classification:pat.csv" : "jest zaklafikowany"
 doc ||--o{ "event:pat.csv" : "coś się z nim [wtedy] stało"
 "pat:pat-raport-ocr.csv" }o--|| doc : "wymienia w rap."
@@ -9,6 +10,12 @@ doc ||--o{ "event:pat.csv" : "coś się z nim [wtedy] stało"
 "spatial.csv" }o--|| doc : "ktoś związany z pat. był w miejscu"
 doc ||--o{ "people:pat-signed.csv" : "ktoś jest związany z dok"
 "people:pat-named.csv" }o--|| doc : "ktoś jest związany z dok"
+
+"pat.csv" 
+{ doc idx "odnośnik do dokumentu"
+  repo idx "zbiór danych z którego pochodzi" 
+  number str "numer aplikacji"
+  country str "kraj aplikacji" }
 
 "classification:pat.csv" 
 { doc idx "odnośnik do dokumentu"

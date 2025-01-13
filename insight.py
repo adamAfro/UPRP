@@ -12,6 +12,9 @@ bundledir = 'bundle'
 figdir = 'raport-fig'
 
 
+L = pd.read_csv(bundledir+'/pat.csv').set_index(['doc', 'docrepo'])
+L['number'] = L['number'].astype(str)
+
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -76,6 +79,8 @@ ax = ax.flatten()
 for i in range(n):
   g = Gt.get_group(Ti[i]).set_index('date')['assignement'].sort_index()
   (g.cat.codes+1).plot.line(ax=ax[i], marker='o')
+  try: ax[i].set_title(L.loc[Ti[i]]['country'] + L.loc[Ti[i]]['number'])
+  except: ax[i].set_title('?')
 for i in range(n):
   ax[i].set_yticklabels(T['assignement'].dtype.categories)
   ax[i].yaxis.set_major_locator(ticker.MaxNLocator(nbins=9))

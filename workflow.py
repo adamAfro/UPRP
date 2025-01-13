@@ -783,6 +783,29 @@ def Classify(storage:Storage, assignpath:str):
 
   return Y
 
+@trail(Step)
+def Codepull(storage:Storage, assignpath:str):
+
+  S = storage
+  with open(assignpath, 'r') as f:
+    S.assignement = yaml.load(f, Loader=yaml.FullLoader)
+
+  K = ['frame', 'doc', 'id']
+  A = S.melt('number-application').set_index(K)['value'].rename('number')
+  B = S.melt('country-application').set_index(K)['value'].rename('country')
+  Y = A.to_frame().join(B)
+
+  Z = S.melt('application').set_index(K)['value'].rename('whole')
+  Z = Z.str.replace(r'\W+', '', regex=True).str.upper().str.strip()
+  Z = Z.str.extract(r'(?P<country>\D+)(?P<number>\d+)')
+
+  Q = [X for X in [Y, Z] if not X.empty]
+  if not Q: return pandas.DataFrame()
+  Y = pandas.concat(Q, axis=0)
+  Y = Y.reset_index().set_index('doc')[['country', 'number']]
+
+  return Y
+
 @trail(Trace)
 def Pull(storage:Storage, assignpath:str, geodata:pandas.DataFrame, nameset:pandas.DataFrame, workdir:str):
 
@@ -790,12 +813,13 @@ def Pull(storage:Storage, assignpath:str, geodata:pandas.DataFrame, nameset:pand
 
   os.makedirs(workdir, exist_ok=True)
 
+  Z = Codepull(storage, assignpath, outpath=f'{workdir}/pat.pkl', skipable=False)
   G = Geoloc(storage, geodata, assignpath, outpath=f'{workdir}/geo.pkl')
   T = Timeloc(storage, assignpath, outpath=f'{workdir}/time.pkl')
   C = Classify(storage, assignpath, outpath=f'{workdir}/clsf.pkl')
-  P = Personify(storage, assignpath, nameset, outpath=f'{workdir}/people.pkl', skipable=False)
+  P = Personify(storage, assignpath, nameset, outpath=f'{workdir}/people.pkl')
 
-  return G(), T(), C(), P()
+  return Z(), G(), T(), C(), P()
 
 @trail(Trace)
 def Bundle(dir:str,
@@ -808,11 +832,12 @@ def Bundle(dir:str,
   "Zapisuje połączone wyniki przetwarzania do plików CSV."
 
   M0, U = matches, pull
-  G0 = { k: v[0] for k, v in U.items() }
-  T0 = { k: v[1] for k, v in U.items() }
-  C0 = { k: v[2] for k, v in U.items() }
-  P0A = { k: v[3][0] for k, v in U.items() }
-  P0B = { k: v[3][1] for k, v in U.items() }
+  Z0 = { k: v[0] for k, v in U.items() }
+  G0 = { k: v[1] for k, v in U.items() }
+  T0 = { k: v[2] for k, v in U.items() }
+  C0 = { k: v[3] for k, v in U.items() }
+  P0A = { k: v[4][0] for k, v in U.items() }
+  P0B = { k: v[4][1] for k, v in U.items() }
 
   #reindex
   for M in M0.values():
@@ -841,12 +866,13 @@ def Bundle(dir:str,
     M.set_index('docrepo', append=True, inplace=True)
 
     try:
-      G, T, C, PA, PB = G0[k], T0[k], C0[k], P0A[k], P0B[k]
-      for X in [G, T, C, PA, PB]:
+      Z, G, T, C, PA, PB = Z0[k], G0[k], T0[k], C0[k], P0A[k], P0B[k]
+      for X in [Z, G, T, C, PA, PB]:
         X['docrepo'] = k
         X.set_index('docrepo', append=True, inplace=True)
     except KeyError: continue
 
+  Z0 = [X for X in Z0.values() if not X.empty]
   M0 = [X for X in M0.values() if not X.empty]
   G0 = [X for X in G0.values() if not X.empty]
   T0 = [X for X in T0.values() if not X.empty]
@@ -854,6 +880,7 @@ def Bundle(dir:str,
   P0A = [X for X in P0A.values() if not X.empty]
   P0B = [X for X in P0B.values() if not X.empty]
 
+  Z0 = pandas.concat(Z0, axis=0)
   M0 = pandas.concat(M0, axis=0)
   G0 = pandas.concat(G0, axis=0)
   T0 = pandas.concat(T0, axis=0)
@@ -861,6 +888,7 @@ def Bundle(dir:str,
   P0A = pandas.concat(P0A, axis=0)
   P0B = pandas.concat(P0B, axis=0)
 
+  Z0.to_csv(f'{dir}/pat.csv')
   M0.to_csv(f'{dir}/pat:pat-raport-ocr.csv')
   G0.to_csv(f'{dir}/spatial:pat.csv')
   T0.to_csv(f'{dir}/event:pat.csv')
@@ -869,6 +897,7 @@ def Bundle(dir:str,
   P0B.to_csv(f'{dir}/people:pat-named.csv')
 
   with zipfile.ZipFile(f'{dir}/dist.zip', 'w') as z:
+    z.write(f'{dir}/pat.csv', 'pat.csv')
     z.write(f'{dir}/pat:pat-raport-ocr.csv', 'pat:pat-raport-ocr.csv')
     z.write(f'{dir}/spatial:pat.csv', 'spatial:pat.csv')
     z.write(f'{dir}/event:pat.csv', 'event:pat.csv')

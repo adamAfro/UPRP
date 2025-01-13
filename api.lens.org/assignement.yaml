@@ -122,8 +122,8 @@ res:
   anticipated_term_date: null
   application_expiry_date: null
   application_reference_date: [date, date-application]
-  application_reference_doc_number: number
-  application_reference_jurisdiction: null
+  application_reference_doc_number: [number, number-application]
+  application_reference_jurisdiction: [country, country-application]
   application_reference_kind: null
   assistant_examiner_value: null
   calculation_log: null

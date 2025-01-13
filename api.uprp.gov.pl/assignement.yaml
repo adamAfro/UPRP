@@ -159,9 +159,9 @@ publication_reference:
 raw:
   filename: label
   abstract_lang: null
-  application_reference_country: null
+  application_reference_country: [country, country-application]
   application_reference_date: [date, date-application]
-  application_reference_doc_number: number
+  application_reference_doc_number: [number, number-application]
   application_reference_kind: null
   begin_date: null
   child_doc_country: null

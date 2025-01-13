@@ -44,7 +44,7 @@ properties_classifications:
 pubs: {}
 similarDocuments: {}
 web:
-  applicationNumber: number
+  applicationNumber: [number, application]
   application_applicationNumber: number
   application_filingDate: [date, date-application]
   application_priorityDate: [date, date-priority]
