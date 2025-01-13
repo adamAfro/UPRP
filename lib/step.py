@@ -33,12 +33,12 @@ def trail(Tracealike):
 
 def lazy(x):
   if isinstance(x, list):
-    if x and isinstance(x[0], Step):
+    if x and isinstance(x[0], Trace):
       return [y.footprint() for y in x]
   if isinstance(x, dict):
-    if x and isinstance(x[next(iter(x))], Step):
+    if x and isinstance(x[next(iter(x))], Trace):
       return {k: v.footprint() for k, v in x.items()}
-  return x.footprint() if isinstance(x, Step) else x
+  return x.footprint() if isinstance(x, Trace) else x
 
 def walk(x, f):
 
@@ -63,6 +63,12 @@ class Trace:
   @property
   def steps(self):
     return self.input + [v for v in self.kwinput.values()]
+
+  def footprint(self, *args, **kwargs):
+
+    Y = self.run(*args, **kwargs)
+    self._loaded = Y
+    return Y
 
   def run(self):
     return self.callback( *[lazy(x) for x in self.input], 
