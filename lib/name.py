@@ -10,6 +10,7 @@ def classify(entries: pandas.DataFrame, nameset:pandas.DataFrame,
              dockey:str,
              rolekey:str,
              evalkey:str,
+             keyskept:list[str] = [],
              indexkey: str = 'index'):
 
   X = entries
@@ -54,9 +55,9 @@ def classify(entries: pandas.DataFrame, nameset:pandas.DataFrame,
   B = B.drop(columns=[evalkey]).set_index(normkey).join(O, how='left')
   B[rolekey] = B[kindkey].fillna(B[rolekey])
 
-  A = A.set_index([dockey, firstname, lastname, commonname])[[rolekey, evalkey]]
+  A = A.set_index([dockey, firstname, lastname, commonname])[[rolekey, evalkey] + keyskept]
   B = B.drop_duplicates(subset=[dockey, valuekey]).dropna(subset=valuekey)\
-       .set_index([dockey, valuekey])[[rolekey, evalkey]]
+       .set_index([dockey, valuekey])[[rolekey, evalkey] + keyskept]
 
   return A, B
 
