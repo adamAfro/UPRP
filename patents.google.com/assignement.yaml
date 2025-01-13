@@ -1,0 +1,58 @@
+afterApplications: {}
+application:
+  applicationNumber: number
+applications:
+  applicationNumber: number
+  title: title
+applicationsByYear: {}
+appsClaimingPriority: {}
+attributes: {}
+backwardReferences: {}
+backwardReferencesFamily:
+  publicationNumber: family
+  assigneeOriginal: [name, name-assignee]
+forwardReferencesFamily:
+  publicationNumber: family
+  assigneeOriginal: [name, name-assignee]
+backwardReferencesOrig: {}
+beforeApplications: {}
+callouts: {}
+childApps: {}
+classifications: {}
+countryStatus: {}
+definitions: {}
+detailedNonPatentLiterature: {}
+directAssociations: {}
+docdbFamily: {}
+events: {}
+forwardReferences: {}
+forwardReferencesOrig: {}
+images: {}
+landscapes: {}
+legalEvents: {}
+links: {}
+match: {}
+otherLanguages: {}
+parentApps: {}
+priorityApps:
+  applicationNumber: number
+  filingDate: [date, date-fill]
+  priorityDate: [date, date-priority]
+  title: title
+properties_classifications:
+  Code: CPC
+pubs: {}
+similarDocuments: {}
+web:
+  applicationNumber: number
+  application_applicationNumber: number
+  application_filingDate: [date, date-application]
+  application_priorityDate: [date, date-priority]
+  application_title: title
+  filingDate: [date, date-fill]
+  inventor: [name, name-inventor]
+  publicationDate: [date, date-publication]
+  publicationNumber: number
+  title: title
+  assigneeOriginal: [name, name-assignee]
+  assigneeCurrent: [name, name-assignee]

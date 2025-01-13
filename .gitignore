@@ -11,7 +11,7 @@ developer.uspto.gov/**/*.*
 !developer.uspto.gov/*.py
 !developer.uspto.gov/**/*.py
 
-patents.google.com
+patents.google.com/*
 
 __pycache__
 
