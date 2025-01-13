@@ -50,6 +50,7 @@ f.savefig(figdir+'/event-n.png')
 
 
 TaN = T.groupby(level=['doc', 'docrepo'])['assignement'].value_counts().unstack(fill_value=0)
+TaN = TaN[ TaN.sum(axis=1) > 0 ]
 TaN.sort_values(by=[k for k in T['assignement'].dtype.categories], ascending=False)
 
 f, ax = plt.subplots(9, figsize=fsize.high, constrained_layout=True, sharex=True)
