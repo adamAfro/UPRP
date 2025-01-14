@@ -173,6 +173,7 @@ def npatclsf(X:pd.DataFrame):
 
 def clsfsampl(X:pd.DataFrame, n:int):
 
+  X = X.reset_index()
   I = X[['doc', 'docrepo']].sample(n, random_state=0)
   Y = X.loc[X['doc'].isin(I['doc'])].fillna('')
   Y = Y.sample(44, random_state=42).sort_index().set_index('doc')
