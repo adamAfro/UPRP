@@ -244,3 +244,134 @@ P0A['docrepo'].value_counts().add(P0B['docrepo'].value_counts(), fill_value=0)\
 						ax=ax['E'], color='orange', ylabel='liczba');
 
 f.savefig(figdir+'/people.png')
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+
+
+S = pd.read_csv(bundledir+'/people:pat-signed.csv').fillna('')
+S = S.set_index(['doc', 'docrepo'])
+
+L = pd.read_csv(bundledir+'/pat.csv').set_index(['doc', 'docrepo'])
+S = S.join(L, how='left').fillna('')
+
+
+N = pd.read_csv(bundledir+'/people:pat-named.csv')
+N = N.set_index(['doc', 'docrepo'])
+nN = N.query('role == "org"').value_counts('name').to_frame().query(f'count > 100')
+
+N = N.query('name in @nN.index')
+N = N['name'].pipe(pd.get_dummies, prefix='', prefix_sep='')\
+     .reset_index().groupby(['doc', 'docrepo']).sum()
+
+S = S.join(N, how='left').fillna(0)
+
+
+C = pd.read_csv(bundledir+'/classification:pat.csv')
+C = C[[ 'doc', 'docrepo', 'classification', 'section' ]]
+C = C.drop_duplicates().set_index(['doc', 'docrepo'])
+
+C = C.query('classification == "IPC"').drop('classification', axis=1)
+C = C.pipe(pd.get_dummies, prefix='', prefix_sep='')\
+     .reset_index().groupby(['doc', 'docrepo']).sum()
+
+S = S.join(C, how='left')
+
+
+T = pd.read_csv(bundledir+'/event:pat.csv')
+T = T.groupby(['doc', 'docrepo'])['delay'].min()
+S = S.join(T, how='left')
+
+
+G = pd.read_csv(bundledir+'/spatial:pat.csv')
+G = G[['doc', 'docrepo', 'name', 'lat', 'lon']]
+G = G.rename(columns={'name': 'city'})
+G = G.set_index(['doc', 'docrepo', 'city'])
+
+S = S.set_index('city', append=True)
+S = S.join(G, how='left')
+
+
+S = S.replace({'': pd.NA})
+
+
+S.value_counts(['fname', 'lname', 'flname'], dropna=False)
+
+SG = S.dropna(subset=['lat', 'lon', 'delay'])
+SG.drop_duplicates(['fname', 'lname', 'flname', 'lat', 'lon'])\
+  .value_counts(['fname', 'lname', 'flname'], dropna=False)
+
+s = SG.query('fname == "PIOTR" and lname == "KOWALSKI"')
+
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+
+ax.set_title('PIOTR KOWALSKI')
+ax.scatter(s['lat'], s['lon'], s['delay'])
+ax.view_init(elev=15, azim=-45)
+
+for i in range(len(s)):
+  ax.plot([s['lat'].iloc[i], s['lat'].iloc[i]], 
+          [s['lon'].iloc[i], s['lon'].iloc[i]], 
+          [0, s['delay'].iloc[i]], color='blue', linestyle='dotted')
+
+  ax.plot([s['lat'].iloc[i], s['lat'].iloc[i]], 
+          [s['lon'].max()+1, s['lon'].iloc[i]], 
+          [s['delay'].iloc[i], s['delay'].iloc[i]], 
+          color='red', linestyle='dotted')
+
+ax.set_xlabel('Latitude')
+ax.set_ylabel('Longitude')
+ax.set_zlabel('Delay')
+
+grid = [['3d', '2d'], ['2d2', '2d3']]
+fig, axs = plt.subplot_mosaic(grid, figsize=(12, 12))
+
+axs['3d'].axis('off')
+ax3d = fig.add_subplot(2, 2, 1, projection='3d')
+ax3d.set_title('Wykres podpisów o imienu PIOTR KOWALSKI w czasie i przestrzeni')
+ax3d.scatter(s['lat'], s['lon'], s['delay'])
+ax3d.view_init(elev=45, azim=-60)
+ax3d.set_xlabel('lat')
+ax3d.set_ylabel('lon')
+ax3d.set_zlabel('delay')
+
+ads = s.groupby(['lat', 'delay']).size().reset_index()
+axs['2d'].scatter(ads['lat'], ads['delay'], s=ads[0]*100)
+axs['2d'].set_xlabel('lat')
+axs['2d'].set_ylabel('delay')
+axs['2d'].yaxis.set_label_position("right")
+axs['2d'].yaxis.tick_right()
+axs['2d'].set_title('Szerokość geograficzna / opóźnienie')
+
+ods = s.groupby(['lon', 'delay']).size().reset_index()
+axs['2d3'].scatter(ods['lon'], ods['delay'], s=ods[0]*100)
+axs['2d3'].set_xlabel('lon')
+axs['2d3'].set_ylabel('delay')
+axs['2d3'].yaxis.set_label_position("right")
+axs['2d3'].yaxis.tick_right()
+axs['2d3'].set_title('Wysokość geograficzna / opóźnienie')
+
+aos = s.groupby(['lat', 'lon']).size().reset_index()
+axs['2d2'].scatter(aos['lat'], aos['lon'], s=aos[0]*100)
+axs['2d2'].set_xlabel('lat')
+axs['2d2'].set_ylabel('lon')
+axs['2d2'].yaxis.set_label_position("right")
+axs['2d2'].yaxis.tick_right()
+axs['2d2'].set_title('Szerokość geograficzna / wysokość geograficzna')
+
+for i in range(len(s)):
+
+  ax3d.plot([s['lat'].iloc[i], s['lat'].iloc[i]], 
+            [s['lon'].iloc[i], s['lon'].iloc[i]], 
+            [0, s['delay'].iloc[i]], color='blue', linestyle='dotted')
+
+  ax3d.plot([s['lat'].iloc[i], s['lat'].iloc[i]], 
+            [s['lon'].max()+1, s['lon'].iloc[i]], 
+            [s['delay'].iloc[i], s['delay'].iloc[i]], 
+            color='red', linestyle='dotted')
+
+plt.tight_layout()
+fig.savefig(figdir+'/people:pat-PIOTR-KOWALSKI.png')
