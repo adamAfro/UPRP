@@ -257,25 +257,25 @@ def name(H:list[pd.DataFrame]):
   f, ax = plt.subplot_mosaic([['A', 'B', 'C'], ['D', 'D', 'E']], figsize=(12, 12))
   f.set_constrained_layout(True)
 
-  H[0] = H[0].reset_index().set_index('doc')
+  H[1] = H[1].reset_index().set_index(['doc', 'docrepo'])
 
-  H[1]['role'].value_counts().add(H[0]['role'].value_counts(), fill_value=0)\
+  H[0]['role'].value_counts().add(H[1]['role'].value_counts(), fill_value=0)\
             .plot.barh(title='Role w pat.',
                        ax=ax['A'], color='orange', ylabel='liczba', xlabel='');
 
-  H[0]['fname'].value_counts().head(16)\
+  H[1]['fname'].value_counts().head(16)\
             .plot.barh(title='Najcz. wyst. imiona',
                        ax=ax['B'], color='orange', ylabel='liczba');
 
-  H[0]['lname'].value_counts().head(16)\
+  H[1]['lname'].value_counts().head(16)\
             .plot.barh(title='Najcz. wyst. nazwiska',
                        ax=ax['C'], color='orange', ylabel='liczba');
 
-  H[1].assign(name=H[1]['name'].str[:10]+'...')['name'].value_counts().head(16)\
+  H[0].assign(name=H[0]['name'].str[:10]+'...')['name'].value_counts().head(16)\
             .plot.barh(title='Najczęściej występujące nazwy w rejestrach patentowych',
                        ax=ax['D'], color='orange', ylabel='liczba');
 
-  H[0]['docrepo'].value_counts().add(H[1]['docrepo'].value_counts(), fill_value=0)\
+  H[1].reset_index()['docrepo'].value_counts().add(H[0].reset_index()['docrepo'].value_counts(), fill_value=0)\
     .plot.barh(title='Liczba nazw w zależności\nod repozytorium',
                ax=ax['E'], color='orange', ylabel='liczba');
 
