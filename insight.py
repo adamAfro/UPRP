@@ -63,6 +63,7 @@ def concat(C, T, L, S, G):
   return Y
 
 U = concat(C, T, L, S, G)
+U.attrs['sign'] = lambda x=None: f'raport-fig/person-{x}.png' if x else f'raport-fig/person.png'
 
 # # # # #
 
