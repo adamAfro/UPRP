@@ -29,7 +29,10 @@ R.columns = pd.MultiIndex.from_tuples([c[:4] for c in
 
 G['lat'] = G['lat'].astype(float)
 G['lon'] = G['lon'].astype(float)
+
+z = G.attrs
 G = G.join(L)
+G.attrs = z
 
 T['delay'] = T['delay'].astype(int)
 T['date'] = pd.to_datetime(T['year'] + '-' + T['month'] + '-' + T['day'])
