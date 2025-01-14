@@ -274,18 +274,16 @@ def name(H:list[pd.DataFrame]):
 
 # # # # #
 
-def person(X:pd.DataFrame):
+def person(X:pd.DataFrame, q:str):
 
   G = X.dropna(subset=['lat', 'lon', 'delay'])
   G.drop_duplicates(['fname', 'lname', 'flname', 'lat', 'lon'])\
     .value_counts(['fname', 'lname', 'flname'], dropna=False)
 
-  Y = G.query('fname == "PIOTR" and lname == "KOWALSKI"')
+  Y = G.query(q)
 
   f = plt.figure()
   ax = f.add_subplot(111, projection='3d')
-
-  ax.set_title('PIOTR KOWALSKI')
   ax.scatter(Y['lat'], Y['lon'], Y['delay'])
   ax.view_init(elev=15, azim=-45)
 
@@ -308,7 +306,7 @@ def person(X:pd.DataFrame):
 
   axs['3d'].axis('off')
   ax3d = f.add_subplot(2, 2, 1, projection='3d')
-  ax3d.set_title('Wykres podpisów o imienu PIOTR KOWALSKI w czasie i przestrzeni')
+  ax3d.set_title('Wykres 3-wymiarowy')
   ax3d.scatter(Y['lat'], Y['lon'], Y['delay'])
   ax3d.view_init(elev=45, azim=-60)
   ax3d.set_xlabel('lat')
