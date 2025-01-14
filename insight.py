@@ -29,6 +29,7 @@ R.columns = pd.MultiIndex.from_tuples([c[:4] for c in
 
 G['lat'] = G['lat'].astype(float)
 G['lon'] = G['lon'].astype(float)
+G = G.join(L)
 
 T['delay'] = T['delay'].astype(int)
 T['date'] = pd.to_datetime(T['year'] + '-' + T['month'] + '-' + T['day'])
@@ -222,8 +223,10 @@ def geo(X:pd.DataFrame, M:gpd.GeoDataFrame):
 
 def geosampl(X:pd.DataFrame, M:gpd.GeoDataFrame, n:int):
 
+  X = X.reset_index()
   I = X[['doc', 'docrepo']].sample(n, random_state=0)
   G = X.loc[X['doc'].isin(I['doc'])]
+  G = gpd.GeoDataFrame(G, geometry=gpd.points_from_xy(G['lon'], G['lat']))
 
   f, ax = plt.subplots(5, 4, figsize=(fsize.width, fsize.width), constrained_layout=True)
   f.suptitle(f'Geolokalizacje osób powiązanych z losowymi patentami')
@@ -237,7 +240,9 @@ def geosampl(X:pd.DataFrame, M:gpd.GeoDataFrame, n:int):
     a.axis('off')
     M.plot(ax=a, color='lightgrey')
     a.set_xlim(14, 25); a.set_ylim(49, 55)
-    g.query(f'doc == {d}').plot(ax=a, markersize=100)
+    g.plot(ax=a, markersize=100)
+    try: a.set_title(g['country'].values[0] + g['number'].values[0])
+    except: a.set_title('?')
 
   return f
 
