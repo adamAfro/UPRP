@@ -35,17 +35,9 @@ T['date'] = pd.to_datetime(T['year'] + '-' + T['month'] + '-' + T['day'])
 T['assignement'] = pd.Categorical(T['assignement'], ordered=True,
 																	categories=['exhibition', 'priority', 'regional', 'fill', 'application', 'nogrant', 'grant', 'decision', 'publication'])
 
-def concat(C, T, R, L, N, S, G):
+def concat(C, T, L, S, G):
 
   Y = S.join(L, how='left').fillna('')
-
-  nN = N.query('role == "org"').value_counts('name')
-  nN = nN.to_frame().query(f'count > 100')
-  N = N.query('name in @nN.index')
-  N = N['name'].pipe(pd.get_dummies, prefix='', prefix_sep='')\
-      .reset_index().groupby(['doc', 'docrepo']).sum()
-
-  Y = Y.join(N, how='left').fillna(0)
 
   C = C[[ 'classification', 'section' ]].reset_index()
   C = C.drop_duplicates().set_index(['doc', 'docrepo'])
@@ -70,7 +62,7 @@ def concat(C, T, R, L, N, S, G):
   
   return Y
 
-U = concat(C, T, R, L, N, S, G)
+U = concat(C, T, L, S, G)
 
 # # # # #
 
