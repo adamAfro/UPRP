@@ -285,15 +285,34 @@ def name(H:list[pd.DataFrame]):
 
 def person(X:pd.DataFrame, q:str):
 
+  from sklearn.preprocessing import LabelEncoder
+
   G = X.dropna(subset=['lat', 'lon', 'delay'])
   G.drop_duplicates(['fname', 'lname', 'flname', 'lat', 'lon'])\
     .value_counts(['fname', 'lname', 'flname'], dropna=False)
 
+  uniqletters = lambda x: ','.join(sorted([k for k in set(''.join(x.values))]))
+
   Y = G.query(q)
+  Y['section'] = Y[['A','B','C','D','E','F','G','H','X']]\
+                  .apply(lambda r: ''.join(r.index[r == True]), axis=1)
+
+  latdelG = Y.groupby(['lat', 'delay']).agg(size=('lat', 'count'), 
+    section=('section', uniqletters)).reset_index()
+
+  londelG = Y.groupby(['lon', 'delay']).agg(size=('lon', 'count'), 
+    section=('section', uniqletters)).reset_index()
+
+  latlonG = Y.groupby(['lat', 'lon']).agg(size=('lat', 'count'), 
+    section=('section', uniqletters)).reset_index()
+
+  E = LabelEncoder()
+  E.fit(pd.concat(x['section'] for x in [Y, latdelG, londelG, latlonG]).drop_duplicates())
+  for x in [Y, latdelG, londelG, latlonG]:
+    x['section-num'] = x['section'].pipe(E.transform)
 
   f = plt.figure()
   ax = f.add_subplot(111, projection='3d')
-  ax.scatter(Y['lat'], Y['lon'], Y['delay'])
   ax.view_init(elev=15, azim=-45)
 
   for i in range(len(Y)):
@@ -315,36 +334,48 @@ def person(X:pd.DataFrame, q:str):
 
   axs['3d'].axis('off')
   ax3d = f.add_subplot(2, 2, 1, projection='3d')
+  
+  for a, x, y, z, c, c0 in [ (ax3d, Y['lat'], Y['lon'], Y['delay'], Y['section-num'], Y['section'].unique()),
+                      (axs['2d'], latdelG['lat'], latdelG['delay'], latdelG['size'], latdelG['section-num'], latdelG['section'].unique()),
+                      (axs['2d3'], londelG['lon'], londelG['delay'], londelG['size'], londelG['section-num'], londelG['section'].unique()),
+                      (axs['2d2'], latlonG['lat'], latlonG['lon'], latlonG['size'], latlonG['section-num'], latlonG['section'].unique()) ]:
+
+    s = a.scatter(x, y, s=z*100, c=c) if z.name == 'size' else a.scatter(x, y, z, c=c)
+    c = [s.cmap(s.norm(E.transform([k])[0])) for k in c0]
+    h = [plt.Line2D([0], [0], marker='o', color='w', 
+                    markerfacecolor=x, markersize=10) for x in c[:16]]
+ 
+    if c0.shape[0] > 16:
+      w = f'{c0.shape[0] - 16} innych\nkombinacji'
+      c0 = c0[:16]
+      c0 = list(c0) + [w]
+      h.append(plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='none', markersize=10))
+
+    a.legend(h, c0, title="Section")
+
   ax3d.set_title('Wykres 3-wymiarowy')
-  ax3d.scatter(Y['lat'], Y['lon'], Y['delay'])
   ax3d.view_init(elev=45, azim=-60)
   ax3d.set_xlabel('lat')
   ax3d.set_ylabel('lon')
   ax3d.set_zlabel('delay')
 
-  ads = Y.groupby(['lat', 'delay']).size().reset_index()
-  axs['2d'].scatter(ads['lat'], ads['delay'], s=ads[0]*100)
+  axs['2d'].set_title('Szerokość geograficzna / opóźnienie')
   axs['2d'].set_xlabel('lat')
   axs['2d'].set_ylabel('delay')
   axs['2d'].yaxis.set_label_position("right")
   axs['2d'].yaxis.tick_right()
-  axs['2d'].set_title('Szerokość geograficzna / opóźnienie')
 
-  ods = Y.groupby(['lon', 'delay']).size().reset_index()
-  axs['2d3'].scatter(ods['lon'], ods['delay'], s=ods[0]*100)
+  axs['2d3'].set_title('Wysokość geograficzna / opóźnienie')
   axs['2d3'].set_xlabel('lon')
   axs['2d3'].set_ylabel('delay')
   axs['2d3'].yaxis.set_label_position("right")
   axs['2d3'].yaxis.tick_right()
-  axs['2d3'].set_title('Wysokość geograficzna / opóźnienie')
 
-  aos = Y.groupby(['lat', 'lon']).size().reset_index()
-  axs['2d2'].scatter(aos['lat'], aos['lon'], s=aos[0]*100)
+  axs['2d2'].set_title('Szerokość geograficzna / wysokość geograficzna')
   axs['2d2'].set_xlabel('lat')
   axs['2d2'].set_ylabel('lon')
   axs['2d2'].yaxis.set_label_position("right")
   axs['2d2'].yaxis.tick_right()
-  axs['2d2'].set_title('Szerokość geograficzna / wysokość geograficzna')
 
   for i in range(len(Y)):
 
@@ -374,4 +405,6 @@ clsfsampl(C, 20).savefig(X.attrs['sign']('sample'))
 geo(G, MONDO).savefig(G.attrs['sign']())
 geosampl(G, MONDO, 20).savefig(G.attrs['sign']('sample'))
 name([N, S]).savefig(N.attrs['sign']())
-person(U).savefig(U.attrs['sign']('person'))
+person(U, q='fname == "PIOTR" and lname == "KOWALSKI"').savefig(U.attrs['sign']('ex-1'))
+person(U, q='fname == "ANTONI" and lname == "LATUSZEK"').savefig(U.attrs['sign']('ex-2'))
+person(U, q='fname == "STANISŁAW" & lname == "BEDNAREK"').savefig(U.attrs['sign']('ex-3'))
