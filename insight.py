@@ -16,9 +16,12 @@ data = [(pd.read_csv(f'bundle/{f0}.csv', dtype='str'), f0) for f0 in
          'people:pat-signed', 
          'spatial:pat']]
 
-for X, f0 in data:
-  X.attrs['sign'] = lambda x=None: f'raport-fig/{f0}-{x}.png' if x else f'raport-fig/{f0}.png'
+def sign(X:pd.DataFrame, x:str=None):
+  assert 'name' in X.attrs
+  s = X.attrs['name']
+  return f'raport-fig/{s}-{x}.png' if x else f'raport-fig/{s}.png'
 
+for X, f0 in data: X.attrs['name'] = f0
 data = [X for X, f0 in data]
 
 MONDO = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
@@ -67,7 +70,7 @@ def concat(C, T, L, S, G):
   return Y
 
 U = concat(C, T, L, S, G)
-U.attrs['sign'] = lambda x=None: f'raport-fig/person-{x}.png' if x else f'raport-fig/person.png'
+U.attrs['name'] = 'person'
 
 # # # # #
 
@@ -394,17 +397,17 @@ def person(X:pd.DataFrame, q:str):
 
 # # # # #
 
-event(T, 365, 3).savefig(T.attrs['sign']('period'))
-eventn(T).savefig(T.attrs['sign']('n'))
-eventpat(T).savefig(T.attrs['sign']('pat'))
-eventsampl(T, 20).savefig(T.attrs['sign']('sample'))
-clsf(C).savefig(X.attrs['sign']())
-nclsf(C).savefig(X.attrs['sign']('n'))
-npatclsf(C).savefig(X.attrs['sign']('n-pat'))
-clsfsampl(C, 20).savefig(X.attrs['sign']('sample'))
-geo(G, MONDO).savefig(G.attrs['sign']())
-geosampl(G, MONDO, 20).savefig(G.attrs['sign']('sample'))
-name([N, S]).savefig(N.attrs['sign']())
-person(U, q='fname == "PIOTR" and lname == "KOWALSKI"').savefig(U.attrs['sign']('ex-1'))
-person(U, q='fname == "ANTONI" and lname == "LATUSZEK"').savefig(U.attrs['sign']('ex-2'))
-person(U, q='fname == "STANISŁAW" & lname == "BEDNAREK"').savefig(U.attrs['sign']('ex-3'))
+event(T, 365, 3).savefig(sign(T, 'period'))
+eventn(T).savefig(sign(T, 'n'))
+eventpat(T).savefig(sign(T, 'pat'))
+eventsampl(T, 20).savefig(sign(T, 'sample'))
+clsf(C).savefig(sign(C))
+nclsf(C).savefig(sign(C, 'n'))
+npatclsf(C).savefig(sign(C, 'n-pat'))
+clsfsampl(C, 20).savefig(sign(C, 'sample'))
+geo(G, MONDO).savefig(sign(G))
+geosampl(G, MONDO, 20).savefig(sign(G, 'sample'))
+name([N, S]).savefig(sign(N))
+person(U, q='fname == "PIOTR" and lname == "KOWALSKI"').savefig(sign(U, 'ex-1'))
+person(U, q='fname == "ANTONI" and lname == "LATUSZEK"').savefig(sign(U, 'ex-2'))
+person(U, q='fname == "STANISŁAW" & lname == "BEDNAREK"').savefig(sign(U, 'ex-3'))
