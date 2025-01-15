@@ -1163,8 +1163,6 @@ try:
 
   if sys.argv[1] == 'docsgen':
 
-    from lib.notebook import gen
-
     n = '\n'
 
     D = set()
@@ -1197,7 +1195,7 @@ try:
     V = f'```\npython {sys.version}\npandas {pandas.__version__}\n```\n\n\n'
 
     Y = f"```mermaid\ngraph LR\n{n.join(list(L))}\n```"
-    gen('insight.py', 'raport.ipynb', [S], [V, Y] + D)
+    with open('docs.md', 'w') as f: f.write(f"{S}\n{V}\n{Y}\n\n\n{n.join(D)}")
 
     exit()
 
