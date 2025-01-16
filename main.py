@@ -113,9 +113,12 @@ from profiling import flow as f0
 from pull import flow as f1
 from raport import flow as f2
 from bundle import bplot
+from identify import authorship as identify, splot
 
 flow = dict()
 flow['plot'] = bplot
+flow['identify'] = identify
+flow['simplot'] = splot
 for f in [f0, f1, f2]:
   for k in f.keys():
 
