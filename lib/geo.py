@@ -1,6 +1,5 @@
 import pandas
 from geopy.distance import geodesic
-from .log import *
 
 def closest(namedgeo: pandas.DataFrame,
           group: str, name: str, lat: str, lon: str):

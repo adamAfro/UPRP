@@ -1,6 +1,5 @@
 import os, json, xmltodict, microdata
 from pandas import DataFrame
-from .log import progress
 
 class Profiler:
 
@@ -63,33 +62,33 @@ class Profiler:
 
   def JSONl(self, dir:str, listname:str):
     F = [os.path.join(dir, f) for f in os.listdir(dir) if f.lower().endswith('.json')]
-    for f0 in progress(F, desc=dir):
+    for f0 in F:
       with open(f0) as f: D = json.load(f)[listname]
       for d in D: self.update(d, dir)
-    for i, f0 in progress(enumerate(F), desc=dir, total=len(F)):
+    for i, f0 in enumerate(F):
       with open(f0) as f: D = json.load(f)[listname]
       for d in D: self.apply(d, dir)
     return self
 
   def JSON(self, dir:str):
     F = [os.path.join(dir, f) for f in os.listdir(dir) if f.lower().endswith('.json')]
-    for f0 in progress(F, desc=dir):
+    for f0 in F:
       with open(f0) as f: d = json.load(f)
       self.update(d, dir)
-    for i, f0 in progress(enumerate(F), desc=dir, total=len(F)):
+    for i, f0 in enumerate(F):
       with open(f0) as f: d = json.load(f)
       self.apply(d, dir)
     return self
 
   def XML(self, dir:str):
     F = [os.path.join(dir, f) for f in os.listdir(dir) if f.lower().endswith('.xml')]
-    for f0 in progress(F, desc=dir):
+    for f0 in F:
       with open(f0) as f: 
         d0 = f.read()
         d = xmltodict.parse(d0)
         d['filename'] = f0#HACK01
       self.update(d, dir)
-    for i, f0 in progress(enumerate(F), desc=dir, total=len(F)):
+    for i, f0 in enumerate(F):
       with open(f0) as f:
         d0 = f.read()
         d = xmltodict.parse(d0)
@@ -99,10 +98,10 @@ class Profiler:
 
   def HTMLmicrodata(self, dir:str):
     F = [os.path.join(dir, f) for f in os.listdir(dir) if f.lower().endswith('.html')]
-    for f0 in progress(F, desc=dir):
+    for f0 in F:
       with open(f0) as f: d = f.read()
       self.update({ "root": [u.json_dict() for u in microdata.get_items(d)] }, dir)
-    for i, f0 in progress(enumerate(F), desc=dir, total=len(F)):
+    for i, f0 in enumerate(F):
       with open(f0) as f: d = f.read()
       self.apply({ "root": [u.json_dict() for u in microdata.get_items(d)] }, dir)
     return self
