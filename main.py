@@ -112,8 +112,10 @@ from dirs import data as D
 from profiling import flow as f0
 from pull import flow as f1
 from raport import flow as f2
+from bundle import bplot
 
 flow = dict()
+flow['plot'] = bplot
 for f in [f0, f1, f2]:
   for k in f.keys():
 
