@@ -329,16 +329,15 @@ def name(H:list[pd.DataFrame]):
 
 
 
-def person(X:pd.DataFrame, q:str):
-
-  assert { 'lat', 'lon', 'delay', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'X' }.issubset(X.columns)
-  assert { 'fname', 'lname', 'flname' }.issubset(X.columns)
+def person(personified:pd.DataFrame, q:str):
 
   from sklearn.preprocessing import LabelEncoder
 
+  X = personified
+
+  assert { 'lat', 'lon', 'delay', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'X' }.issubset(X.columns)
+
   G = X.dropna(subset=['lat', 'lon', 'delay'])
-  G.drop_duplicates(['fname', 'lname', 'flname', 'lat', 'lon'])\
-    .value_counts(['fname', 'lname', 'flname'], dropna=False)
 
   uniqletters = lambda x: ','.join(sorted([k for k in set(''.join(x.values))]))
 

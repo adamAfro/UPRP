@@ -82,7 +82,6 @@ def simcalc(repo:DataFrame, affilation:DataFrame, qcount:str):
   KG = ['lat', 'lon']
   KC = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'X']#IPC
 
-  #BIAS #WORKAROUND #TODO: potrzebna optymalizacja, żeby usunąć, np. fragmetnacja
   N = N[ N[k0].isin(N.value_counts(k0).to_frame().query(qcount).index) ]
 
   N = N.reset_index().set_index(k0)
@@ -191,7 +190,7 @@ def identify(searchrepo:DataFrame, picked:DataFrame):
   P.index.name = 'person'
 
   L = N.join(P.explode('registry').reset_index().set_index('registry'))\
-       .set_index(['doc', 'docrepo'])['person']
+       .reset_index()[['id', 'doc', 'docrepo', 'person']]
 
   P['example'] = P['registry'].apply(lambda x: next(iter(x)))
   P = P.reset_index().set_index('example').join(N['nameset'])\
