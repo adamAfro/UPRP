@@ -1,212 +1,138 @@
-import pandas
+import pandas, unicodedata
 
-def classify(entries: pandas.DataFrame, nameset:pandas.DataFrame,
-             valuekey: str, kindkey: str, normkey:str,
-             firstname: str,
-             lastname: str,
-             commonname: str,
-             orgname: str,
-             idkey:str,
-             dockey:str,
-             rolekey:str,
-             evalkey:str,
-             keyskept:list[str] = [],
-             indexkey: str = 'index'):
+def normalize(entries:pandas.Series):
 
-  X = entries
-  X = X.reset_index()
-  X.index.name = indexkey
-  X = X.set_index([idkey, dockey], append=True)
-
-  wordkey = '__word__'
-
-  N = pandas.concat([
-    nameset.query(f'{kindkey} == "{k}"')[valuekey]\
-           .str.split(' ').explode().dropna().drop_duplicates()\
-           .to_frame().assign(kind=k).rename(columns={valuekey: wordkey}) for k in [commonname, firstname, lastname]
-  ], ignore_index=True).drop_duplicates(subset=wordkey)
-
-  X[evalkey] = None
-  for k in [firstname, lastname, commonname]:
-    if k in X.columns:
-      X.loc[ ~X[k].isna(), evalkey ] = 'source'
-    else:
-      X[k] = None
-
-  X.update(namefill(X, N, firstname, lastname, commonname, 
-                    idkey, dockey, kindkey, normkey, valuekey, nchar=2, wordkey=wordkey))
-
-  a = (~X[[firstname, lastname, commonname]].isna()).sum(axis=1) > 0
-  A = X[a].reset_index().drop(columns=[valuekey])
-  A[evalkey] = A[evalkey].fillna('nameset')
-  A = A.drop_duplicates(subset=[dockey, firstname, lastname])
-
-  B = X[~a].dropna(subset=valuekey).drop(columns=[firstname, lastname, commonname])
-  B = B.reset_index().dropna(subset=valuekey)
-  B = B.drop_duplicates(subset=[dockey, valuekey])
-
-  B[normkey] = B[valuekey].str.replace(r'\W+', ' ', regex=True).str.strip()
-  Z = nameset
-  Z[normkey] = Z[valuekey].str.replace(r'\W+', ' ', regex=True).str.strip()
-
-  O = Z.query(f'{kindkey}=="{orgname}"').set_index(normkey)[[kindkey]]
-  O[evalkey] = 'nameset'
-  if B[evalkey].count() != 0: raise NotImplementedError()
-  B = B.drop(columns=[evalkey]).set_index(normkey).join(O, how='left')
-  B[rolekey] = B[kindkey].fillna(B[rolekey])
-
-  A = A.set_index([dockey, firstname, lastname, commonname])[[rolekey, evalkey] + keyskept]
-  B = B.drop_duplicates(subset=[dockey, valuekey]).dropna(subset=valuekey)\
-       .set_index([dockey, valuekey])[[rolekey, evalkey] + keyskept]
-
-  return A, B
-
-def namefill(entries:pandas.DataFrame, fill:pandas.DataFrame,
-             firstname:str, lastname:str, commonname:str,
-             idkey:str, dockey:str, kindkey:str,
-             normkey:str, valuekey:str, nchar:int, indexkey:str='index', 
-             n0key:str = '__N__', nkey:str = '__n__', wordkey:str = '__word__'):
-
-  X = entries
-  N = fill
-
-  N[wordkey] = N[wordkey].str.replace(r'\W+', ' ', regex=True)
-  N = N.set_index(wordkey)
-
-  X[wordkey] = X[valuekey].str.replace(rf'\b\w{{,{nchar}}}\b', '', regex=True)
-  X[wordkey] = X[wordkey].str.replace(r'\W+', ' ', regex=True).str.strip()
-  X = X.dropna(subset=wordkey).copy()
-  X[wordkey] = X[wordkey].apply(lambda x: ' '.join([y for y in set(x.split())]))
-
-  X[n0key] = X[wordkey].str.count(' ') + 1
-  X[wordkey] = X[wordkey].str.split(' ')
-
-  Z = X[[n0key, wordkey]].explode(wordkey).dropna(subset=wordkey)
-  Z = Z.reset_index().set_index(wordkey).join(N, how='inner')
-
-  G = Z.groupby([indexkey, idkey, dockey]).agg({n0key: ['size', 'first']})
-  G.columns = [nkey, n0key]
-  G = G[ G[nkey] == G[n0key] ].reset_index()
-
-  Z = Z.reset_index().set_index([indexkey, idkey, dockey])
-  Z = Z.join(G[[indexkey, idkey, dockey]].set_index([indexkey, idkey, dockey]), how='right')
-  Z = Z.pivot_table(index=[indexkey, idkey, dockey], 
-                columns=kindkey, values=wordkey, 
-                aggfunc=lambda x: ' '.join(x)).reset_index()
-
-  Z = Z.set_index([indexkey, idkey, dockey])
-
-  for k in [firstname, lastname, commonname]:
-    X[k] = X[k].fillna(Z[k])
-
-  X = X.reset_index().drop(columns=[wordkey, n0key])
-  X = X.set_index([indexkey, idkey, dockey])
-
+  X = entries.copy()
+  X = X.str.upper()
+  X = X.str.replace(r'[\W\s]+', ' ', regex=True)
+  X = X.str.replace(r'\b(\w{1})\b', '', regex=True)
+  X = X.str.strip()
+  X = X.apply(lambda x: ''.join([c for c in unicodedata.normalize('NFKD', x)
+                                   if not unicodedata.combining(c)]))
   return X
 
-def distinguish(entries: pandas.DataFrame,
-                valuekey: str, kindkey: str, normkey:str,
-                firstname: str,
-                lastname: str,
-                commonname: str,
-                orgname: str,
-                orgqueries: list[str] = [],
-                namequeries: list[str] = [],
-                orgkeywords: list[str] = [],
-                orgkeysubstr: list[str] = []):
+def classify(entries:pandas.DataFrame, namesmap:pandas.DataFrame,
+
+             I = ['doc', 'id'],
+
+             v0: str = 'value',
+             n:  str = 'nword',
+
+             v: str = 'norm',
+             x: str = 'role',
+
+             lO:str = 'orgname',
+             l1:str = 'firstname',
+             l2:str = 'lastname',
+             lA:str = 'ambigname',
+
+             k1:str = 'firstnames',
+             k2:str = 'lastnames',):
+
+  assert isinstance(namesmap, pandas.Series)
 
   X = entries
-  Y = pandas.DataFrame(columns=[valuekey, kindkey])
+  M = namesmap
+
+  X = X.reset_index().drop_duplicates([I[0], v0])
+
+  X[v] = X[v0].pipe(normalize)
+
+  YM = X.reset_index().set_index(v).join(M, how='inner')
+  YM = YM.reset_index().set_index(I)
+
+  X[n] = X[v].str.count(' ') + 1
+  X[v] = X[v].str.split(' ')
+
+  E = X.drop(v0, axis=1).explode(v)
+  E = E.reset_index().set_index(v).join(M[ M.isin([l1, l2, lA]) ], how='inner')
+  J = E.groupby(I).agg({n: 'first', x: 'count'})
+  J = J[ J[n] == J[x] ][[]].join(E.reset_index().set_index(I), how='inner')
+  J = J.drop('nword', axis=1)
+
+  YE = pandas.concat([YM, J]).reset_index().drop_duplicates(I+[v])
+  YO = YE[ YE[x] == lO ]
+  Y = YE[ YE[x] != lO ].groupby(I).agg({v:' '.join})
+
+  Nf = YE[ YE[x] == l1 ].groupby(I).agg({v:' '.join})[v].rename(k1)
+  Nl = YE[ YE[x] == l2 ].groupby(I).agg({v:' '.join})[v].rename(k2)
+
+  Y = Y.join(Nf, how='left').join(Nl, how='left')
+
+  #TODO niedopasowane nigdzie
+
+  #TODO dokończyć
+  return Y, YO.set_index(I)[[v0, v, x]]
+
+def mapnames(entries: pandas.DataFrame,
+
+             v: str = 'value',
+             a: str = 'assignement',
+             y: str = 'role',
+
+             a0:str = 'names',
+             a1:str = 'firstnames',
+             a2:str = 'lastnames',
+
+             lO:str = 'orgname',
+             l1:str = 'firstname',
+             l2:str = 'lastname',
+             lA:str = 'ambigname',
+
+             orgqueries: list[str] = [],
+             orgkeywords: list[str] = [],
+             orgkeysubstr: list[str] = [],
+
+             sep=' '):
+
+  X = entries
+  Y = pandas.DataFrame()
+
+  Io0 = sum([X[v].str.contains(q) for q in orgkeysubstr])
+  O0 = X[Io0 > 0][[v]]
+  O0[y] = lO
+
+  O0[v] = O0[v].pipe(normalize)
+  O0 = O0[O0[v].str.len() > 1]
+  X = X.loc[ X.index.difference(O0.index) ]
+  Y = pandas.concat([Y, O0])
+
+  X[v] = X[v].pipe(normalize)
 
   for q in orgqueries:
 
-    y = entries.query(q).assign(kind=orgname)
-    Y = pandas.concat([Y, y[[valuekey, kindkey]]])
-    X = X.loc[ X.index.difference(Y.index) ]
+    V = entries.query(q)[[v]]
+    V[y] = lO
 
-  Nf = X[firstname].dropna().str.split(' ').explode().dropna()
-  Nf = pandas.concat([Nf.str.split(' ').explode().dropna()]).drop_duplicates()
-  Nf = Nf[ Nf.str.len() > 2 ].rename(valuekey)
+    X = X.loc[ X.index.difference(V.index) ]
+    Y = pandas.concat([Y, V])
 
-  Nl = X[lastname].dropna().str.split(' ').explode().dropna()
-  Nl = pandas.concat([Nl.str.split(' ').explode().dropna()]).drop_duplicates()
-  Nl = Nl[ Nl.str.len() > 2 ].rename(valuekey)
+  Io = X[v].apply(lambda y: any(q in y for q in orgkeywords))
+  O = X[Io][[v]]
+  O[y] = lO
 
-  N = pandas.concat([Nf, Nl])
-  N = N[ N.duplicated(keep=False) ]
-  N = N.drop_duplicates()
-  Nf = Nf[ ~ Nf.isin(N) ]
-  Nl = Nl[ ~ Nl.isin(N) ]
+  X = X.loc[ X.index.difference(O.index) ]
+  Y = pandas.concat([Y, O])
 
-  Y = pandas.concat([ Y,
-                      N.to_frame().assign(kind=commonname),
-                      Nf.to_frame().assign(kind=firstname),
-                      Nl.to_frame().assign(kind=lastname) ])
+  Nf = X[ X[a] == a1 ][v].str.split(sep).explode().dropna().drop_duplicates().to_frame().set_index(v)
+  Nl = X[ X[a] == a2 ][v].str.split(sep).explode().dropna().drop_duplicates().to_frame().set_index(v)
+  N0 = X[ X[a] == a0 ][v].str.split(sep).explode().dropna().drop_duplicates().to_frame().set_index(v)
 
-  for q in namequeries:
+  N0 = pandas.concat([N0, Nf.join(Nl, how='inner')]).drop_duplicates()
 
-    y = X.query(q).assign(kind=commonname)[[valuekey, kindkey]]
+  Nf = Nf.drop(Nf.join(N0, how='inner').index, errors='ignore')
+  Nl = Nl.drop(Nl.join(N0, how='inner').index, errors='ignore')
 
-    y[valuekey] = y[valuekey].str.replace(r'\W+', ' ', regex=True).str.strip().dropna()
+  N0[y] = lA
+  Nf[y] = l1
+  Nl[y] = l2
 
-    y[valuekey] = y[valuekey].str.split()
-    y = y.explode(valuekey).dropna(subset=valuekey).drop_duplicates(subset=valuekey)
+  X = X.loc[ X.index.difference(N0.index.union(Nf.index).union(Nl.index)) ]
+  Y = pandas.concat([ Y, N0.reset_index(), Nf.reset_index(), Nl.reset_index() ])
 
-    Y = pandas.concat([Y, y])
-    X = X.loc[ X.index.difference(Y.index) ]
+  Y[y] = pandas.Categorical(Y[y], categories=[lO, l1, l2, lA], ordered=True)
+  Y = Y.sort_values(y).drop_duplicates(v, keep='last').set_index(v)
 
+  Y = Y[ Y.index != '' ] #WTF
 
-  X[normkey] = X[valuekey].str.replace(r'\W+', ' ', regex=True).str.strip()
-
-  X = X.drop(columns=[firstname, lastname]).dropna(subset=valuekey)
-  X = namedrop(X, Y, normkey, valuekey, nchar=2)
-
-  X[kindkey] = X[normkey].apply(lambda y: orgname if any(x in y for x in orgkeywords) else None)
-  for k in orgkeysubstr:
-    X.loc[ X[valuekey].str.contains(k), kindkey ] = orgname
-
-  Y = pandas.concat([Y, X.query(f'{kindkey} == "{orgname}"')[[kindkey, valuekey, normkey]]\
-                         .drop_duplicates(valuekey)])
-
-  X = X.query(f'{kindkey} != "{orgname}"').drop(columns=kindkey)
-
-  Y = Y.dropna(subset=valuekey)
-
-
-  a = Y.query(f'{kindkey} == "{commonname}"')
-  b = Y.query(f'{kindkey}.isin(["{firstname}", "{lastname}"])')
-  c = a[valuekey].isin(b[valuekey])
-  c = c[c].index
-
-  Y = Y.drop(c).drop_duplicates(subset=valuekey)
-
-  return Y
-
-def namedrop(entries:pandas.DataFrame, drop:pandas.DataFrame,
-             normkey:str, valuekey:str, nchar:int = 2, indexkey:str='index', 
-             n0key:str = '__N__', nkey:str = '__n__', wordkey:str = '__word__'):
-
-  X = entries
-  D = drop
-
-  D = D[ D[valuekey].str.len() > nchar ].set_index(valuekey)
-  X[wordkey] = X[normkey].str.replace(rf'\b\w{{,{nchar}}}\b', '', regex=True)\
-                         .str.strip().dropna()\
-                         .apply(lambda x: ' '.join([y for y in set(x.split())]))
-
-  X[n0key] = X[wordkey].str.count(' ') + 1
-
-  X[wordkey] = X[wordkey].str.split(' ')
-  Z = X[[n0key, wordkey]].explode(wordkey).dropna(subset=wordkey)
-
-  Z = Z.reset_index().set_index(wordkey).join(D, how='inner')
-  Z = Z.reset_index().drop_duplicates([indexkey, wordkey]).set_index(indexkey)
-
-  G = Z.groupby(level=0).agg({n0key: ['size', 'first']})
-  G.columns = [nkey, n0key]
-  G = G[ G[nkey] == G[n0key] ][[]]
-
-  X = X.loc[X.index.difference(Z.join(G, how='inner').index)]
-  X = X.drop(columns=[n0key, wordkey])
-
-  return X
+  return Y[y]

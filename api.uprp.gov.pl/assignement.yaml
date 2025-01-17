@@ -12,7 +12,7 @@ addressbook:
   id: null
   lang: null
   name_type: [type-name]
-  text: [name, name-assignee]
+  text: [name, ambignames-assignee]
 agent:
   '&raw': null
   city: null
@@ -42,7 +42,7 @@ applicants_addressbook:
   doc_: null
   id: null
   lang: null
-  name: [name, name-applicant]
+  name: [name, ambignames-applicant]
 assignee:
   '&raw': null
   doc_: null
@@ -124,10 +124,10 @@ inventors_addressbook:
   city: [city, city-inventor]
   country: [country, country-inventor]
   doc_: null
-  first_name: [name, fname-inventor]
+  first_name: [name, firstnames-inventor]
   id: null
   lang: null
-  last_name: [name, lname-inventor]
+  last_name: [name, lastnames-inventor]
 other_doc:
   '&raw': null
   doc_: null

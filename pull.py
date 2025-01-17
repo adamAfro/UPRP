@@ -2,7 +2,7 @@ import sys, pandas, yaml, json, re, os, asyncio, aiohttp, unicodedata, zipfile
 import xml.etree.ElementTree as ET
 from lib.storage import Storage
 from lib.geo import closest
-from lib.name import distinguish, classify
+from lib.name import mapnames, classify
 from pyproj import Transformer
 from lib.flow import Flow
 
@@ -31,105 +31,77 @@ def LoadOSM(path:str):
   return Y
 
 @Flow.From()
-def Nameread(asnstores:dict[Storage, str]):
+def Nameread(asnstores:dict[Storage, str],
+             assignements = ['names', 'firstnames', 'lastnames', 'ambignames'],
+             typeassign='type-name'):
 
-  """
-  Odróżnia w danych imiona, nazwiska i nazwy organizacji.
-  Zwraca zbiór słów imienniczych (imię albo nazwisko), 
-  samych imion, samych nazwisk, nazw organizacji.
-  Nazwy bez jednoznacznej klasyfikacji są pomijane.
-  """
-
-  K0 = ['name', 'fname', 'lname', 'city']
-  P = pandas.DataFrame()
-  T = pandas.DataFrame()
+  Y = pandas.DataFrame()
 
   for assignpath, S in asnstores.items():
 
     with open(assignpath, 'r') as f:
       S.assignement = yaml.load(f, Loader=yaml.FullLoader)
 
-    T = pandas.concat([T, S.melt('type-name').reset_index()])
-
     for h in ['assignee', 'applicant', 'inventor']:
 
-      K = [f'{k0}-{h}' for k0 in K0]
-      p = pandas.concat([S.melt(f'{k}').reset_index() for k in K] + [T])
-      p = p[['id', 'doc', 'value', 'assignement']]
-      p['value'] = p['value'].str.upper().str.replace(r'\s+', ' ', regex=True).str.strip()
-      p = p.pivot_table(index=['id', 'doc'], columns='assignement',
-                        values='value', aggfunc='first')
+      K = [f'{k0}-{h}' for k0 in assignements]
 
-      p.columns = [k.split('-')[0] for k in p.columns]
-      p['role'] = h
+      X = pandas.concat([S.melt(f'{k}') for k in K]).set_index(['doc', 'id'])
+      X = X[['value', 'assignement']]
+      X['assignement'] = X['assignement'].str.split('-').str[0]
 
-      P = pandas.concat([P, p]) if not P.empty else p
+      T = S.melt(typeassign).set_index(['doc', 'id'])['value'].rename('type')
+      if not T.empty: X = X.join(T, on=['doc', 'id'], how='left')
 
-  P = P.reset_index(drop=True).drop_duplicates()
+      Y = pandas.concat([Y, X]) if not Y.empty else X
 
-  return distinguish(P, valuekey='name', kindkey='kind', normkey='norm',
-                     firstname='fname', lastname='lname', commonname='flname',
-                     orgname='org',
-                     orgqueries=['type == "LEGAL"'],
-                     namequeries=['role == "inventor"'],
-                     orgkeysubstr=['&', 'INTERNAZIO', 'INTERNATIO', 'INC.', 'ING.', 'SP. Z O. O.'],
-                     orgkeywords=[x for X in ['COMPANY PRZEDSIĘBIORSTWO PRZEDSIEBIORSTWO FUNDACJA INSTYTUT INSTITUTE',
-                                              'HOSPITAL SZPITAL'
-                                              'COMPANY LTD SPÓŁKA LIMITED GMBH ZAKŁAD PPHU',
-                                              'KOPALNIA SPÓŁDZIELNIA SPOLDZIELNIA FABRYKA',
-                                              'ENTERPRISE TECHNOLOGY',
-                                              'LLC CORPORATION INC',
-                                              'MIASTO GMINA URZĄD',
-                                              'GOVERNMENT RZĄD',
-                                              'AKTIENGESELLSCHAFT KOMMANDITGESELLSCHAFT',
-                                              'UNIWERSYTET UNIVERSITY AKADEMIA ACADEMY',
-                                              'POLITECHNIKA'] for x in X.split()])
+  return mapnames(Y.reset_index(drop=True), 
+                  orgqueries=['type.str.upper() == "LEGAL"'],
+                  orgkeysubstr=['&', 'INTERNAZIO', 'INTERNATIO', 'INC.', 'ING.', 'SP. Z O. O.'],
+                  orgkeywords=[x for X in [ 'COMPANY PRZEDSIĘBIORSTWO PRZEDSIEBIORSTWO FUNDACJA INSTYTUT INSTITUTE',
+                                            'HOSPITAL SZPITAL'
+                                            'COMPANY LTD SPÓŁKA LIMITED GMBH ZAKŁAD PPHU',
+                                            'KOPALNIA SPÓŁDZIELNIA SPOLDZIELNIA FABRYKA',
+                                            'ENTERPRISE TECHNOLOGY',
+                                            'LLC CORPORATION INC',
+                                            'MIASTO GMINA URZĄD',
+                                            'GOVERNMENT RZĄD',
+                                            'AKTIENGESELLSCHAFT KOMMANDITGESELLSCHAFT',
+                                            'UNIWERSYTET UNIVERSITY AKADEMIA ACADEMY',
+                                            'POLITECHNIKA'] for x in X.split()])
 
 @Flow.From()
-def Personify(storage:Storage, assignpath:str, nameset:pandas.DataFrame):
-
-  #TODO: zamiana imion z fname i lname na flname jeśli taka jest sytuacja
-  #BUG: pojawiają się duplikaty z jakiegoś powodu, napewno z tego powyżej ale czy to jedyne źródło? 
-
-  """
-  Zwraca ramkę z danymi osobowymi.
-
-  Identyfikuje imiona osób na podstawie słownika imion o ile
-  każde słowo w nazwie dłusze niż 2 znaki jest w słowniku.
-
-  Działa tylko na wewnętrnzym zbiorze - do porpawnia
-
-  Normalizacja nie jest jeszcze poprawnie zaimplementowana
-  """
+def Namepull(storage:Storage, assignpath:str, nameset:pandas.DataFrame,
+             assignements = ['firstnames', 'lastnames'],
+             assignentities = ['names', 'ambignames']):
 
   S = storage
   with open(assignpath, 'r') as f:
     S.assignement = yaml.load(f, Loader=yaml.FullLoader)
 
-  K0 = ['name', 'fname', 'lname', 'city']
-  P = pandas.DataFrame()
+  Y = pandas.DataFrame()
 
+  i = 0
   for h in ['assignee', 'applicant', 'inventor']:
 
-    K = [f'{k0}-{h}' for k0 in K0]
-    p = pandas.concat([S.melt(f'{k}').reset_index() for k in K])
-    p = p[['id', 'doc', 'value', 'assignement']]
-    p['value'] = p['value'].str.upper().str.replace(r'\s+', ' ', regex=True).str.strip()
-    p = p.pivot_table(index=['id', 'doc'], columns='assignement',
-                      values='value', aggfunc='first')
+    X0 = pandas.concat([S.melt(f'{k}') for k in [f'{k0}-{h}' for k0 in assignements]])
+    if not X0.empty:
+      X0['id'] = X0.groupby(['doc', 'id']).ngroup() + i
+      i = X0['id'].max() + 1
 
-    p.columns = [k.split('-')[0] for k in p.columns]
-    p['role'] = h
+    X = pandas.concat([S.melt(f'{k}') for k in [f'{k0}-{h}' for k0 in assignentities]])
+    if not X0.empty:
+      X['id'] = X.groupby(['doc', 'id', 'frame', 'col']).ngroup() + i
+      i = X['id'].max() + 1
 
-    P = pandas.concat([P, p]) if not P.empty else p
+    X = pandas.concat([X0[['doc', 'id', 'value']], X[['doc', 'id', 'value']]])
+    X = X.set_index(['doc', 'id'])
 
-  if P.empty:
-    return pandas.DataFrame(), pandas.DataFrame()
+    Y = pandas.concat([Y, X]) if not Y.empty else X
 
-  return classify(P, nameset, valuekey='name', kindkey='kind', normkey='norm',
-                  firstname='fname', lastname='lname', commonname='flname',
-                  orgname='org', idkey='id', dockey='doc', rolekey='role', 
-                  indexkey='index', evalkey='evalname', keyskept=['city'] if 'city' in P.columns else [])
+  if Y.empty: pandas.DataFrame()
+
+  return classify(Y, nameset)
 
 @Flow.From()
 def Geoloc(storage:Storage, geodata:pandas.DataFrame, assignpath:str):
@@ -314,7 +286,7 @@ def Pull(storage:Storage, assignpath:str,
   G = Geoloc(storage, geodata, assignpath).map(f'{workdir}/geo.pkl')
   T = Timeloc(storage, assignpath).map(f'{workdir}/time.pkl')
   C = Classify(storage, assignpath).map(f'{workdir}/clsf.pkl')
-  P = Personify(storage, assignpath, nameset).map(f'{workdir}/people.pkl')
+  P = Namepull(storage, assignpath, nameset)#.map(f'{workdir}/people.pkl')
 
   return Flow(callback=lambda *z: z, args=[Z, G, T, C, P])
 
@@ -375,10 +347,10 @@ flow['Geoportal']['parse'] = GMLParse(path='geoportal.gov.pl/wfs/name.gml').map(
 flow['geodata'] = GeoXLSXload(path='prom/df_adresses_with_coordinates.xlsx').map('prom/df_adresses_with_coordinates.pkl')
 
 flow['nameread'] = Nameread({ 
-  D['Google']+'/assignement.yaml': f0['Google']['profiling'],
+  D['UPRP']+'/assignement.yaml': f0['UPRP']['profiling'],
   D['Lens']+'/assignement.yaml': f0['Lens']['profiling'],
-  D['UPRP']+'/assignement.yaml': f0['UPRP']['profiling'] 
-}, outpath='names.pkl')
+  D['Google']+'/assignement.yaml': f0['Google']['profiling'],
+}).map('names.pkl')
 
 for k, p in D.items():
 

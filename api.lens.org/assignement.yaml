@@ -17,7 +17,7 @@ applicants:
   extracted_address: [city, city-applicant]
   id: null
   residence: [country, country-applicant]
-  value: [name, name-applicant]
+  value: [name, ambignames-applicant]
 citations:
   '&res': null
   category: null
@@ -76,7 +76,7 @@ inventors:
   orcid: null
   residence: [country, country-inventor]
   sequence: null
-  value: [name, name-inventor]
+  value: [name, names-inventor]
 members:
   '&res': null
   date: null
@@ -100,7 +100,7 @@ owners_all:
   extracted_country: null
   id: null
   recorded_date: null
-  value: [name, name-assignee]
+  value: [name, ambignames-assignee]
 patents:
   '&res': null
   doc_: null

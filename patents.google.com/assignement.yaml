@@ -10,10 +10,10 @@ attributes: {}
 backwardReferences: {}
 backwardReferencesFamily:
   publicationNumber: family
-  assigneeOriginal: [name, name-assignee]
+  assigneeOriginal: [name, ambignames-assignee]
 forwardReferencesFamily:
   publicationNumber: family
-  assigneeOriginal: [name, name-assignee]
+  assigneeOriginal: [name, ambignames-assignee]
 backwardReferencesOrig: {}
 beforeApplications: {}
 callouts: {}
@@ -50,9 +50,9 @@ web:
   application_priorityDate: [date, date-priority]
   application_title: title
   filingDate: [date, date-fill]
-  inventor: [name, name-inventor]
+  inventor: [name, names-inventor]
   publicationDate: [date, date-publication]
   publicationNumber: number
   title: title
-  assigneeOriginal: [name, name-assignee]
-  assigneeCurrent: [name, name-assignee]
+  assigneeOriginal: [name, ambignames-assignee]
+  assigneeCurrent: [name, ambignames-assignee]
