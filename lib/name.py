@@ -28,7 +28,8 @@ def classify(entries:pandas.DataFrame, namesmap:pandas.DataFrame,
 
              k1:str = 'firstnames',
              k2:str = 'lastnames',
-             kU:str = 'unclear'):
+             kU:str = 'unclear',
+             K:list[str] = []):
   
   assert isinstance(namesmap, pandas.Series)
 
@@ -59,7 +60,7 @@ def classify(entries:pandas.DataFrame, namesmap:pandas.DataFrame,
 
  #Org
   O = Y[ Y[x] == lO ]
-  O = O.set_index(I)[[v0, v, x]]
+  O = O.set_index(I)[[v0, v, x]+K]
   O[kU] = False
 
  #People
