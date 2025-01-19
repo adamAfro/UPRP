@@ -57,8 +57,9 @@ def Nameread(asnstores:dict[Storage, str],
 
   return mapnames(Y.reset_index(drop=True), 
                   orgqueries=['type.str.upper() == "LEGAL"'],
-                  orgkeysubstr=['&', 'INTERNAZIO', 'INTERNATIO', 'INC.', 'ING.', 'SP. Z O. O.'],
-                  orgkeywords=[x for X in [ 'COMPANY PRZEDSIĘBIORSTWO PRZEDSIEBIORSTWO FUNDACJA INSTYTUT INSTITUTE',
+                  orgkeysubstr=['&', 'INTERNAZIO', 'INTERNATIO', 'INC.', 'ING.', 'SP. Z O. O.', 'S.P.A.'],
+                  orgkeywords=[x for X in [ 'THE', 'INDIVIDUAL', 'CORP',
+                                            'COMPANY PRZEDSIĘBIORSTWO PRZEDSIEBIORSTWO FUNDACJA INSTYTUT INSTITUTE',
                                             'HOSPITAL SZPITAL'
                                             'COMPANY LTD SPÓŁKA LIMITED GMBH ZAKŁAD PPHU',
                                             'KOPALNIA SPÓŁDZIELNIA SPOLDZIELNIA FABRYKA',
@@ -90,7 +91,7 @@ def Namepull(storage:Storage, assignpath:str, nameset:pandas.DataFrame,
       i = X0['id'].max() + 1
 
     X = pandas.concat([S.melt(f'{k}') for k in [f'{k0}-{h}' for k0 in assignentities]])
-    if not X0.empty:
+    if not X.empty:
       X['id'] = X.groupby(['doc', 'id', 'frame', 'col']).ngroup() + i
       i = X['id'].max() + 1
 
@@ -100,6 +101,8 @@ def Namepull(storage:Storage, assignpath:str, nameset:pandas.DataFrame,
     Y = pandas.concat([Y, X]) if not Y.empty else X
 
   if Y.empty: pandas.DataFrame()
+
+  assert Y.index.is_unique
 
   return classify(Y, nameset)
 

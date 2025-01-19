@@ -11,8 +11,7 @@ def closest(namedgeo: pandas.DataFrame,
 
   def f(G): return _closest(G, name, lat, lon)
 
-  Y = namedgeo.groupby(group)\
-     .progress_apply(f).reset_index(drop=True)
+  Y = namedgeo.groupby(group).apply(f).reset_index(drop=True)
 
   return Y
 
