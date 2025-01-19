@@ -24,10 +24,6 @@ def mkrepo(personified:DataFrame, sep=';'):
   X = X[[k0]+KG+KC].reset_index().drop('city', axis=1)
   X = X[ X.duplicated(k0, keep=False) ]
 
-  #NA na początek do workaroundu
-  X = X.sort_values([k for k in X.columns[::-1]], na_position='first')
-  #WORKAROUND - duplikatów nie powinno być - wymagana poprawa w poprz. etap.
-  X = X.drop_duplicates(KD+[k0], keep='last')
   assert X[KD+[k0]].duplicated().sum() == 0
 
   X.index.name = ki
