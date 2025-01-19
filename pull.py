@@ -1,4 +1,4 @@
-import sys, pandas, yaml, json, re, os, asyncio, aiohttp, unicodedata, zipfile
+import sys, pandas, yaml, json, re, os, unicodedata
 import xml.etree.ElementTree as ET
 from lib.storage import Storage
 from lib.geo import closest
@@ -7,6 +7,7 @@ from pyproj import Transformer
 from lib.flow import Flow
 
 def txtnorm(input_str):
+  if not isinstance(input_str, str): return None
   nfkd_form = unicodedata.normalize('NFKD', input_str)
   return ''.join([c for c in nfkd_form if not unicodedata.combining(c)])
 
