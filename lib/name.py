@@ -27,8 +27,9 @@ def classify(entries:pandas.DataFrame, namesmap:pandas.DataFrame,
              lA:str = 'ambigname',
 
              k1:str = 'firstnames',
-             k2:str = 'lastnames',):
-
+             k2:str = 'lastnames',
+             kU:str = 'unclear'):
+  
   assert isinstance(namesmap, pandas.Series)
 
   X = entries
@@ -38,31 +39,42 @@ def classify(entries:pandas.DataFrame, namesmap:pandas.DataFrame,
 
   X[v] = X[v0].pipe(normalize)
 
-  YM = X.reset_index().set_index(v).join(M, how='inner')
-  YM = YM.reset_index().set_index(I)
+ #Exact
+  E = X.reset_index().set_index(v).join(M, how='inner')
+  E = E.reset_index().set_index(I)
+  X = X.set_index(I).drop(E.index)
 
   X[n] = X[v].str.count(' ') + 1
   X[v] = X[v].str.split(' ')
 
-  E = X.drop(v0, axis=1).explode(v)
-  E = E.reset_index().set_index(v).join(M[ M.isin([l1, l2, lA]) ], how='inner')
-  J = E.groupby(I).agg({n: 'first', x: 'count'})
-  J = J[ J[n] == J[x] ][[]].join(E.reset_index().set_index(I), how='inner')
-  J = J.drop('nword', axis=1)
+ #Words
+  W = X.drop(v0, axis=1).explode(v)
+  W = W.reset_index().set_index(v).join(M[ M.isin([l1, l2, lA]) ], how='inner')
+  nW = W.groupby(I).agg({n: 'first', x: 'count'})
+  W = nW[ nW[n] == nW[x] ][[]].join(W.reset_index().set_index(I), how='inner')
+  X = X.drop([v, n], axis=1).drop(W.index)
+  W = W.drop(n, axis=1)
 
-  YE = pandas.concat([YM, J]).reset_index().drop_duplicates(I+[v])
-  YO = YE[ YE[x] == lO ]
-  Y = YE[ YE[x] != lO ].groupby(I).agg({v:' '.join})
+  Y = pandas.concat([E, W]).reset_index().drop_duplicates(I+[v])
 
-  Nf = YE[ YE[x] == l1 ].groupby(I).agg({v:' '.join})[v].rename(k1)
-  Nl = YE[ YE[x] == l2 ].groupby(I).agg({v:' '.join})[v].rename(k2)
+ #Org
+  O = Y[ Y[x] == lO ]
+  O = O.set_index(I)[[v0, v, x]]
+  O[kU] = False
 
-  Y = Y.join(Nf, how='left').join(Nl, how='left')
+ #People
+  P = Y[ Y[x] != lO ].groupby(I).agg({v:' '.join})
+  Nf = Y[ Y[x] == l1 ].groupby(I).agg({v:' '.join})[v].rename(k1)
+  Nl = Y[ Y[x] == l2 ].groupby(I).agg({v:' '.join})[v].rename(k2)
+  P = P.join(Nf, how='left').join(Nl, how='left')
+  P[kU] = False
 
-  #TODO niedopasowane nigdzie
+ #WORKAROUND: zawiera nazwy firm
+  X[v] = X[v0].pipe(normalize)
+  P = pandas.concat([X.drop(v0, axis=1), P]).sort_index()
+  P[kU] = P[kU].fillna(True)
 
-  #TODO dokończyć
-  return Y, YO.set_index(I)[[v0, v, x]]
+  return P, O
 
 def mapnames(entries: pandas.DataFrame,
 
