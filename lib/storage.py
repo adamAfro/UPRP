@@ -32,6 +32,9 @@ class Storage:
     H = concat(H0)
     H['assignement'] = a
 
+    if any(k in a for k in ['name', 'city']):
+      H['value'] = H['value'].str.upper()
+
     return H
 
   @staticmethod
