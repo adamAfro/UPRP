@@ -91,6 +91,8 @@ def Bundle(dir:str,
   P0A = pandas.concat(P0A, axis=0)
   P0B = pandas.concat(P0B, axis=0)
 
+  if not os.path.exists(dir): os.makedirs(dir)
+
   Z0.to_csv(f'{dir}/pat.csv')
   M0.to_csv(f'{dir}/pat:pat-raport-ocr.csv')
   G0.to_csv(f'{dir}/spatial:pat.csv')
