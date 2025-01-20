@@ -312,6 +312,12 @@ względem występowania.\todonote{przykł.}
 \end{defi}
 
 \begin{defi}
+Niespójność typów --- obiekty oraz wartości zawieraja różne
+typy chociaż są identycznie pod względem opisu i etykiet.\todonote{przykł.}
+\label{def:niespójność-typu}
+\end{defi}
+
+\begin{defi}
 Niespójność formatu --- cechy są przechowywane w różnych formatach,
 mimo, że opisują to samo zjawisko.\todonote{przykł.}
 \label{def:niespójność-formatu}
@@ -361,10 +367,9 @@ Filtracja polega na zastąpieniu wartości znaków diakrytycznych ich
 podstawowymi odpowiednikami. Dodatkowo wartości są przekształcane
 do wielkich liter, a znaki specjalne są usuwane.
 
-\begin{uwaga}
-Zastsowanie filtra danych może stwarzać nieprawdziwe sytuacje, gdzie
-nieprawdziwa relacja identyczności 2 wartości jest uznawana za prawdziwą.
-\end{uwaga}
+Takie działanie pozwala zniwelować błąd błędnego odrzucenia równości
+dwóch wartości. Wiąże się on jednak z zaistnieniem błędów niewłaściwego
+potwierdzenia równości dwóch wartości, które w rzeczywistości nie są równe.
 
 Na następnych stronach są zaprezentowane losowo wybrane obserwacje, 
 z typów wyróżnionych opisywaną metodą. Przykłady poniżej dają wgląd
