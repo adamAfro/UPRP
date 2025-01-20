@@ -226,7 +226,7 @@ class Geoloc:
     assert { 'doc' }.issubset(Y.index.names)
     return Y
 
-from dirs import data as D
+from config import data as D
 from profiling import flow as f0
 from geoloc import flow as fg
 

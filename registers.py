@@ -290,7 +290,7 @@ def Merge(affilated:dict[str, pandas.DataFrame]):
 
   return Y
 
-from dirs import data as D
+from config import data as D
 from profiling import flow as f0
 from patent import flow as fP
 

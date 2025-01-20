@@ -376,13 +376,7 @@ def Preview(path:str,
     with open(path, 'w') as f: f.write(Y)
 
 from profiling import flow as f0
-
-D = { 'UPRP': 'api.uprp.gov.pl',
-      'Lens': 'api.lens.org',
-      # 'Open': 'api.openalex.org',
-      'USPG': 'developer.uspto.gov/grant',
-      'USPA': 'developer.uspto.gov/application',
-      'Google': 'patents.google.com' }
+from config import data as D
 
 flow = { k: dict() for k in D.keys() }
 
