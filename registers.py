@@ -419,7 +419,6 @@ flow['registry-spacetime'] = Spacetime(flow['registry-textual'],
                                        fP['UPRP']['patent-event'], 
                                        fP['UPRP']['patent-classify']).map('spacetime.pkl')
 
-#TODO backpropagate stąd do self-doc-geoloc
 flow['affilate'] = Affilate(flow['registry-spacetime']).map('affilate.pkl')
 
 flow['simcalc-00'] = Simcalc(flow['affilate'], qcount='count  < 10')
@@ -432,8 +431,36 @@ flow['simcalc'] = Flow('Simcalc', lambda x: pandas.concat(x),
 
 flow['entity'] = Entity(sim=flow['simcalc'], all=flow['registry-spacetime']).map('entity.pkl')
 
-flow['self-entity-geoloc'] = Selfloc.fill(flow['entity'], group='entity').map('entity-selfloc.pkl')
+flow['self-entity-geoloc'] = Selfloc.fill(flow['entity'], group='entity', loceval='identity')
 
-flow['self-doc-geoloc'] = Selfloc.fill(flow['self-entity-geoloc'], group='doc').map('entity-docloc.pkl')
+@Flow.From()
+def Geobackprop(entities:pandas.DataFrame):
+
+  X = entities
+  n = X['lat'].isna().sum()
+
+  while(n > 0):
+
+    X = flow['self-entity-geoloc'].callback(X, group='entity', loceval='identity')
+    d = n - X['lat'].isna().sum()
+    n = n - d
+
+    if d == 0: break
+    print(-d, "geo NA")
+
+    A = flow['affilate'].callback(X)
+
+    S00 = flow['simcalc-00'].callback(A, qcount='count  < 10')
+    S10 = flow['simcalc-10'].callback(A, qcount='count >= 10 & count  < 50')
+    S50 = flow['simcalc-50'].callback(A, qcount='count >= 50')
+    S = flow['simcalc'].callback([S00, S10, S50])
+
+    X = flow['entity'].callback(S, X)
+
+  return X
+
+flow['geobackprop'] = Geobackprop(flow['entity']).map('geobackprop.pkl')
+
+flow['self-doc-geoloc'] = Selfloc.fill(flow['geobackprop'], group='doc', loceval='affilation')
 
 flow['geoloc-eval'] = Selfloc.evalplot(flow['self-doc-geoloc']).map('docs/insight-img/registers/geoloc-eval.png')
