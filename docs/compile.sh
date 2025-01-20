@@ -4,6 +4,7 @@ rm -rf workdir/*
 if [ -z "$1" ]; then
 
 pdflatex -output-directory=workdir main.tex
+cp cit.bib workdir/
 cd workdir
 bibtex main
 cd ../
