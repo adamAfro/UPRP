@@ -233,6 +233,7 @@ def Simcalc(affilated:pandas.DataFrame, qcount:str):
   S = Y[[kY.N, kY.G, kY.C, kY.D, kY.M]]
   S = S.sort_values([kY.N, kY.G, kY.C, kY.D, kY.M])
 
+  i = 'id'
   assert { kY.N, kY.G, kY.C, kY.D, kY.M }.issubset(S.columns)
   assert { i+'L', i+'R' }.issubset(S.index.names)
   return S
@@ -261,6 +262,9 @@ def Entity(sim:pandas.DataFrame, all:pandas.DataFrame):
   X.index.name = 'entity'
   X = X.explode('id').reset_index().set_index('id')
   
+  if 'entity' in Y.columns:
+    Y = Y.drop(columns='entity')
+
   Y = Y.join(X)
 
   return Y
@@ -268,7 +272,7 @@ def Entity(sim:pandas.DataFrame, all:pandas.DataFrame):
 class Selfloc:
 
   @Flow.From()
-  def fill(entities:pandas.DataFrame, group:str):
+  def fill(entities:pandas.DataFrame, group:str, loceval:str):
 
     import tqdm
 
@@ -283,6 +287,7 @@ class Selfloc:
       if n.empty: continue
 
       m = n.idxmax()
+      E.loc[G.index, 'loceval'] = loceval
       E.loc[G.index, 'lat'] = G['lat'].fillna(m[0])
       E.loc[G.index, 'lon'] = G['lon'].fillna(m[1])
 
