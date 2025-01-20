@@ -1,0 +1,152 @@
+\section{Dane patentowe}
+
+
+
+\subsection{Rejestr dat związanych z patentami}
+
+Poszczególne czynności związane z ochroną patentów są rejestrowane
+przez urzędy i są dostępne w wymienionych zbiorach danych.
+Takie wydarzenia są powiązane z konkretną datą kalendarzową,
+co pozwala na wyznaczenie czasu pojawienia się danej informacji
+w systemie. Można wyróżnić 9 typów dat:
+
+\begin{itemize}
+\item publiczne ujawnienie \foreign{ang}{exhibition}
+\item roszczenia z pierwszeństwa \foreign{ang}{priority claim} --- 
+      data rozszczenia sprzed rozpoczęcia procesu patentowania dla wybranego urzędu
+\item regionalna deklaracja \foreign{ang}{regional filing}\todonote{potrz. wyjaśniene}
+\item deklaracja \foreign{ang}{filing}\todonote{potrz. wyjaśniene}
+\item aplikacja \foreign{ang}{application} --- data złożenia aplikacji
+\item publikacja przed przyznaniem ochrony \foreign{ang}{unexamined-printed-without-grant}
+\item przyznanie ochrony \foreign{ang}{grant}
+\item decyzja urzędowa
+\item publikacja
+\end{itemize}
+\todonote{potrz. źródło}
+
+
+
+\subsection{Klasyfikacje patentów}
+
+Klasyfikacje patentowe to systemy, które pozwalają na przypisanie
+patentów do odpowiednich dziedzin.
+
+
+
+\section{Dane przestrzenne}
+
+Dane przestrzenne odnoszą się do miejsc z jakimi są powiązane
+osoby albo organizacji związane z patentami. Patent może mieć więc
+kilka lokalizacji, żadna nie jest określona jako główna.
+\todonote{w sumie można by wyznaczyć główną lokację
+          jako miast organizacji jeśli jakaś jest}
+
+Dane zawierają wyłącznie nazwy miast, więc ich umieszczenie na
+mapie wiąże się z wadami: nazwy nie są unikalne --- w takim
+przypadku używany jest algorytm minimalizacji odległości, tak
+żeby wybrać optymalną kombinację. Wynika z tego oczywiste obicążenie.
+Po za tym nazwy mniejszych miejscowości mogą być duplikatami
+nazw miast. Pewne powiązanie jest w takim przypadku niemożliwe
+w wykonalny sposób na podstawie patentowych informacji.
+
+
+
+\subsubsection{Międzynarodowa Klasyfikacja Patentów}
+
+W Polsce funkcjonuje klasyfikacja
+\ac{MKP}, czyli \ac{IPC}. Zapis klasyfikacji w tym systemie to ciąg
+cyfrowo-literowy składający się z 4 części:
+
+\begin{enumerate}
+    \item Dział - najwyższa hierarchia złożona z 8 kategorii
+    \begin{itemize}
+        \item ma tytuł informacyjny
+        \item każdy tytuł działu ma swój symbol: A, B, C, D, E, F, G albo H
+        \begin{itemize}
+            \item A – podstawowe potrzeby ludzkie
+            \item B – różne procesy przemysłowe; transport
+            \item C – chemia; metalurgia
+            \item D – włókiennictwo; papiernictwo
+            \item E – budownictwo; górnictwo
+            \item F – budowa maszyn; oświetlenie; ogrzewanie; uzbrojenie; technika minerska
+            \item G – fizyka
+            \item H – elektrotechnika
+        \end{itemize}
+        \item poddział - każdy dział może zawierać poddział, który nie jest oznaczany symbolem
+    \end{itemize}
+    \item Klasa - drugi poziom hierarchii
+    \begin{itemize}
+        \item ma tytuł informacyjny
+        \item oznaczana przez liczbę 2-cyfrową
+        \item zakres klasy - skrótowa informacja o treści klasy
+    \end{itemize}
+    \item Podklasa - trzeci poziom hierarchii
+    \begin{itemize}
+        \item ma tytuł informacyjny
+        \item oznaczana dużą literą
+        \item ma zakres i tytuł pomocniczy
+    \end{itemize}
+    \item Grupa - czwarty poziom hierarchii
+    \begin{itemize}
+        \item 2 zestawy cyfr oddzielone ukośnikiem
+        \begin{itemize}
+            \item zestaw pierwszy składa się od 1 do 3 cyfr i określa grupę główną
+            \item zestaw drugi składa się z 2 cyfr i określa grupę pomocniczą, grupa główna jest oznaczana 00
+        \end{itemize}
+        \item grupa ma tytuł informacyjny, podgrupa ma bardziej szczegółowe hasło
+    \end{itemize}
+\end{enumerate}
+
+
+
+\subsubsection{Wspólna Klasyfikacja Patentów}
+
+\ac{CPC} to klasyfikacja stworzona przez \ac{EPO} i \ac{USPTO}
+jako wspólny wysiłek w kierunku standaryzacji klasyfikacji.
+
+\begin{enumerate}
+    \item Sekcja - najwyższa hierarchia złożona z 9 kategorii
+    \begin{itemize}
+        \item ma tytuł informacyjny
+        \item każda sekcja ma swój symbol: A, B, C, D, E, F, G, H albo Y
+        \begin{itemize}
+            \item A – Potrzeby ludzkie
+            \item B – Różne operacje przemysłowe; Transport
+            \item C – Chemia; Metalurgia
+            \item D – Tekstylia; Papier
+            \item E – Budownictwo; Górnictwo
+            \item F – Mechanika; Oświetlenie; Ogrzewanie; Broń; Wybuchy
+            \item G – Fizyka
+            \item H – Elektryczność
+            \item Y – Ogólne technologie lub zastosowania specyficzne dla nowych lub pojawiających się dziedzin technologii
+        \end{itemize}
+    \end{itemize}
+    \item Klasa - drugi poziom hierarchii
+    \begin{itemize}
+        \item ma tytuł informacyjny
+        \item oznaczana przez liczbę 2-cyfrową
+        \item zakres klasy - skrótowa informacja o treści klasy
+    \end{itemize}
+    \item Podklasa - trzeci poziom hierarchii
+    \begin{itemize}
+        \item ma tytuł informacyjny
+        \item oznaczana dużą literą
+        \item ma zakres i tytuł pomocniczy
+    \end{itemize}
+    \item Grupa - czwarty poziom hierarchii
+    \begin{itemize}
+        \item 2 zestawy cyfr oddzielone ukośnikiem
+        \begin{itemize}
+            \item zestaw pierwszy składa się od 1 do 3 cyfr i określa grupę główną
+            \item zestaw drugi składa się z 2 cyfr i określa grupę pomocniczą, grupa główna jest oznaczana 00
+        \end{itemize}
+        \item grupa ma tytuł informacyjny, podgrupa ma bardziej szczegółowe hasło
+    \end{itemize}
+\end{enumerate}
+
+
+
+\subsubsection{Rewizja \ac{IPC}}
+
+\ac{IPCR} powstał przez rewizję systemu \ac{IPC}. Zawiera dodatkowe
+symbole dodające prezycji do klasyfikacji.
