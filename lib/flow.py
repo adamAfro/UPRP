@@ -115,9 +115,11 @@ class Flow():
     self.mapping = mapping
     return self
 
-  def From(name=str(None)):
+  def From(name=str(None), cls=None):
 
     import inspect
+
+    if cls is None: cls = Flow
 
     def decorator(func):
       def wrapper(*args, **kwargs):
@@ -127,7 +129,30 @@ class Flow():
         K = {k: v for k, v in kwargs.items() if k in P}
         A = args[:len(P)]
 
-        return Flow(name, callback=func, args=A, kwargs=K)
+        return cls(name, callback=func, args=A, kwargs=K)
 
       return wrapper
     return decorator
+
+class ImgFlow(Flow):
+
+  def From(name=str(None)):
+    return Flow.From(name, ImgFlow)
+
+  def __call__(self, forced=False): return self.call()
+  def call(self, forced=False): return super().call()
+
+  def fload(self, f0): return None
+  def fdump(self, f0, x):
+
+    import matplotlib.pyplot as plt
+    import os
+
+    if f0.endswith('.png'):
+      assert isinstance(x, plt.Figure)
+      os.makedirs(os.path.dirname(f0), exist_ok=True)
+      x.savefig(f0)
+      self.info(f'saved {f0}')
+      return
+
+    raise NotImplementedError()
