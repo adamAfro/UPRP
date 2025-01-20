@@ -3,7 +3,11 @@ from lib.storage import Storage
 from lib.name import mapnames, classify
 from lib.flow import Flow, ImgFlow
 import matplotlib.pyplot as plt
-from config import Colr
+from config import Colr, Cmap
+import geopandas as gpd
+import geoplot as gplt
+import geoplot.crs as gcrs
+import seaborn as sns
 
 @Flow.From()
 def Nameclsf(asnstores:dict[Storage, str],
@@ -285,6 +289,57 @@ class Selfloc:
     return E
 
   @ImgFlow.From()
+  def evalplot(X):
+
+    f, A = plt.subplots(2, 2, figsize=(12, 12))
+
+    X.loc[X['lat'].isna(), 'loceval'] = 'brak'
+    X['loceval'] = X['loceval'].replace({ 'proximity': 'najbliższe\n z duplikatów', 
+                                          'unique': 'unikalne' }).fillna('uzupełnione')
+    X['loceval'].value_counts().sort_values(ascending=False)\
+                .plot.bar(ax=A[0,0], color=[Colr.warning, Colr.attention, Colr.good, Colr.good], 
+                          title='Rozkład typu geolokalizacji', xlabel='', rot=0)
+
+    X = X.dropna(subset=['lat', 'lon'])
+
+    P = gpd.GeoDataFrame(X, geometry=gpd.points_from_xy(X['lon'], X['lat']))
+    G = P.groupby(['lat', 'lon', 'city']).size().rename('count').reset_index()
+    G = gpd.GeoDataFrame(G, geometry=gpd.points_from_xy(G['lon'], G['lat']))
+    G = G.sort_values('count', ascending=False).head(10)
+
+    gplt.kdeplot(P, fill=True, cmap=Cmap.neutral, ax=A[0,1])
+    A[0,1].set_title('Wszystkie geolokalizacje osób\nzwiązanych z patentami')
+    for x, y, label in zip(G.geometry.x, G.geometry.y, G['city']):
+      A[0,1].annotate(label, xy=(x, y), xytext=(3, 3), 
+                    textcoords="offset points", fontsize=8, color='black')
+
+    X2 = X.query('~ loceval.isna()')
+    P = gpd.GeoDataFrame(X2, geometry=gpd.points_from_xy(X2['lon'], X2['lat']))
+    G = P.groupby(['lat', 'lon', 'city']).size().rename('count').reset_index()
+    G = gpd.GeoDataFrame(G, geometry=gpd.points_from_xy(G['lon'], G['lat']))
+    G = G.sort_values('count', ascending=False).head(10)
+
+    gplt.kdeplot(P, fill=True, cmap=Cmap.good, ax=A[1,0])
+    A[1,0].set_title('Geolokalizacje wynikające\nbezpośrednio z rejestrów')
+    for x, y, label in zip(G.geometry.x, G.geometry.y, G['city']):
+      A[1,0].annotate(label, xy=(x, y), xytext=(3, 3), 
+                      textcoords="offset points", fontsize=8, color='black')
+
+    X0 = X.query('~ loceval.isna()')
+    P = gpd.GeoDataFrame(X0, geometry=gpd.points_from_xy(X0['lon'], X0['lat']))
+    G = P.groupby(['lat', 'lon', 'city']).size().rename('count').reset_index()
+    G = gpd.GeoDataFrame(G, geometry=gpd.points_from_xy(G['lon'], G['lat']))
+    G = G.sort_values('count', ascending=False).head(10)
+
+    gplt.kdeplot(P, fill=True, cmap=Cmap.attention, ax=A[1,1])
+    A[1,1].set_title('Geolokalizacje uzupełnione na podstawie\npodobieństwa i współautorstwa')
+    for x, y, label in zip(G.geometry.x, G.geometry.y, G['city']):
+      A[1,1].annotate(label, xy=(x, y), xytext=(3, 3), 
+                      textcoords="offset points", fontsize=8, color='black')
+
+    return f
+
+  @ImgFlow.From()
   def evalplot3D(X):
 
     X = X.dropna(subset=['lat', 'lon', 'delay'])
@@ -376,6 +431,4 @@ flow['self-entity-geoloc'] = Selfloc.fill(flow['entity'], group='entity').map('e
 
 flow['self-doc-geoloc'] = Selfloc.fill(flow['self-entity-geoloc'], group='doc').map('entity-docloc.pkl')
 
-flow['geoloc-eval'] = Selfloc.evalplot3D(flow['self-doc-geoloc']).map('docs/insight-img/registers/geoloc-eval.png')
-
-flow['geoloc-eval']()
+flow['geoloc-eval'] = Selfloc.evalplot(flow['self-doc-geoloc']).map('docs/insight-img/registers/geoloc-eval.png')
