@@ -36,8 +36,8 @@ for h, X in S.data.items():
   S = S.map(lambda x: x.replace('&', '\&'))
   S = S.map(lambda x: x.replace('$', '\$'))
   S = S.map(lambda x: x[:k]+'...' if len(x) > k+5 else x)  
-  S.columns.name = 'Losowa obs. nr.'
   S = S.sort_index().reset_index().T
+  S.columns.name = 'Losowa obs. nr.'
 
   h = h.replace('_', ' ')
 

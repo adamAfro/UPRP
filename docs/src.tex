@@ -298,25 +298,82 @@ zakładając, że $b_1 = g_1$ otrzymalibyśmy dla nich następujące
 \end{itemize}
 
 
-\newpage
-\footnotesize
-\input{ex-storage/input}
-\normalsize
-\newpage
 
+\subsubsection{Niespójność danych}
 
+Głównym problemem danych jest ich niespójność. Można wyróżnić
+3 rodzaje niespójności: strukturalna, formatu oraz fragmentacji.
 
+\begin{defi}
+Niespójność stukturalna --- te same cechy są przechowywane jako
+różne wartości obiektów; mogą wykluczać się między sobą pod
+względem występowania.\todonote{przykł.}
+\label{def:niespójność-strukturalna}
+\end{defi}
+
+\begin{defi}
+Niespójność formatu --- cechy są przechowywane w różnych formatach,
+mimo, że opisują to samo zjawisko.\todonote{przykł.}
+\label{def:niespójność-formatu}
+\end{defi}
+
+\begin{defi}
+Niespójność fragmentacji --- wartości obiektów zawierają różne
+poziomy szczegółowości.\todonote{przykł.}
+\label{def:niespójność-fragmentacji}
+\end{defi}
+
+\begin{defi}
+Drobne niespójności danych --- dane różnią się od siebie wartościami,
+w sposób niejednoznaczny, a jednocześnie są wystarczająco podobne,
+by estymować ich identyczność.\todonote{przykł.}
+\label{def:drobne-niespójności}
+\end{defi}
+
+\begin{przykład}
+Niektóre imiona nie zawierają znaków diaktycznych, mimo że powinny,
+w wielu przypadkach występują wariacje w użyciach znaków diaktrycznych.
+\end{przykład}
 
 \subsection{Przypisywanie ról dla danych}
 
-Po wyciągnięciu danych dla każdego rodzaju wartości można 
-przypisać rolę. W toku dalszej analizy, role są używane do
-wyciągania danych o różnych formatach z wielu tabel jednocześnie
-do homogenicznych struktur. Struktury składają się z wyciągnietych
+Z racji szerokości i różnorodności danych,
+wartości obiektów są przypisywane do ról. Rola wartości wskazuje 
+jaką cechą jest w danym kontekście. W toku dalszej analizy, 
+role są używane do wyciągania danych o różnych formatach 
+z wielu tabel jednocześnie do homogenicznych struktur.
+Jest to rozwiązanie problemu niespójności strukturalnej danych
+(\cref{def:niespójność-strukturalna}).
+
+W dalszych procesach może także zachodzić normalizacja,
+która ma zapobiegać problemowi związanemu z formatowaniem danych 
+(\cref{def:niespójność-formatu}).
+Struktury składają się z wyciągnietych
 wartości oraz ich mapowania do oryginalnych danych.
 To podejście zapewnia względną jednorodność oczekiwanych danych
 dzięki zastosowaniu powtarzalnej metody ich wyciągania;
 mapowanie daje wgląd do wewnętrznych źródeł danych; dane oryginalne
 po profilowaniu nigdy nie zmieniają formy.
 
-\sidenote{czy potrzebne wyjaśn.?}
+Dodatkowo zastosowany jest filtr danych, który zapobiega utracie
+informacji ze względu na drobne niespójności (\cref{def:drobne-niespójności}).
+Filtracja polega na zastąpieniu wartości znaków diakrytycznych ich
+podstawowymi odpowiednikami. Dodatkowo wartości są przekształcane
+do wielkich liter, a znaki specjalne są usuwane.
+
+\begin{uwaga}
+Zastsowanie filtra danych może stwarzać nieprawdziwe sytuacje, gdzie
+nieprawdziwa relacja identyczności 2 wartości jest uznawana za prawdziwą.
+\end{uwaga}
+
+Na następnych stronach są zaprezentowane losowo wybrane obserwacje, 
+z typów wyróżnionych opisywaną metodą. Przykłady poniżej dają wgląd
+w szerokość i różnorodność danych.
+
+\newpage
+\subsection{Przykłady danych}
+
+\footnotesize
+\input{ex-storage/input}
+\normalsize
+\newpage
