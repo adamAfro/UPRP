@@ -14,6 +14,9 @@ class Flow():
 
     self.name = name
     self.callback = callback
+    if self.name == str(None):
+      self.name = self.callback.__name__
+
     self.args = args
     self.kwargs = kwargs
     self.mapping = mapping
@@ -35,9 +38,11 @@ class Flow():
         except FileNotFoundError: self.output = None
       if self.output is not None: return self.output
 
-    self.info(f'call {self.callback.__name__}')
+    self.info(f'computing args')
     args = [Flow.lazyload(x) for x in self.args]
     kwargs = {k: Flow.lazyload(v) for k, v in self.kwargs.items()}
+
+    self.info(f'call')
     self.output = self.callback(*args, **kwargs)
     self.dump()
     return self.output
