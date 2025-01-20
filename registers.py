@@ -1,7 +1,9 @@
 import pandas, yaml, numpy
 from lib.storage import Storage
 from lib.name import mapnames, classify
-from lib.flow import Flow
+from lib.flow import Flow, ImgFlow
+import matplotlib.pyplot as plt
+from config import Colr
 
 @Flow.From()
 def Nameclsf(asnstores:dict[Storage, str],
@@ -259,26 +261,74 @@ def Entity(sim:pandas.DataFrame, all:pandas.DataFrame):
 
   return Y
 
-@Flow.From()
-def SelfGeoloc(entities:pandas.DataFrame, group:str):
+class Selfloc:
 
-  import tqdm
-  
-  assert group in entities.columns
+  @Flow.From()
+  def fill(entities:pandas.DataFrame, group:str):
 
-  E = entities
-  G = E.groupby(group)
+    import tqdm
 
-  for g, G in tqdm.tqdm(G, total=G.ngroups):
+    assert group in entities.columns
 
-    n = G[['lat', 'lon']].value_counts()
-    if n.empty: continue
+    E = entities
+    G = E.groupby(group)
 
-    m = n.idxmax()
-    E.loc[G.index, 'lat'] = G['lat'].fillna(m[0])
-    E.loc[G.index, 'lon'] = G['lon'].fillna(m[1])
+    for g, G in tqdm.tqdm(G, total=G.ngroups):
 
-  return E
+      n = G[['lat', 'lon']].value_counts()
+      if n.empty: continue
+
+      m = n.idxmax()
+      E.loc[G.index, 'lat'] = G['lat'].fillna(m[0])
+      E.loc[G.index, 'lon'] = G['lon'].fillna(m[1])
+
+    return E
+
+  @ImgFlow.From()
+  def evalplot3D(X):
+
+    X = X.dropna(subset=['lat', 'lon', 'delay'])
+
+    f, A0 = plt.subplots(figsize=(15, 15))
+    A0.axis('off')
+
+   #normalizacja
+    X['delay'] = X['delay'] - X['delay'].min()
+
+    A = [f.add_subplot(221, projection='3d'),
+         f.add_subplot(222, projection='3d'),
+         f.add_subplot(223),
+         f.add_subplot(224, projection='3d')]
+
+    Selfloc.scatter3D(A[0], X, Colr.neutral)
+    A[0].set_title('Geolokalizacje osób związane z patentami')
+
+    Selfloc.scatter3D(A[1], X.query('~ loceval.isna()'), Colr.good)
+    A[1].set_title('Geolokalizacje oparte o dane z rejestrów')
+
+    Selfloc.scatter3D(A[3], X.query('loceval.isna()'), Colr.attention)
+    A[3].set_title('Geolokalizacje wynikające z uzupełniania braków')
+
+    X['loceval'] = X['loceval'].replace({ 'proximity': 'z blikości', 
+                                          'unique': 'unikalne' }).fillna('uzupełnione')
+
+    X['loceval'].value_counts().sort_values(ascending=False)\
+                .plot.barh(ax=A[2], color=[Colr.attention, Colr.good, Colr.good], 
+                          title='Ocena geolokalizacji', ylabel='')
+
+    return f
+
+  def scatter3D(ax, X, color):
+
+   #nakładające się
+    P = X.groupby(['delay', 'lat', 'lon']).size().rename('count')\
+         .reset_index()
+
+    ax.scatter(P['lon'], P['lat'], P['delay'], s=P['count']/10, c=color)
+
+    ax.set_xlabel('Długość')
+    ax.set_ylabel('Szerokość')
+    ax.set_zlabel('Opóźnieninie (dni)')
 
 @Flow.From()
 def Merge(affilated:dict[str, pandas.DataFrame]):
@@ -322,6 +372,10 @@ flow['simcalc'] = Flow('Simcalc', lambda x: pandas.concat(x),
 
 flow['entity'] = Entity(sim=flow['simcalc'], all=flow['registry-spacetime']).map('entity.pkl')
 
-flow['self-entity-geoloc'] = SelfGeoloc(flow['entity'], group='entity').map('entity-selfloc.pkl')
+flow['self-entity-geoloc'] = Selfloc.fill(flow['entity'], group='entity').map('entity-selfloc.pkl')
 
-flow['self-doc-geoloc'] = SelfGeoloc(flow['self-entity-geoloc'], group='doc').map('entity-docloc.pkl')
+flow['self-doc-geoloc'] = Selfloc.fill(flow['self-entity-geoloc'], group='doc').map('entity-docloc.pkl')
+
+flow['geoloc-eval'] = Selfloc.evalplot3D(flow['self-doc-geoloc']).map('docs/insight-img/registers/geoloc-eval.png')
+
+flow['geoloc-eval']()
