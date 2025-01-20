@@ -11,6 +11,14 @@ class Colr:
   mid = 'yellow'
   attention = 'orange'
   warning = 'red'
+  
+class Cmap:
+
+  neutral = 'Blues'
+  good = 'Greens'
+  mid = 'YlOrBr'
+  attention = 'Oranges'
+  warning = 'Reds'
 
 import matplotlib.pyplot as plt
 plt.rcParams['axes.spines.top'] = False
