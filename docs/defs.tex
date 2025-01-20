@@ -1,0 +1,261 @@
+\usepackage[a4paper,twoside,top=2.6cm,bottom=2.6cm,inner=3cm,outer=2.6cm]{geometry}
+
+\usepackage[utf8]{inputenc}            % kodowanie znaków
+\usepackage[polish]{babel}             % język polski
+\usepackage[T1]{polski}                % j.w.
+
+\usepackage[font=small,labelfont=bf,justification=centering]{caption}
+
+
+
+
+\input glyphtounicode.tex              % Zaznaczanie tekstu w programach
+\pdfgentounicode = 1                   % j.w.
+
+
+\usepackage{lmodern}
+
+
+
+\usepackage{float}
+\usepackage{needspace}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{url}
+\usepackage{longtable}
+\usepackage{array,hhline}
+\usepackage{acronym}                   % skróty literowe
+\usepackage{fancyvrb}                  % kod komputerowy
+\usepackage{hyperref}                  % hiperłącza na komputerach
+\usepackage{cleveref}
+\usepackage{todonotes}                 % notatki na marginesie
+\newcommand\sidenote[1]{\todo[linecolor=lightgray,backgroundcolor=lightgray!25,bordercolor=lightgray]{\raggedright\footnotesize{#1}}}
+\newcommand\todonote[1]{\todo[linecolor=red!50,backgroundcolor=lightgray!25,bordercolor=red!50]{\raggedright\footnotesize{#1}}}
+\newcommand{\foreign}[2]{(#1. \textit{#2})}
+
+\usepackage{booktabs} \heavyrulewidth=1.5bp \lightrulewidth=0.5bp
+
+\newcommand\allsource[0]{źródło: opracowanie własne; 
+                         dane: UPRP, patents.google.com, Lens.org, USPTO}
+
+\let\leq\leqslant\let\le\leq\let\geq\geqslant\let\ge\geq 
+                                       % sic! ucywilizowanie znaków niewiększości
+
+
+\theoremstyle{plain}
+\newtheorem{twier}{Twierdzenie}[chapter] % pierwsze to nazwa środowiska,
+                                      %drugie to wyświetlana nazwa
+				% to trzecie w~nawiasie kwadratowym
+				% wskazuje numer dolepiony z~lewej do
+				% numeru twierdzenia (tu numer
+				% 'chapter', 
+\newtheorem{lemat}{Lemat}[chapter]
+
+\crefname{figure}{rys.}{rys.}
+\Crefname{figure}{Rys.}{Rys.}
+
+\crefname{table}{tab.}{tab.}
+\Crefname{table}{Tab.}{Tab.}
+
+\crefname{section}{sekcja}{sekcje}
+\Crefname{section}{Sekcja}{Sekcje}
+
+\theoremstyle{definition}
+\newtheorem{defi}{Definicja}[chapter]
+\crefname{defi}{def.}{def.}
+\Crefname{defi}{Def.}{Def.}
+
+\newcommand{\crefpairconjunction}{ oraz }
+\newcommand{\creflastconjunction}{ oraz }
+
+\theoremstyle{definition}
+\newtheorem{przyp}{Przypadek}[chapter]
+\crefname{przyp}{przypadek}{przypadki}
+\Crefname{przyp}{Przypadek}{Przypadki}
+
+\theoremstyle{remark}
+\newtheorem{uwaga}{Uwaga}[chapter]
+\newtheorem{wniosek}{Wniosek}[chapter]
+
+%%%%% więcej możliwości w~dokumentacji amsthm
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%% wcięcie akapitowe %%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%% ustawić w~zaleceń i~gustu %%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%% zalecenie na stronie wydziałowej
+%%%%%%%% było 1.25cm i wyglądało jakoś 
+%%%%%%%% śmiesznie duże, więc spłoszony nieco
+%%%%%%%% wpisałem 1cm, ale uważny czytelnik już
+%%%%%%%% zapewne się domyśli, że podmiana napisu 
+%%%%%%%% =1cm na =1.25cm sprawi, że wcięcia na początku
+%%%%%%%% akapitu ustawią się na (nieco przydużą)
+%%%%%%%% wartość 1.25cm 
+
+\parindent=1cm
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%% tu pewne poluzowanie rozmieszczenia elementów tabelek
+%%%%% możecie sobie poeksperymentować, by dopasować do swych
+%%%%% gustów, a przede wszystkim gustów promotorów (promotorek)
+  \tabcolsep=4mm          
+  %\renewcommand\arraystretch{1.3}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+%%%%%%%%% teraz żywa pagina (aka 'running headline') i~numerowanie stron
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%na górze mają być śródtytuły, na dole (po stronie zewneętrznej)
+%%%%%numery stron. Poszedłem kapkę dalej i~na stronach ropoczynających
+%%%%%rozdział nie ma paginy (górki).
+%%%%% Oczywiście jeśli ostatnia strona
+%%%%% jest pusta (uzupełnia jeno parzystość) to tam żadnej stopki ani 
+%%%%% górki byc mnie może - ma być pusta.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\pagestyle{fancy}
+\fancyhead{}% oczyszczenie
+\fancyhead[RO]{\rightmark} %% na nieparzystych 'podległe' śródtytuły
+\fancyhead[LE]{\leftmark} %% na parzystych 'ważniejsze'
+\fancyfoot{}% oczyszczenie
+\fancyfoot[RO,LE]{\arabic{page}}  %% numer na dole (po prawej na
+%% nieparzystych, po lewej na parzystych)
+\renewcommand\headrulewidth{0.4pt} %%% cienka hrulka oddzielająca paginę
+                                    %%% od kolumny tekstu
+\fancypagestyle{closing}{%%%%%% to styl dla stron zamykających rozdział
+\fancyhead{}% oczyszczenie
+\fancyhead[RO]{\rightmark} %% na nieparzystych 'podległe'
+\fancyhead[LE]{\leftmark} %% na parzystych 'ważniejsze'
+\fancyfoot{}% oczyszczenie
+\fancyfoot[RO,LE]{\arabic{page}}  %% numer na dole (po prawej na
+                                  %% powyższą linijkę usuń jeśli nie
+				  %% chcesz numerów na niepełnych
+				  %% kolumnach (zamykających rozdział)
+\renewcommand\headrulewidth{0.4pt}
+}
+\fancypagestyle{opening}{%%% styl stron rozpoczynających rozdział
+\fancyhead{}% oczyszczenie
+\fancyfoot{}% oczyszczenie
+\fancyfoot[RO,LE]{\arabic{page}}  %% numer na dole (po prawej na
+\renewcommand\headrulewidth{0pt}
+}
+\fancypagestyle{plain}{%%%% styl zwykły, niektóre konstrukcje
+                       %%%% (typu \titlepage, którego ja tu nie używam
+                       %%%% ale może są jakieś inne o których nawet nie chce 
+                       %%% mi się myśleć, więc dla spokoju robię to po swojemu
+\fancyhead{}% oczyszczenie
+\fancyfoot{}% oczyszczenie
+\fancyfoot[RO,LE]{\arabic{page}}  %% numer na dole (po prawej na
+\renewcommand\headrulewidth{0pt}
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% lekka modyfikcja 'markow' do paginy
+%%% uznalem, ze jesli ktos nie da \section (np we wstepnie czy
+%%% podsumowaniu to niech na obu sronach w~paginie pojawia sie tytuł
+%%% chaptera, bo standardowo, to na nieparzystej stronie w takiej sytuacji
+%%% nad górną linią ziałaby pustka, co mogłoby wprowadzać konsternację
+\makeatletter
+    \def\chaptermark#1{%
+      \markboth{%
+        \ifHeadingNumbered
+     \if@mainmatter
+     \@chapapp\
+            \thechapter.\enspace
+          \fi
+        \fi
+        #1}{%
+        \ifHeadingNumbered
+     \if@mainmatter
+     \@chapapp\
+            \thechapter.\enspace
+          \fi
+        \fi
+        #1%
+	}}%
+    \def\sectionmark#1{%
+      \markright{%
+        \ifHeadingNumbered \thesection.\enspace \fi
+        #1}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%% wielkości czcionek dla chapter i~section
+%%%%%%%%%%%% 16 dla rozdziału, 14 dla podrozdziału - te domyślne
+%%%%%%%%%%%% w klasie mwbk były całkiem ładne, ale żeby nie było
+%%%%%%%%%%%% że nie potrafię ustawić
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\SetSectionFormatting[breakbefore,wholewidth]{chapter}
+        {0\p@}
+        {\FormatRigidChapterHeading{6.4\baselineskip}{12\p@}%
+	{\large\@chapapp\space}{\fontsize{16}{19}\selectfont}}
+        {1.6\baselineskip}
+\SetSectionFormatting{section}
+        {24\p@\@plus5\p@\@minus2\p@}
+	{\FormatHangHeading{\fontsize{14}{16}\selectfont}}
+        {10\p@\@plus3\p@}
+\makeatother	
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%% jakies inne pomocnicze definicje, ja na przykład lubię
+% \R
+%%%%%%%%%%%%%%%%%%%%%%%5
+%%%%%%%%%%%%%%%%%%%%%%%
+%%%% tak naprawdę są t potrzebne tylko po to
+%%%% by zadziałały przykłady poniżej w tekście
+%%%% które w sposób dość losowy zostały 
+%%%% pobrane z jakichś moich starych plików
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% w realnej pracy te poniższe śmieci możecie oczywiście
+%%%% usunąć
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newcommand\R{\mathbb{R}}
+\newcommand{\ff}{\mathbf{f}}
+\newcommand{\hh}{\mathbf{h}}
+\newcommand{\xx}{\mathbf{x}}
+\newcommand{\yy}{\mathbf{y}}
+\newcommand{\zz}{\mathbf{z}}
+\newcommand{\gggg}{\mathbf{g}}
+\newcommand{\skalar}[2]{\pmb{\langle}#1,#2\pmb{\rangle}}
+%%%%%%%%%%%% koniec tych dodatkowych definicji
+
+%%%%%% trocę więcej ``luzu'' przy rozmieszczaniu {fgur} i~{table}
+
+ \renewcommand{\topfraction}{0.9}	% max fraction of floats at top
+    \renewcommand{\bottomfraction}{0.8}	% max fraction of floats at bottom
+    %   Parameters for TEXT pages (not float pages):
+    \setcounter{topnumber}{2}
+    \setcounter{bottomnumber}{2}
+    \setcounter{totalnumber}{4}     % 2 may work better
+    \setcounter{dbltopnumber}{2}    % for 2-column pages
+    \renewcommand{\dbltopfraction}{0.9}	% fit big float above 2-col. text
+    \renewcommand{\textfraction}{0.07}	% allow minimal text w. figs
+    %   Parameters for FLOAT pages (not text pages):
+    \renewcommand{\floatpagefraction}{0.7}	% require fuller float pages
+    % N.B.: floatpagefraction MUST be less than topfraction !!
+    \renewcommand{\dblfloatpagefraction}{0.7}	% require fuller float pages
+    % remember to use [htp] or [htpb] for placement
+
+    
+%%% DWA proste polecenia służące do ujednolicenia podawania źródeł przy rysunkach i~tabelkach    
+    
+    \newcommand\zrodlo[1]{\par\vspace{-3mm}{\small\textit{Źródło: }#1 }}
+    \newcommand\zrodlotab[1]{{\par\vspace{2mm}\small\textit{Źródło: }#1 }}
+
+\raggedbottom   %%% to znaczy, że nie będzie siłowego wyrównywania typowych
+                %%     stron do jednakowej wysokości
+
+\linespread{1.3}
