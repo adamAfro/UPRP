@@ -99,13 +99,20 @@ def Pull(storage:Storage, assignpath:str,
        .agg({'assignee': 'max', 'applicant': 'max', 'inventor': 'max', 
              'value': ' '.join }).reset_index()
 
+ #Same'name-1'doc
+  Y['city'] = Y['city'].replace({"BD": None})
+  Y = Y.groupby(['doc', 'value']).agg({ 'id': 'min',
+                                        'city': 'first', #utrata małej części danych
+                                        'assignee': 'max',
+                                        'applicant': 'max',
+                                        'inventor': 'max' }).reset_index()
+
  #Concat'val
   Y = Y.set_index('id').drop_duplicates()
   assert { 'id' }.issubset(Y.index.names) and Y.index.is_unique
-  assert { 'doc', 'value', 'city' }.issubset(Y.columns)
-
-  if (X.duplicated(['doc', 'value']).sum() > 0):
-    Warning("X.duplicated(['doc', 'value']).sum() > 0")
+  assert Y.duplicated(['doc', 'value']).sum() == 0
+  assert { 'doc', 'value', 'city', 
+           'assignee', 'applicant', 'inventor' }.issubset(Y.columns)
 
   return Y
 
@@ -113,18 +120,10 @@ def Pull(storage:Storage, assignpath:str,
 def Textual(pulled:pandas.DataFrame, nameset:pandas.DataFrame):
 
   X = pulled
-
-  X['city'] = X['city'].replace({"BD": None})#TODO do `pull`
-  X = X.reset_index().groupby(['doc', 'value'])\
-       .agg({ 'id': 'min', 'city': 'first',
-                                   #^utrata małej części danych
-              'assignee': 'max', 'applicant': 'max', 'inventor': 'max' })
-  
-  X = X.reset_index().set_index('id')
-
   assert { 'id' }.issubset(X.index.names) and X.index.is_unique
-  assert { 'doc', 'value', 'city' }.issubset(X.columns)
   assert X.duplicated(['doc', 'value']).sum() == 0
+  assert { 'doc', 'value', 'city', 
+           'assignee', 'applicant', 'inventor' }.issubset(X.columns)
 
   P, O = classify(X, nameset)
   try: O = O.drop(columns=['role', 'value'])
@@ -334,6 +333,10 @@ def Simcalc(affilated:pandas.DataFrame, qcount:str):
 
   X = X[ X[k0].isin(X.value_counts(k0).to_frame().query(qcount).index) ]
 
+  z = X.nameset.apply(len) < 2
+  if z.sum() > 0: Warning('(X.nameset.apply(len) < 2).sum() > 0')
+  X = X[ z ]
+
  #Nameset
   X = X.reset_index().set_index(k0)
   Y = X.join(X, lsuffix='L', rsuffix='R')
@@ -420,10 +423,9 @@ GT = Spacetime(N, fP['UPRP']['patent-geoloc'],
 aG = Affilategeo(GT).map('registry/affilate-geo.pkl')
 aN = Affilatenames(aG).map('registry/affilate.pkl')
 
-S00 = Simcalc(aN, qcount='count  < 20')
-S20 = Simcalc(aN, qcount='count >= 20 & count  < 50')
-S50 = Simcalc(aN, qcount='count >= 50')
-S = Flow('Simcalc', lambda x: pandas.concat(x), args=[S00, S20, S50]).map('sim.pkl')
+S000 = Simcalc(aN, qcount='count  < 100').map('registry/sim-000.pkl')
+S100 = Simcalc(aN, qcount='count >= 100').map('registry/sim-100.pkl')
+S = Flow('Simcalc merge', lambda *x: pandas.concat(x), args=[S000, S100]).map('registry/sim.pkl')
 
 E = Entity(sim=S, all=GT).map('registry/entity.pkl')
 
