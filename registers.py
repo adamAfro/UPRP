@@ -468,65 +468,26 @@ from config import data as D
 from profiling import flow as f0
 from patent import flow as fP
 
-flow = { k: dict() for k in D.keys() }
+N0 = Nameclsf({ D['UPRP']+'/assignement.yaml':   f0['UPRP']['profiling'],
+                D['Lens']+'/assignement.yaml':   f0['Lens']['profiling'],
+                D['Google']+'/assignement.yaml': f0['Google']['profiling'] }).map('registry/names.pkl')
 
-flow['nameread'] = Nameclsf({ D['UPRP']+'/assignement.yaml': f0['UPRP']['profiling'],
-                              D['Lens']+'/assignement.yaml': f0['Lens']['profiling'],
-                              D['Google']+'/assignement.yaml': f0['Google']['profiling'] }).map('registry/names.pkl')
+X = Pull(f0['UPRP']['profiling'], assignpath=D['UPRP']+'/assignement.yaml').map('registry/pulled.pkl')
 
-flow['registry-pull'] = Pull(f0['UPRP']['profiling'], assignpath=D['UPRP']+'/assignement.yaml').map('registry/pulled.pkl')
+N = Textual(X, nameset=N0).map('registry/textual.pkl')
 
-flow['registry-textual'] = Textual(flow['registry-pull'], nameset=flow['nameread']).map('registry/textual.pkl')
+GT = Spacetime(N, fP['UPRP']['patent-geoloc'], 
+                  fP['UPRP']['patent-event'], 
+                  fP['UPRP']['patent-classify']).map('registry/spacetime.pkl')
 
-flow['registry-spacetime'] = Spacetime(flow['registry-textual'], 
-                                       fP['UPRP']['patent-geoloc'], 
-                                       fP['UPRP']['patent-event'], 
-                                       fP['UPRP']['patent-classify']).map('registry/spacetime.pkl')
+aG = Affilategeo(GT).map('registry/affilate-geo.pkl')
+aN = Affilatenames(aG).map('registry/affilate.pkl')
 
-flow['affilate-geo'] = Affilategeo(flow['registry-spacetime']).map('registry/affilate-geo.pkl')
-flow['affilate'] = Affilatenames(flow['affilate-geo']).map('registry/affilate.pkl')
+S00 = Simcalc(aN, qcount='count  < 20')
+S20 = Simcalc(aN, qcount='count >= 20 & count  < 50')
+S50 = Simcalc(aN, qcount='count >= 50')
+S = Flow('Simcalc', lambda x: pandas.concat(x), args=[S00, S20, S50]).map('sim.pkl')
 
-flow['simcalc-00'] = Simcalc(flow['affilate'], qcount='count  < 10')
-flow['simcalc-10'] = Simcalc(flow['affilate'], qcount='count >= 10 & count  < 50')
-flow['simcalc-50'] = Simcalc(flow['affilate'], qcount='count >= 50')
-flow['simcalc'] = Flow('Simcalc', lambda x: pandas.concat(x), 
-                        args=[flow['simcalc-00'], 
-                              flow['simcalc-10'],
-                              flow['simcalc-50']]).map('sim.pkl')
+E = Entity(sim=S, all=GT).map('registry/entity.pkl')
 
-flow['entity'] = Entity(sim=flow['simcalc'], all=flow['registry-spacetime']).map('registry/entity.pkl')
-
-flow['self-entity-geoloc'] = Selfloc.fill(flow['entity'], group='entity', loceval='identity')
-flow['self-doc-geoloc'] = Selfloc.fill(flow['self-entity-geoloc'], group='doc', loceval='registry/affilation')
-
-@Flow.From()
-def Geobackprop(entities:pandas.DataFrame):
-
-  X = entities
-  n = X['lat'].isna().sum()
-
-  while(n > 0):
-
-    X = flow['self-entity-geoloc'].callback(X, group='entity', loceval='identity')
-    d = n - X['lat'].isna().sum()
-    n = n - d
-
-    if d == 0: break
-    print(-d, "geo NA")
-
-    A = flow['affilate'].callback(X)
-
-    S00 = flow['simcalc-00'].callback(A, qcount='count  < 10')
-    S10 = flow['simcalc-10'].callback(A, qcount='count >= 10 & count  < 50')
-    S50 = flow['simcalc-50'].callback(A, qcount='count >= 50')
-    S = flow['simcalc'].callback([S00, S10, S50])
-
-    X = flow['entity'].callback(S, X)
-
-  return X
-
-flow['geobackprop'] = Geobackprop(flow['entity']).map('registry/geobackprop.pkl')
-
-flow['geobackprop-self-doc-geoloc'] = Selfloc.fill(flow['geobackprop'], group='doc', loceval='registry/affilation')
-
-flow['geoloc-eval'] = Selfloc.evalplot(flow['self-doc-geoloc']).map('docs/insight-img/registers/geoloc-eval.png')
+flow = { 'entity': E }
