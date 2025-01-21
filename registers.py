@@ -1,14 +1,9 @@
 import pandas, yaml, numpy
 from lib.storage import Storage
-from lib.name import mapnames, classify
-from lib.flow import Flow, ImgFlow
+from lib.name import mapnames
+from lib.flow import Flow
 import matplotlib.pyplot as plt
-from util import Colr, Cmap, Annot, strnorm
-import geopandas as gpd
-import geoplot as gplt
-import geoplot.crs as gcrs
-import seaborn as sns
-from matplotlib.ticker import MaxNLocator
+from util import strnorm
 
 pandas.set_option('future.no_silent_downcasting', True)
 
@@ -96,26 +91,21 @@ def Pull(storage:Storage, assignpath:str,
 
  #Roles
   Y[['assignee', 'applicant', 'inventor']] = Y[['assignee', 'applicant', 'inventor']].fillna(False)
-  Y = Y.reset_index().groupby(['doc', 'id', 'city'])\
+  Y = Y.reset_index().groupby(['doc', 'id', 'city'], dropna=False)\
        .agg({'assignee': 'max', 'applicant': 'max', 'inventor': 'max', 
              'value': ' '.join }).reset_index()
-
- #Same'name-1'doc
-  Y['city'] = Y['city'].replace({"BD": None})
-  Y = Y.groupby(['doc', 'value']).agg({ 'id': 'min',
-                                        'city': 'first', #utrata małej części danych
-                                        'assignee': 'max',
-                                        'applicant': 'max',
-                                        'inventor': 'max' }).reset_index()
 
  #Normalize
   Y['city'] = Y['city'].apply(strnorm, dropinter=True, dropdigit=True)
   Y['value'] = Y['value'].apply(strnorm, dropinter=False, dropdigit=False)
 
+ #Traktowanie powtórzeń wynikających z nazw miast jako inne rejestry
+  Y = Y.drop_duplicates(['doc', 'value', 'city'])
+
  #Concat'val
+  Y['id'] = numpy.arange(Y.shape[0])
   Y = Y.set_index('id').drop_duplicates()
   assert { 'id' }.issubset(Y.index.names) and Y.index.is_unique
-  assert Y.duplicated(['doc', 'value']).sum() == 0
   assert { 'doc', 'value', 'city', 
            'assignee', 'applicant', 'inventor' }.issubset(Y.columns)
 
@@ -125,105 +115,93 @@ def Pull(storage:Storage, assignpath:str,
 def Textual(pulled:pandas.DataFrame, nameset:pandas.DataFrame):
 
   X = pulled
+  M = nameset
+
   assert { 'id' }.issubset(X.index.names) and X.index.is_unique
-  assert X.duplicated(['doc', 'value']).sum() == 0
+  assert X.duplicated(['doc', 'value', 'city']).sum() == 0
   assert { 'doc', 'value', 'city', 
            'assignee', 'applicant', 'inventor' }.issubset(X.columns)
 
-  P, O = classify(X, nameset)
-  try: O = O.drop(columns=['role', 'value'])
-  except KeyError: pass
+ #exact
+  X = X.reset_index()
+  E = X.set_index('value').join(M, how='inner')
+  E = E.reset_index().set_index(['doc', 'id', 'city'])
+  X = X.set_index(['doc', 'id', 'city']).drop(E.index)
 
-  P = P.reset_index().drop(columns='id')
-  P.index = numpy.arange(P.shape[0])
-  P.index.name = 'id'
-  P['organisation'] = False
-  assert { 'id' }.issubset(P.index.names)
-  assert { 'doc', 'norm', 'firstnames', 'lastnames', 'city', 'unclear', 
-          'assignee', 'applicant', 'inventor' }.issubset(P.columns)
+ #split
+  X['value'] = X['value'].apply(strnorm, dropinter=True, dropdigit=True)
+  X['nword'] = X['value'].str.count(' ') + 1
+  X['value'] = X['value'].str.split(' ')
 
-  O = O.reset_index().drop(columns='id')
-  O.index = numpy.arange(P.index.max()+1, P.index.max()+1+O.shape[0])
-  O.index.name = 'id'
+ #word
+  W = X.reset_index().explode('value')
+  W = W.set_index('value').join(M[ M.isin(['firstname', 'lastname', 'ambigname']) ], how='inner')
+  nW = W.groupby(['doc', 'id', 'city']).agg({'nword': 'first', 'role': 'count'})
+  W = nW[ nW['nword'] == nW['role'] ][[]].join(W.reset_index().set_index(['doc', 'id', 'city']), how='inner')
+  X = X.drop('nword', axis=1).drop(W.index)
+  X['value'] = X['value'].apply(' '.join)
+  W = W.drop('nword', axis=1)
+
+  Y = pandas.concat([E, W]).reset_index().drop_duplicates(['doc', 'city', 'value'])
+
+ #org
+  O = Y[ Y['role'] == 'orgname' ]
+  O = O.set_index('id').drop('role', axis=1)
   O['organisation'] = True
-  assert { 'id' }.issubset(O.index.names)
-  assert { 'doc', 'norm', 'organisation',
-          'assignee', 'applicant', 'inventor' }.issubset(O.columns)
 
-  Y = pandas.concat([P, O])
+  assert { 'id' }.issubset(O.index.names)
+  assert { 'organisation'  }.issubset(O.columns)
+
+ #people
+  agg = lambda X: X.agg({'value':' '.join, **{k:'max' for k in ['assignee', 'inventor', 'applicant'] }})
+  P  = Y[ Y['role'] !=   'orgname' ].groupby(['doc', 'id', 'city']).pipe(agg)
+  Nf = Y[ Y['role'] == 'firstname' ].groupby(['doc', 'id', 'city']).pipe(agg)['value'].rename('firstnames')
+  Nl = Y[ Y['role'] ==  'lastname' ].groupby(['doc', 'id', 'city']).pipe(agg)['value'].rename('lastnames')
+  P = P.join(Nf, how='left').join(Nl, how='left').reset_index().set_index('id')
+  P['organisation'] = False
+
+  assert { 'id' }.issubset(P.index.names)
+  assert { 'organisation', 'firstnames', 'lastnames' }.issubset(P.columns)
+
+  X = X.reset_index().set_index('id')
+  X = X.loc[X.index.difference(P.index).difference(O.index)]
+  Y = pandas.concat([P, O, X])
 
   assert { 'id' }.issubset(Y.index.names) and Y.index.is_unique
-  assert { 'doc', 'norm', 'firstnames', 'lastnames', 'city', 'unclear', 
+  assert { 'doc', 'value', 'firstnames', 'lastnames', 'city', 
            'organisation', 'assignee', 'applicant', 'inventor' }.issubset(Y.columns)
 
   return Y
 
-class Spacetime:
-
-  @Flow.From()
-  def arrange(textual:pandas.DataFrame, 
+@Flow.From()
+def Spacetime(textual:pandas.DataFrame, 
               geoloc:pandas.DataFrame, 
               event:pandas.DataFrame, 
               clsf:pandas.DataFrame):
 
-    X = textual
+  X = textual
 
-    T = event
-    X = X.reset_index().set_index('doc')\
-        .join(T.groupby('doc')['delay'].min(), how='left').reset_index()
+  T = event
+  X = X.reset_index().set_index('doc')\
+      .join(T.groupby('doc')['delay'].min(), how='left').reset_index()
 
-    G = geoloc.set_index('city', append=True)
-    X = X.set_index(['doc', 'city']).join(G, how='left').reset_index()
+  G = geoloc.set_index('city', append=True)
+  X = X.set_index(['doc', 'city']).join(G, how='left').reset_index()
 
-    X = X.set_index('doc')
-    C = clsf
-    C['clsf'] = C['section']
-    C = pandas.get_dummies(C[['clsf']], prefix_sep='-')
-    C = C.groupby('doc').sum()
-    X = X.join(C, how='left')
+  X = X.set_index('doc')
+  C = clsf
+  C['clsf'] = C['section']
+  C = pandas.get_dummies(C[['clsf']], prefix_sep='-')
+  C = C.groupby('doc').sum()
+  X = X.join(C, how='left')
 
-    X = X.reset_index().set_index('id')
+  X = X.reset_index().set_index('id')
 
-    assert { 'doc', 'lat', 'lon', 'delay', 'organisation' }.issubset(X.columns)
-    assert any([ c.startswith('clsf-') for c in X.columns ])
-    assert { 'id' }.issubset(X.index.names)
+  assert { 'doc', 'lat', 'lon', 'delay', 'organisation' }.issubset(X.columns)
+  assert any([ c.startswith('clsf-') for c in X.columns ])
+  assert { 'id' }.issubset(X.index.names)
 
-    return X
-
-  def TplotNA(spacetime:pandas.DataFrame):
-
-    X = spacetime
-
-    assert { 'id' }.issubset(X.index.names)
-    assert { 'doc', 'lat', 'lon' }.issubset(X.columns)
-
-    K = ['lokalizacja', 'geolokalizacja']
-    f, A = plt.subplots(len(K), 3, tight_layout=True, sharex=True, sharey=True)
-
-    X['delay'] = numpy.ceil(X['delay']/365)*365
-    X['delay'] = X['delay'].fillna(0).astype(int)
-    for j, (g, g0) in enumerate([('wnioskodawca', 'assignee'),
-                               ('zgłaszający', 'applicant'),
-                               ('wynalazca', 'inventor')]):
-
-      A[0, j].set_title(f'{g}')
-
-      Y = X[ X[g0] == True ]
-      Y = Y.rename(columns={ 'city': 'lokalizacja',
-                             'lat': 'geolokalizacja' })
-      Y = Y.groupby('delay')
-
-      for i, k in enumerate(K):
-
-        N = Y[k].count()
-        N0 = Y[k].size() - N
-
-        pandas.DataFrame({'Dane': N, 'Braki': N0 })\
-              .plot.bar(stacked=True, ylabel=k, rot=0,
-                        xlabel='dzień początkowy okresu 365 dni', color=[Colr.good, Colr.warning], ax=A[i, j])
-        A[i, j].xaxis.set_major_locator(MaxNLocator(5))
-
-    return f
+  return X
 
 @Flow.From()
 def Affilategeo(registry:pandas.DataFrame):
@@ -278,55 +256,6 @@ def Affilatenames(registry:pandas.DataFrame):
   assert { 'id' }.issubset(Y.index.names)
   assert Y.index.is_unique
   return Y
-
-def affilplot(affilated:pandas.DataFrame):
-
-  X = affilated
-
-  assert { 'id' }.issubset(X.index.names)
-  assert { 'doc', 'organisation', 'geoaffil', 'nameaffil' }.issubset(X.columns)
-
-  f, A = plt.subplots(2, 2, tight_layout=True)
-
-  X['Nnameaffil'] = X['nameaffil'].apply(len)
-  X['Ngeoaffil'] = X['geoaffil'].apply(len)
-  X['Nnameset'] = X['nameset'].apply(len)
-  X.loc[X['organisation'], 'Nnameset'] = X['nameset'].apply(lambda s: len(next(iter(s))) if s else 0)
-
-  X['organisation'].replace({ True: 'organizacje', False: 'osoby' }).value_counts()\
-   .plot.pie(title=f'Podmioty rozpoznane jako\nosoby i organizacje (n={X.shape[0]})', 
-             ylabel='', autopct='%1.1f%%', ax=A[0,0])
-
-  nN = X.value_counts(['Nnameset', 'organisation']).unstack().sort_index()
-  nN.index.name = 'liczba nazw'
-  nN.columns.name = 'typ podmiotu'
-  nN.columns = nN.columns.map({ False: 'osoby', True: 'organizacje' })
-  nN = nN.fillna(0).astype(int)
-  nN = nN.groupby(lambda x: x if x <= 10 else '10+'
-                              if x <= 20 else '20+'
-                              if x <= 50 else '50+'
-                              if x <= 100 else '99+').sum()
-  nN.plot.bar(title='Liczba nazw w zbiorze imienniczym\npodmiotów rozpoznanych jako osoby i organizacje', ax=A[0,1])
-
-  aN = X.value_counts(['Nnameaffil', 'organisation']).unstack().sort_index()
-  aN.index.name = 'liczba powiązań'
-  aN.columns.name = 'typ podmiotu'
-  aN.columns = aN.columns.map({ False: 'osoby', True: 'organizacje' })
-  aN = aN.groupby(lambda x: x if x <= 10 else '10+'
-                              if x <= 20 else '20+').sum()
-  aN.plot.bar(title='Liczba powiązań imienniczych\nwynikających z udziału w patentowaniu', ax=A[1,0])
-
-  aG = X.value_counts(['Ngeoaffil', 'organisation']).unstack().sort_index()
-  aG.index.name = 'liczba powiązań'
-  aG.columns.name = 'typ podmiotu'
-  aG.columns = aG.columns.map({ False: 'osoby', True: 'organizacje' })
-  aG.plot.bar(title='Liczba powiązań geolokacyjnych\nwynikających z udziału w patentowaniu', ax=A[1,1])
-
-  Annot.bar(A[0,1], nbarfix=10)
-  Annot.bar(A[1,0])
-  Annot.bar(A[1,1])
-
-  return f
 
 @Flow.From('calculating similarity')
 def Simcalc(affilated:pandas.DataFrame, qcount:str):
@@ -395,48 +324,6 @@ def Simcalc(affilated:pandas.DataFrame, qcount:str):
   assert { i+'L', i+'R' }.issubset(S.index.names)
   return S
 
-def simplot(sim:pandas.DataFrame):
-
-  R = sim
-
-  assert { 'id' }.issubset(R.index.names)
-  assert { 'nameaffil', 'geoaffil', 
-           'clsfmatch', 'clsfdiff', 
-           'geomatch' }.issubset(R.columns)
-
-  f, A = plt.subplot_mosaic([['nameaffil', 'nameaffil'], ['geoaffil', 'clsf']],
-                            tight_layout=True)
-
-  nA = R.value_counts(['nameaffil', 'geomatch']).unstack().sort_index()
-  nA = nA.groupby(lambda x: x if x <= 10 else '10+').sum()
-  nA.index.name = 'liczba zgodności'
-  nA.columns.name = 'Zgodność\ngeolokalizacyjna'
-  nA.columns = nA.columns.map({ False: 'brak', True: 'całkowita' })
-  nA = nA.fillna(0).astype(int)
-  nA.plot.bar(title='Liczba zgodnych zbiorów afiliacyjno-imieniczych', ax=A['nameaffil'])
-
-  nG = R.value_counts(['geoaffil', 'geomatch']).unstack().sort_index()
-  nG = nG.groupby(lambda x: x if x <= 10 else '10+').sum()
-  nG.index.name = 'liczba zgodności'
-  nG.columns.name = 'Zgodność\ngeolokalizacyjna'
-  nG.columns = nG.columns.map({ False: 'brak', True: 'całkowita' })
-  nG = nG.fillna(0).astype(int)
-  nG.plot.bar(title='Liczba zgodnych zbiorów\nafiliacyjno-geolokacyjnych', ax=A['geoaffil'])
-
-  nC = R.value_counts(['clsfmatch', 'clsfdiff', 'geomatch']).unstack().sort_index()
-  nC.index.name = 'liczba zgodności'
-  nC.columns.name = 'Zgodność\ngeolokalizacyjna'
-  nC.columns = nC.columns.map({ False: 'brak', True: 'całkowita' })
-  nC = nC.fillna(0).astype(int)
-  nC.plot.bar(title='Liczba zgodnych zbiorów\nklasyfikacyjnych',
-              xlabel='ilość klasyfikacji (zgodne, niezgodne)', ax=A['clsf'])
-
-  Annot.bar(A['nameaffil'])
-  Annot.bar(A['geoaffil'])
-  Annot.bar(A['clsf'], nbarfix=10)
-
-  return f
-
 class Entity:
 
   @Flow.From()
@@ -502,7 +389,7 @@ X = Pull(f0['UPRP']['profiling'], assignpath=D['UPRP']+'/assignement.yaml').map(
 
 N = Textual(X, nameset=N0).map('registry/textual.pkl')
 
-GT = Spacetime.arrange(N, fP['UPRP']['patent-geoloc'], 
+GT = Spacetime(N, fP['UPRP']['patent-geoloc'], 
                           fP['UPRP']['patent-event'], 
                           fP['UPRP']['patent-classify']).map('registry/spacetime.pkl')
 
@@ -515,4 +402,4 @@ S = Flow('Simcalc merge', lambda *x: pandas.concat(x), args=[S000, S100]).map('r
 
 E = Entity.arrange(sim=S, all=GT).map('registry/entity.pkl')
 
-flow = { 'entity': E }
+flow = { 'entity': E, 'rpull': X }

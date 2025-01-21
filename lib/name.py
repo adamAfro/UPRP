@@ -1,64 +1,5 @@
-import pandas, unicodedata
-
-def classify(entries:pandas.DataFrame, namesmap:pandas.DataFrame,
-
-             I = ['doc', 'id'],
-
-             v0: str = 'value',
-             n:  str = 'nword',
-
-             v: str = 'norm',
-             x: str = 'role',
-
-             lO:str = 'orgname',
-             l1:str = 'firstname',
-             l2:str = 'lastname',
-             lA:str = 'ambigname',
-
-             k1:str = 'firstnames',
-             k2:str = 'lastnames',
-             kU:str = 'unclear',
-             kM:list[str] = ['assignee', 'inventor', 'applicant'],
-             K:list[str] = []):
-  
-  assert isinstance(namesmap, pandas.Series)
-
-  X = entries
-  M = namesmap
-
-  X = X.reset_index().drop_duplicates([I[0], v0])
-
- #Exact
-  E = X.reset_index().set_index(v).join(M, how='inner')
-  E = E.reset_index().set_index(I)
-  X = X.set_index(I).drop(E.index)
-
-  X[n] = X[v].str.count(' ') + 1
-  X[v] = X[v].str.split(' ')
-
- #Words
-  W = X.reset_index().drop(v0, axis=1).explode(v)
-  W = W.set_index(v).join(M[ M.isin([l1, l2, lA]) ], how='inner')
-  nW = W.groupby(I).agg({n: 'first', x: 'count'})
-  W = nW[ nW[n] == nW[x] ][[]].join(W.reset_index().set_index(I), how='inner')
-  X = X.drop([v, n], axis=1).drop(W.index)
-  W = W.drop(n, axis=1)
-
-  Y = pandas.concat([E, W]).reset_index().drop_duplicates(I+[v])
-
- #Org
-  O = Y[ Y[x] == lO ]
-  O = O.set_index(I)[[v0, v, x]+K+kM]
-  O[kU] = False
-
- #People
-  P = Y[ Y[x] != lO ].groupby(I).agg({v:' '.join, **{k:'max' for k in kM }})
-  Nf = Y[ Y[x] == l1 ].groupby(I).agg({v:' '.join, **{k:'max' for k in kM }})[v].rename(k1)
-  Nl = Y[ Y[x] == l2 ].groupby(I).agg({v:' '.join, **{k:'max' for k in kM }})[v].rename(k2)
-  P = P.join(Nf, how='left').join(Nl, how='left')
-  P[kU] = False
-
-  return P, O
+import pandas
+from util import strnorm
 
 def mapnames(entries: pandas.DataFrame,
 
@@ -87,6 +28,8 @@ def mapnames(entries: pandas.DataFrame,
   Io0 = sum([X[v].str.contains(q) for q in orgkeysubstr])
   O0 = X[Io0 > 0][[v]]
   O0[y] = lO
+
+  X[v] = X[v].apply(strnorm, dropinter=True, dropdigit=True)
 
   O0 = O0[O0[v].str.len() > 1]
   X = X.loc[ X.index.difference(O0.index) ]
