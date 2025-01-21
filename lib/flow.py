@@ -1,12 +1,3 @@
-def notify(*message, sep=" "):#TODO: impl in Flow
-
-  import datetime, requests
-
-  message = str(datetime.datetime.now())+sep+sep.join(message)
-  D = dict(data=message.encode(encoding='utf-8'))
-  requests.post( "https://ntfy.sh/uprp_dev", **D )
-  print("notify", message, flush=True)
-
 class Flow():
 
   def __init__(self, name=str(None), callback=lambda x: x,
@@ -29,8 +20,17 @@ class Flow():
     self.triggered.append(f)
     return f
 
+  def notify(self, *message, sep=" "):
+
+    import datetime, requests
+
+    message = self.name+sep+str(datetime.datetime.now())+sep+sep.join(message)
+    D = dict(data=message.encode(encoding='utf-8'))
+    requests.post( "https://ntfy.sh/uprp_dev", **D )
+    self.info("notify", message)
+
   def info(self, *x):
-    if self.verbose: print(*x, f'({self.name})')
+    if self.verbose: print(*x, f'({self.name})', flush=True)
 
   def __call__(self, forced=False): return self.call(forced)
 
@@ -49,10 +49,17 @@ class Flow():
     kwargs = {k: Flow.lazyload(v) for k, v in self.kwargs.items()}
 
     self.info(f'call')
-    self.output = self.callback(*args, **kwargs)
+    try:
+      self.notify('start')
+      self.output = self.callback(*args, **kwargs)
+    except Exception as e:
+      self.notify(f'error: {e}')
+      raise e
+
     self.dump()
     for f in self.triggered:
       f.call(forced=True)
+
     return self.output
 
   def load(self):
@@ -149,26 +156,3 @@ class Flow():
 
       return wrapper
     return decorator
-
-class ImgFlow(Flow):
-
-  def From(name=str(None)):
-    return Flow.From(name, ImgFlow)
-
-  def __call__(self, forced=False): return self.call()
-  def call(self, forced=False): return super().call()
-
-  def fload(self, f0): return None
-  def fdump(self, f0, x):
-
-    import matplotlib.pyplot as plt
-    import os
-
-    if f0.endswith('.png'):
-      assert isinstance(x, plt.Figure)
-      os.makedirs(os.path.dirname(f0), exist_ok=True)
-      x.savefig(f0)
-      self.info(f'saved {f0}')
-      return
-
-    raise NotImplementedError()
