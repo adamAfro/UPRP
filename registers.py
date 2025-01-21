@@ -8,6 +8,7 @@ import geopandas as gpd
 import geoplot as gplt
 import geoplot.crs as gcrs
 import seaborn as sns
+from matplotlib.ticker import MaxNLocator
 
 pandas.set_option('future.no_silent_downcasting', True)
 
@@ -153,36 +154,72 @@ def Textual(pulled:pandas.DataFrame, nameset:pandas.DataFrame):
 
   return Y
 
-@Flow.From()
-def Spacetime(textual:pandas.DataFrame, 
+class Spacetime:
+
+  @Flow.From()
+  def arrange(textual:pandas.DataFrame, 
               geoloc:pandas.DataFrame, 
               event:pandas.DataFrame, 
               clsf:pandas.DataFrame):
 
-  X = textual
+    X = textual
 
-  T = event
-  X = X.reset_index().set_index('doc')\
-       .join(T.groupby('doc')['delay'].min(), how='left').reset_index()
+    T = event
+    X = X.reset_index().set_index('doc')\
+        .join(T.groupby('doc')['delay'].min(), how='left').reset_index()
 
-  G = geoloc.set_index('city', append=True)
-  X = X.set_index(['doc', 'city']).join(G, how='left').reset_index()
+    G = geoloc.set_index('city', append=True)
+    X = X.set_index(['doc', 'city']).join(G, how='left').reset_index()
 
-  X = X.set_index('doc')
-  C = clsf
-  C['clsf'] = C['section']
-  C = pandas.get_dummies(C[['clsf']], prefix_sep='-')
-  C = C.groupby('doc').sum()
-  X = X.join(C, how='left')
+    X = X.set_index('doc')
+    C = clsf
+    C['clsf'] = C['section']
+    C = pandas.get_dummies(C[['clsf']], prefix_sep='-')
+    C = C.groupby('doc').sum()
+    X = X.join(C, how='left')
 
-  X = X.reset_index().set_index('id')
+    X = X.reset_index().set_index('id')
 
-  assert { 'doc', 'lat', 'lon', 'delay', 'organisation' }.issubset(X.columns)
-  assert any([ c.startswith('clsf-') for c in X.columns ])
-  assert { 'id' }.issubset(X.index.names)
+    assert { 'doc', 'lat', 'lon', 'delay', 'organisation' }.issubset(X.columns)
+    assert any([ c.startswith('clsf-') for c in X.columns ])
+    assert { 'id' }.issubset(X.index.names)
 
-  return X
+    return X
 
+  def TplotNA(spacetime:pandas.DataFrame):
+
+    X = spacetime
+
+    assert { 'id' }.issubset(X.index.names)
+    assert { 'doc', 'lat', 'lon' }.issubset(X.columns)
+
+    K = ['lokalizacja', 'geolokalizacja']
+    f, A = plt.subplots(len(K), 3, tight_layout=True, sharex=True, sharey=True)
+
+    X['delay'] = numpy.ceil(X['delay']/365)*365
+    X['delay'] = X['delay'].fillna(0).astype(int)
+    for j, (g, g0) in enumerate([('wnioskodawca', 'assignee'),
+                               ('zgłaszający', 'applicant'),
+                               ('wynalazca', 'inventor')]):
+
+      A[0, j].set_title(f'{g}')
+
+      Y = X[ X[g0] == True ]
+      Y = Y.rename(columns={ 'city': 'lokalizacja',
+                             'lat': 'geolokalizacja' })
+      Y = Y.groupby('delay')
+
+      for i, k in enumerate(K):
+
+        N = Y[k].count()
+        N0 = Y[k].size() - N
+
+        pandas.DataFrame({'Dane': N, 'Braki': N0 })\
+              .plot.bar(stacked=True, ylabel=k, rot=0,
+                        xlabel='dzień początkowy okresu 365 dni', color=[Colr.good, Colr.warning], ax=A[i, j])
+        A[i, j].xaxis.set_major_locator(MaxNLocator(5))
+
+    return f
 
 @Flow.From()
 def Affilategeo(registry:pandas.DataFrame):
@@ -461,9 +498,9 @@ X = Pull(f0['UPRP']['profiling'], assignpath=D['UPRP']+'/assignement.yaml').map(
 
 N = Textual(X, nameset=N0).map('registry/textual.pkl')
 
-GT = Spacetime(N, fP['UPRP']['patent-geoloc'], 
-                  fP['UPRP']['patent-event'], 
-                  fP['UPRP']['patent-classify']).map('registry/spacetime.pkl')
+GT = Spacetime.arrange(N, fP['UPRP']['patent-geoloc'], 
+                          fP['UPRP']['patent-event'], 
+                          fP['UPRP']['patent-classify']).map('registry/spacetime.pkl')
 
 aG = Affilategeo(GT).map('registry/affilate-geo.pkl')
 aN = Affilatenames(aG).map('registry/affilate.pkl')
