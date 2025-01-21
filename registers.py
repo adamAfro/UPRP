@@ -3,7 +3,7 @@ from lib.storage import Storage
 from lib.name import mapnames, classify
 from lib.flow import Flow, ImgFlow
 import matplotlib.pyplot as plt
-from config import Colr, Cmap, Annot
+from config import Colr, Cmap, Annot, strnorm
 import geopandas as gpd
 import geoplot as gplt
 import geoplot.crs as gcrs
@@ -107,6 +107,10 @@ def Pull(storage:Storage, assignpath:str,
                                         'assignee': 'max',
                                         'applicant': 'max',
                                         'inventor': 'max' }).reset_index()
+
+ #Normalize
+  Y['city'] = Y['city'].apply(strnorm, dropinter=True, dropdigit=True)
+  Y['value'] = Y['value'].apply(strnorm, dropinter=False, dropdigit=False)
 
  #Concat'val
   Y = Y.set_index('id').drop_duplicates()

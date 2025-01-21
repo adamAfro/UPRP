@@ -1,16 +1,5 @@
 import pandas, unicodedata
 
-def normalize(entries:pandas.Series):
-
-  X = entries.copy()
-  X = X.str.upper()
-  X = X.str.replace(r'[\W\s]+', ' ', regex=True)
-  X = X.str.replace(r'\b(\w{1})\b', '', regex=True)
-  X = X.str.strip()
-  X = X.apply(lambda x: ''.join([c for c in unicodedata.normalize('NFKD', x)
-                                   if not unicodedata.combining(c)]))
-  return X
-
 def classify(entries:pandas.DataFrame, namesmap:pandas.DataFrame,
 
              I = ['doc', 'id'],
@@ -38,8 +27,6 @@ def classify(entries:pandas.DataFrame, namesmap:pandas.DataFrame,
   M = namesmap
 
   X = X.reset_index().drop_duplicates([I[0], v0])
-
-  X[v] = X[v0].pipe(normalize)
 
  #Exact
   E = X.reset_index().set_index(v).join(M, how='inner')
@@ -71,11 +58,6 @@ def classify(entries:pandas.DataFrame, namesmap:pandas.DataFrame,
   P = P.join(Nf, how='left').join(Nl, how='left')
   P[kU] = False
 
- #WORKAROUND: zawiera nazwy firm
-  X[v] = X[v0].pipe(normalize)
-  P = pandas.concat([X.drop(v0, axis=1), P]).sort_index()
-  P[kU] = P[kU].fillna(True)
-
   return P, O
 
 def mapnames(entries: pandas.DataFrame,
@@ -106,12 +88,9 @@ def mapnames(entries: pandas.DataFrame,
   O0 = X[Io0 > 0][[v]]
   O0[y] = lO
 
-  O0[v] = O0[v].pipe(normalize)
   O0 = O0[O0[v].str.len() > 1]
   X = X.loc[ X.index.difference(O0.index) ]
   Y = pandas.concat([Y, O0])
-
-  X[v] = X[v].pipe(normalize)
 
   for q in orgqueries:
 

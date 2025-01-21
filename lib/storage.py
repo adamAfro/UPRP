@@ -1,24 +1,5 @@
 from pandas import DataFrame, concat
 
-def strnorm(x):
-
-  import unicodedata, re
-
-  if not isinstance(x, str): return None
-  x = x.upper()
-  n = unicodedata.normalize('NFKD', x)
-  y = ''.join([c for c in n if not unicodedata.combining(c)])
-  
-  for a, b in {'Ą': 'A', 'Ć': 'C', 'Ę': 'E', 
-               'Ł': 'L', 'Ń': 'N', 'Ó': 'O', 
-               'Ś': 'S', 'Ź': 'Z', 'Ż': 'Z'}.items():
-
-      y = y.replace(a, b)
-
-  y = re.sub(r'[\s\W]+', ' ', y).strip()
-
-  return y
-
 class Storage:
 
   def __init__(self, name:str, data:dict[str, DataFrame],
@@ -50,9 +31,6 @@ class Storage:
 
     H = concat(H0)
     H['assignement'] = a
-
-    H['value'] = H['value'].apply(strnorm)
-    H.attrs['norm'] = strnorm
 
     return H
 

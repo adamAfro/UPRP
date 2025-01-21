@@ -4,6 +4,29 @@ data = { 'UPRP': 'api.uprp.gov.pl',
          'USPA': 'developer.uspto.gov/application',
          'Google': 'patents.google.com' }
 
+def strnorm(x, dropinter:bool, dropdigit:bool):
+
+  import unicodedata, re
+
+  if not isinstance(x, str): return None
+  x = x.upper()
+  n = unicodedata.normalize('NFKD', x)
+  y = ''.join([c for c in n if not unicodedata.combining(c)])
+  
+  for a, b in {'Ą': 'A', 'Ć': 'C', 'Ę': 'E', 
+               'Ł': 'L', 'Ń': 'N', 'Ó': 'O', 
+               'Ś': 'S', 'Ź': 'Z', 'Ż': 'Z'}.items():
+
+      y = y.replace(a, b)
+
+  if dropdigit:
+    y = re.sub(r'[\s\d]+', ' ', y)
+
+  if dropinter:
+    y = re.sub(r'[\s\W]+', ' ', y).strip()
+
+  return y
+
 class Colr:
 
   neutral = 'blue'

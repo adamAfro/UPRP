@@ -2,7 +2,7 @@ import pandas, yaml
 from lib.storage import Storage
 from lib.geo import closest
 from lib.flow import Flow
-
+from config import strnorm
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import MaxNLocator
@@ -189,27 +189,33 @@ class Classification:
 class Geoloc:
 
   @Flow.From()
-  def pull(storage:Storage, assignpath:str, geodata:pandas.DataFrame, codes:pandas.DataFrame):
+  def pull(storage:Storage, 
+           assignpath:str, 
+           geodata:pandas.DataFrame, 
+           codes:pandas.DataFrame,
+           NAstr = ['bd', '~']):
 
     S = storage
     with open(assignpath, 'r') as f:
       S.assignement = yaml.load(f, Loader=yaml.FullLoader)
 
     C = S.melt('city').drop(columns=['repo', 'col', 'frame', 'assignement'])
-    N = C.attrs['norm']
+    C = C[ ~ C['value'].isin(NAstr) ]
     C = C.drop_duplicates(subset=['doc', 'value'])
     C = C.set_index('doc')
     C = C['value'].str.split(',').explode()
     C = C.str.split(';').explode()
-    C = C.str.upper().str.replace(r'\W+', ' ', regex=True)
+
+   #Wyciąganie z zapisów kodów pocztowych
     C = C.str.extractall(r'((?:[^\d\W]|\s)+)')[0].rename('value').dropna()
-    C = C.str.upper().str.strip()
+
     C = C.reset_index().drop(columns='match')
+    C['value'] = C['value'].apply(strnorm, dropinter=True, dropdigit=True)
     C = C.set_index('value')
 
     L = geodata
     L = L[ L['type'] == 'miasto' ].copy()
-    L['city'] = L['city'].apply(N)
+    L['city'] = L['city'].apply(strnorm, dropinter=True, dropdigit=True)
 
     Y = C.join(L.set_index('city'), how='inner').reset_index()
     Y = Y.dropna(subset=['lat','lon']).dropna(axis=1)
