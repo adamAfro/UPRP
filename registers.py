@@ -239,6 +239,74 @@ def Affilatenames(registry:pandas.DataFrame):
   assert Y.index.is_unique
   return Y
 
+class Annot:
+
+  def bar(ax, nbarfix=2, rbarfix=0.02, fixh = 12):
+    H = []
+    R = ax.get_ylim()[1] - ax.get_ylim()[0]
+    for p in ax.patches:
+      h = p.get_height()
+      z = -1 if h > 0.5*R else 1
+      if h == 0: continue
+      T = (0, z*fixh)
+      for h0 in H:
+        if abs(h - h0) < rbarfix*R:
+          T = (0+T[0], fixh+T[1])
+      H = [h] + H[:nbarfix]
+      ax.annotate(f'{h}', (p.get_x() + p.get_width() / 2., h),
+                  bbox=dict(boxstyle="round,pad=0.3", edgecolor='black', facecolor='white', alpha=0.7),
+                  ha='center', va='center', xytext=T, textcoords='offset points',
+                  arrowprops=dict(arrowstyle='-', color='black', shrinkA=0, shrinkB=0))
+
+def affilplot(affilated:pandas.DataFrame):
+
+  X = affilated
+
+  assert { 'id' }.issubset(X.index.names)
+  assert { 'doc', 'organisation', 'geoaffil', 'nameaffil' }.issubset(X.columns)
+
+  f, A = plt.subplots(2, 2, tight_layout=True)
+
+  X['Nnameaffil'] = X['nameaffil'].apply(len)
+  X['Ngeoaffil'] = X['geoaffil'].apply(len)
+  X['Nnameset'] = X['nameset'].apply(len)
+  X.loc[X['organisation'], 'Nnameset'] = X['nameset'].apply(lambda s: len(next(iter(s))) if s else 0)
+
+  X['organisation'].replace({ True: 'organizacje', False: 'osoby' }).value_counts()\
+   .plot.pie(title=f'Podmioty rozpoznane jako\nosoby i organizacje (n={X.shape[0]})', 
+             ylabel='', autopct='%1.1f%%', ax=A[0,0])
+
+  nN = X.value_counts(['Nnameset', 'organisation']).unstack().sort_index()
+  nN.index.name = 'liczba nazw'
+  nN.columns.name = 'typ podmiotu'
+  nN.columns = nN.columns.map({ False: 'osoby', True: 'organizacje' })
+  nN = nN.fillna(0).astype(int)
+  nN = nN.groupby(lambda x: x if x <= 10 else '10+'
+                              if x <= 20 else '20+'
+                              if x <= 50 else '50+'
+                              if x <= 100 else '99+').sum()
+  nN.plot.bar(title='Liczba nazw w zbiorze imienniczym\npodmiotów rozpoznanych jako osoby i organizacje', ax=A[0,1])
+
+  aN = X.value_counts(['Nnameaffil', 'organisation']).unstack().sort_index()
+  aN.index.name = 'liczba powiązań'
+  aN.columns.name = 'typ podmiotu'
+  aN.columns = aN.columns.map({ False: 'osoby', True: 'organizacje' })
+  aN = aN.groupby(lambda x: x if x <= 10 else '10+'
+                              if x <= 20 else '20+').sum()
+  aN.plot.bar(title='Liczba powiązań imienniczych\nwynikających z udziału w patentowaniu', ax=A[1,0])
+
+  aG = X.value_counts(['Ngeoaffil', 'organisation']).unstack().sort_index()
+  aG.index.name = 'liczba powiązań'
+  aG.columns.name = 'typ podmiotu'
+  aG.columns = aG.columns.map({ False: 'osoby', True: 'organizacje' })
+  aG.plot.bar(title='Liczba powiązań geolokacyjnych\nwynikających z udziału w patentowaniu', ax=A[1,1])
+
+  Annot.bar(A[0,1], nbarfix=10)
+  Annot.bar(A[1,0])
+  Annot.bar(A[1,1])
+
+  return f
+
 @Flow.From('calculating similarity')
 def Simcalc(affilated:pandas.DataFrame, qcount:str):
 
