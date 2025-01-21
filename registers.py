@@ -373,6 +373,48 @@ def Simcalc(affilated:pandas.DataFrame, qcount:str):
   assert { i+'L', i+'R' }.issubset(S.index.names)
   return S
 
+def simplot(sim:pandas.DataFrame):
+
+  R = sim
+
+  assert { 'id' }.issubset(R.index.names)
+  assert { 'nameaffil', 'geoaffil', 
+           'clsfmatch', 'clsfdiff', 
+           'geomatch' }.issubset(R.columns)
+
+  f, A = plt.subplot_mosaic([['nameaffil', 'nameaffil'], ['geoaffil', 'clsf']],
+                            tight_layout=True)
+
+  nA = R.value_counts(['nameaffil', 'geomatch']).unstack().sort_index()
+  nA = nA.groupby(lambda x: x if x <= 10 else '10+').sum()
+  nA.index.name = 'liczba zgodności'
+  nA.columns.name = 'Zgodność\ngeolokalizacyjna'
+  nA.columns = nA.columns.map({ False: 'brak', True: 'całkowita' })
+  nA = nA.fillna(0).astype(int)
+  nA.plot.bar(title='Liczba zgodnych zbiorów afiliacyjno-imieniczych', ax=A['nameaffil'])
+
+  nG = R.value_counts(['geoaffil', 'geomatch']).unstack().sort_index()
+  nG = nG.groupby(lambda x: x if x <= 10 else '10+').sum()
+  nG.index.name = 'liczba zgodności'
+  nG.columns.name = 'Zgodność\ngeolokalizacyjna'
+  nG.columns = nG.columns.map({ False: 'brak', True: 'całkowita' })
+  nG = nG.fillna(0).astype(int)
+  nG.plot.bar(title='Liczba zgodnych zbiorów\nafiliacyjno-geolokacyjnych', ax=A['geoaffil'])
+
+  nC = R.value_counts(['clsfmatch', 'clsfdiff', 'geomatch']).unstack().sort_index()
+  nC.index.name = 'liczba zgodności'
+  nC.columns.name = 'Zgodność\ngeolokalizacyjna'
+  nC.columns = nC.columns.map({ False: 'brak', True: 'całkowita' })
+  nC = nC.fillna(0).astype(int)
+  nC.plot.bar(title='Liczba zgodnych zbiorów\nklasyfikacyjnych',
+              xlabel='ilość klasyfikacji (zgodne, niezgodne)', ax=A['clsf'])
+
+  Annot.bar(A['nameaffil'])
+  Annot.bar(A['geoaffil'])
+  Annot.bar(A['clsf'], nbarfix=10)
+
+  return f
+
 @Flow.From()
 def Entity(sim:pandas.DataFrame, all:pandas.DataFrame):
 
