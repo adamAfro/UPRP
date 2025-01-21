@@ -3,8 +3,8 @@ import pandas, yaml, matplotlib.pyplot as plt
 from lib.storage import Storage
 from lib.geo import closest
 from lib.flow import Flow
-from config import strnorm
-from config import data as D
+from util import strnorm
+from util import data as D
 from profiling import flow as f0
 from geoloc import flow as fg
 

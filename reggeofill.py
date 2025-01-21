@@ -1,6 +1,6 @@
 import pandas, matplotlib.pyplot as plt
 from lib.flow import Flow, ImgFlow
-from config import Colr, Cmap
+from util import Colr, Cmap
 import geopandas as gpd
 import geoplot as gplt
 

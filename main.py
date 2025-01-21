@@ -24,7 +24,7 @@ def Fetch(queries:pandas.Series, URL:str, outdir:str):
   _, P = queries
   asyncio.run(scrap(P))
 
-from config import data as D
+from util import data as D
 from profiling import flow as f0
 from patent import flow as fP
 from registers import flow as fA

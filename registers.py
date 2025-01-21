@@ -3,7 +3,7 @@ from lib.storage import Storage
 from lib.name import mapnames, classify
 from lib.flow import Flow, ImgFlow
 import matplotlib.pyplot as plt
-from config import Colr, Cmap, Annot, strnorm
+from util import Colr, Cmap, Annot, strnorm
 import geopandas as gpd
 import geoplot as gplt
 import geoplot.crs as gcrs
@@ -490,7 +490,7 @@ class Entity:
 
     return f
 
-from config import data as D
+from util import data as D
 from profiling import flow as f0
 from patent import flow as fP
 

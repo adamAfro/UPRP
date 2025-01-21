@@ -103,7 +103,7 @@ def Profiling(dir:str, kind:str, assignpath:str, aliaspath:str,  profargs:dict={
 
   return Storage(dir, H)
 
-from config import data as D
+from util import data as D
 
 flow = { k: dict() for k in D.keys() }
 

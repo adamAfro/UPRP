@@ -376,7 +376,7 @@ def Preview(path:str,
     with open(path, 'w') as f: f.write(Y)
 
 from profiling import flow as f0
-from config import data as D
+from util import data as D
 
 flow = { k: dict() for k in D.keys() }
 
