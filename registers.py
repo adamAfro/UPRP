@@ -396,36 +396,58 @@ def simplot(sim:pandas.DataFrame):
 
   return f
 
-@Flow.From()
-def Entity(sim:pandas.DataFrame, all:pandas.DataFrame):
+class Entity:
 
-  import networkx as nx
+  @Flow.From()
+  def arrange(sim:pandas.DataFrame, all:pandas.DataFrame):
 
-  S = sim
-  G = S[ S['geomatch'] == True ].drop('geomatch', axis=1)
-  Z = S[ S['geomatch'] == False ].drop('geomatch', axis=1)
+    import networkx as nx
 
-  I = pandas.concat([G.query('~((clsfdiff > 0) & (clsfmatch == 0))')\
-                      .query('(nameaffil > 0) | (geoaffil > 0)'),
-                     Z.query('(clsfdiff == 0) | (clsfmatch > 0)')\
-                      .query('nameaffil > 2') ])
+    S = sim
+    G = S[ S['geomatch'] == True ].drop('geomatch', axis=1)
+    Z = S[ S['geomatch'] == False ].drop('geomatch', axis=1)
 
-  Y = all
+    I = pandas.concat([G.query('~((clsfdiff > 0) & (clsfmatch == 0))')\
+                        .query('(nameaffil > 0) | (geoaffil > 0)'),
+                       Z.query('(clsfdiff == 0) | (clsfmatch > 0)')\
+                        .query('nameaffil > 2') ])
 
-  G = nx.Graph()
-  G.add_nodes_from(list(set(Y.index)))
-  G.add_edges_from([tuple(e) for e in I.index])
+    Y = all
 
-  X = pandas.DataFrame({'id': list(nx.connected_components(G))})
-  X.index.name = 'entity'
-  X = X.explode('id').reset_index().set_index('id')
-  
-  if 'entity' in Y.columns:
-    Y = Y.drop(columns='entity')
+    G = nx.Graph()
+    G.add_nodes_from(list(set(Y.index)))
+    G.add_edges_from([tuple(e) for e in I.index])
 
-  Y = Y.join(X)
+    X = pandas.DataFrame({'id': list(nx.connected_components(G))})
+    X.index.name = 'entity'
+    X = X.explode('id').reset_index().set_index('id')
+    
+    if 'entity' in Y.columns:
+      Y = Y.drop(columns='entity')
 
-  return Y
+    Y = Y.join(X)
+
+    return Y
+
+  def plot(entities:pandas.DataFrame):
+
+    X = entities
+
+    assert { 'id' }.issubset(X.index.names)
+    assert { 'doc', 'lat', 'lon', 'organisation', 'entity' }.issubset(X.columns)
+
+    f, A = plt.subplots(2, 1, tight_layout=True, gridspec_kw={'height_ratios': [1, 2]})
+
+    nE = X.value_counts('entity').value_counts().sort_index()
+    nE1 = nE.groupby(lambda x: x if x <= 1 else '1+').sum()
+    nE1.plot.pie(title='Liczba rejestrów na 1 podmiot', 
+                ax=A[0], ylabel='', autopct='%1.1f%%')
+    nE = nE[nE.index != 1].groupby(lambda x: x if x <= 10 else '10+'
+                                               if x <= 99 else '99+').sum()
+    nE.plot.bar(title='Liczba rejestrów na 1 podmiot\ngdy podmiot występuje wielokrotnie', 
+                ax=A[1], xlabel='ilość')
+
+    return f
 
 from config import data as D
 from profiling import flow as f0
@@ -450,6 +472,6 @@ S000 = Simcalc(aN, qcount='count  < 100').map('registry/sim-000.pkl')
 S100 = Simcalc(aN, qcount='count >= 100').map('registry/sim-100.pkl')
 S = Flow('Simcalc merge', lambda *x: pandas.concat(x), args=[S000, S100]).map('registry/sim.pkl')
 
-E = Entity(sim=S, all=GT).map('registry/entity.pkl')
+E = Entity.arrange(sim=S, all=GT).map('registry/entity.pkl')
 
 flow = { 'entity': E }
