@@ -9,6 +9,8 @@ import geoplot as gplt
 import geoplot.crs as gcrs
 import seaborn as sns
 
+pandas.set_option('future.no_silent_downcasting', True)
+
 @Flow.From()
 def Nameclsf(asnstores:dict[Storage, str],
              assignements = ['names', 'firstnames', 'lastnames', 'ambignames'],
@@ -52,7 +54,7 @@ def Nameclsf(asnstores:dict[Storage, str],
                                             'POLITECHNIKA'] for x in X.split()])
 
 @Flow.From()
-def Textual(storage:Storage, assignpath:str, nameset:pandas.DataFrame,
+def Pull(storage:Storage, assignpath:str,
             assignements = ['firstnames', 'lastnames'],
             assignentities = ['names', 'ambignames'],
             cityassign='city'):
@@ -87,31 +89,70 @@ def Textual(storage:Storage, assignpath:str, nameset:pandas.DataFrame,
                        X[['doc', 'id', 'value', 'city']]])
 
     X = X.set_index(['doc', 'id'])
+    X[h] = True
 
     Y = pandas.concat([Y, X]) if not Y.empty else X
 
-  if Y.empty: pandas.DataFrame()
-  Y = Y.reset_index().drop_duplicates(subset=['doc', 'value']).set_index(['doc', 'id'])
+ #Roles
+  Y[['assignee', 'applicant', 'inventor']] = Y[['assignee', 'applicant', 'inventor']].fillna(False)
+  Y = Y.reset_index().groupby(['doc', 'id', 'city'])\
+       .agg({'assignee': 'max', 'applicant': 'max', 'inventor': 'max', 
+             'value': ' '.join }).reset_index()
+
+ #Concat'val
+  Y = Y.set_index('id').drop_duplicates()
+  assert { 'id' }.issubset(Y.index.names) and Y.index.is_unique
+  assert { 'doc', 'value', 'city' }.issubset(Y.columns)
+
+  if (X.duplicated(['doc', 'value']).sum() > 0):
+    Warning("X.duplicated(['doc', 'value']).sum() > 0")
+
+  return Y
+
+@Flow.From()
+def Textual(pulled:pandas.DataFrame, nameset:pandas.DataFrame):
+
+  X = pulled
+
+  X['city'] = X['city'].replace({"BD": None})#TODO do `pull`
+  X = X.reset_index().groupby(['doc', 'value'])\
+       .agg({ 'id': 'min', 'city': 'first',
+                                   #^utrata małej części danych
+              'assignee': 'max', 'applicant': 'max', 'inventor': 'max' })
   
-  P, O = classify(Y, nameset)
-  try: O = O.drop(columns=['role', 'value'])#LEGACY
+  X = X.reset_index().set_index('id')
+
+  assert { 'id' }.issubset(X.index.names) and X.index.is_unique
+  assert { 'doc', 'value', 'city' }.issubset(X.columns)
+  assert X.duplicated(['doc', 'value']).sum() == 0
+
+  P, O = classify(X, nameset)
+  try: O = O.drop(columns=['role', 'value'])
   except KeyError: pass
 
   P = P.reset_index().drop(columns='id')
-  P.index = numpy.arange(P.shape[0])#WORKAROUND01
+  P.index = numpy.arange(P.shape[0])
   P.index.name = 'id'
-  assert { 'norm', 'firstnames', 'lastnames', 'city', 'unclear', 'doc' }.issubset(P.columns)
+  P['organisation'] = False
   assert { 'id' }.issubset(P.index.names)
+  assert { 'doc', 'norm', 'firstnames', 'lastnames', 'city', 'unclear', 
+          'assignee', 'applicant', 'inventor' }.issubset(P.columns)
 
   O = O.reset_index().drop(columns='id')
-  O.index = numpy.arange(P.shape[0]+1, P.shape[0]+1+O.shape[0])#WORKAROUND01
+  O.index = numpy.arange(P.index.max()+1, P.index.max()+1+O.shape[0])
   O.index.name = 'id'
-  assert { 'norm', 'doc' }.issubset(O.columns)
+  O['organisation'] = True
   assert { 'id' }.issubset(O.index.names)
+  assert { 'doc', 'norm', 'organisation',
+          'assignee', 'applicant', 'inventor' }.issubset(O.columns)
 
-  P = P.drop_duplicates(['doc', 'norm'])#WTF nie powinno być
+  Y = pandas.concat([P, O])
 
-  return P, O
+  assert { 'id' }.issubset(Y.index.names) and Y.index.is_unique
+  assert { 'doc', 'norm', 'firstnames', 'lastnames', 'city', 'unclear', 
+           'organisation', 'assignee', 'applicant', 'inventor' }.issubset(Y.columns)
+
+  return Y
 
 @Flow.From()
 def Spacetime(textual:pandas.DataFrame, 
@@ -119,7 +160,7 @@ def Spacetime(textual:pandas.DataFrame,
               event:pandas.DataFrame, 
               clsf:pandas.DataFrame):
 
-  X, O = textual
+  X = textual
 
   T = event
   X = X.reset_index().set_index('doc')\
@@ -137,43 +178,66 @@ def Spacetime(textual:pandas.DataFrame,
 
   X = X.reset_index().set_index('id')
 
-  assert { 'doc', 'lat', 'lon', 'delay' }.issubset(X.columns)
+  assert { 'doc', 'lat', 'lon', 'delay', 'organisation' }.issubset(X.columns)
   assert any([ c.startswith('clsf-') for c in X.columns ])
   assert { 'id' }.issubset(X.index.names)
 
   return X
 
 
-@Flow.From('getting affilations')
-def Affilate(registry:pandas.DataFrame):
+@Flow.From()
+def Affilategeo(registry:pandas.DataFrame):
 
   import tqdm
-
-  assert { 'id' }.issubset(registry.index.names)
-  assert { 'doc', 'lat', 'lon' }.issubset(registry.columns)
+  tqdm.tqdm.pandas()
 
   X = registry
+  assert { 'id' }.issubset(X.index.names) and X.index.is_unique
+  assert { 'doc', 'lat', 'lon', 'organisation' }.issubset(X.columns)
 
-  kd = 'doc'
-  KG = ['lat', 'lon']
-
-  G = X.groupby(kd)
-
-  X['nameaffil'] = [set() for _ in range(X.shape[0])]
-  X['geoaffil'] = [set() for _ in range(X.shape[0])]
-
-  for d, g in tqdm.tqdm(G, total=G.ngroups):
-    if g.shape[0] > 1:
-      for i in g.index:
-        X.at[i, 'nameaffil'].update(g.index.values)
-        X.at[i, 'geoaffil'].update(tuple(q) for q in g.loc[g.index != i, KG].dropna().values)
-
-  X['nameaffil'] = X['nameaffil'].apply(lambda x: x if len(x) > 0 else None)
-  X['geoaffil'] = X['geoaffil'].apply(lambda x: x if len(x) > 0 else None)
+  geoset = lambda g: set(tuple(x) for x in g[['lat', 'lon']].dropna().values)\
+                                  if g['lat'].count() > 0 else frozenset()
+  geoassign = lambda g: g.assign(geoaffil=[geoset(g)]*g.shape[0])
+  Y = X.reset_index().groupby('doc').progress_apply(geoassign).set_index('id')
   
-  assert { 'nameaffil', 'geoaffil' }.issubset(X.columns)
-  assert { 'id' }.issubset(X.index.names)
-  return X
+  assert { 'doc', 'geoaffil' }.issubset(Y.columns)
+  assert { 'id' }.issubset(Y.index.names) and  Y.index.is_unique
+  return Y
+
+@Flow.From()
+def Affilatenames(registry:pandas.DataFrame):
+
+  import tqdm
+  tqdm.tqdm.pandas()
+
+  assert { 'id' }.issubset(registry.index.names)
+  assert { 'doc', 'lat', 'lon', 'organisation' }.issubset(registry.columns)
+
+  U = registry
+
+ #org'split
+  o = U['organisation'].fillna(False)
+  X = U.loc[ o[ o == False].index ]
+  O = U.loc[ o[ o == True ].index ]
+
+ #nameset'mk
+  X[['firstnames', 'lastnames', 'norm']] = \
+    X[['firstnames', 'lastnames', 'norm']].fillna('').astype(str)
+  X['nameset'] = (X['firstnames'] + ' ' + X['norm'] + ' ' + X['lastnames'])
+  X['nameset'] = X['nameset'].str.strip().str.split()
+  X['nameset'] = X['nameset'].apply(lambda x: frozenset([x[0], x[-1]]) if x else frozenset())
+  O['nameset'] = O['norm'].apply(lambda x: frozenset({x}))
+  Y = pandas.concat([X, O])
+
+ #affilating
+  nameset = lambda g: set(g['nameset'].dropna().values)
+  nameassign = lambda g: g.assign(nameaffil=[nameset(g)]*g.shape[0])
+  Y = Y.reset_index().groupby('doc').progress_apply(nameassign).set_index('id')
+
+  assert { 'doc', 'nameaffil' }.issubset(Y.columns)
+  assert { 'id' }.issubset(Y.index.names)
+  assert Y.index.is_unique
+  return Y
 
 @Flow.From('calculating similarity')
 def Simcalc(affilated:pandas.DataFrame, qcount:str):
@@ -330,7 +394,7 @@ class Selfloc:
       A[1,0].annotate(label, xy=(x, y), xytext=(3, 3), 
                       textcoords="offset points", fontsize=8, color='black')
 
-    X0 = X.query('~ loceval.isna()')
+    X0 = X.query(' loceval.isna()')
     P = gpd.GeoDataFrame(X0, geometry=gpd.points_from_xy(X0['lon'], X0['lat']))
     G = P.groupby(['lat', 'lon', 'city']).size().rename('count').reset_index()
     G = gpd.GeoDataFrame(G, geometry=gpd.points_from_xy(G['lon'], G['lat']))
@@ -408,18 +472,19 @@ flow = { k: dict() for k in D.keys() }
 
 flow['nameread'] = Nameclsf({ D['UPRP']+'/assignement.yaml': f0['UPRP']['profiling'],
                               D['Lens']+'/assignement.yaml': f0['Lens']['profiling'],
-                              D['Google']+'/assignement.yaml': f0['Google']['profiling'] }).map('names.pkl')
+                              D['Google']+'/assignement.yaml': f0['Google']['profiling'] }).map('registry/names.pkl')
 
-flow['registry-textual'] = Textual(f0['UPRP']['profiling'], 
-                                           assignpath=D['UPRP']+'/assignement.yaml', 
-                                           nameset=flow['nameread']).map(D['UPRP']+'/textual.pkl')
+flow['registry-pull'] = Pull(f0['UPRP']['profiling'], assignpath=D['UPRP']+'/assignement.yaml').map('registry/pulled.pkl')
+
+flow['registry-textual'] = Textual(flow['registry-pull'], nameset=flow['nameread']).map('registry/textual.pkl')
 
 flow['registry-spacetime'] = Spacetime(flow['registry-textual'], 
                                        fP['UPRP']['patent-geoloc'], 
                                        fP['UPRP']['patent-event'], 
-                                       fP['UPRP']['patent-classify']).map('spacetime.pkl')
+                                       fP['UPRP']['patent-classify']).map('registry/spacetime.pkl')
 
-flow['affilate'] = Affilate(flow['registry-spacetime']).map('affilate.pkl')
+flow['affilate-geo'] = Affilategeo(flow['registry-spacetime']).map('registry/affilate-geo.pkl')
+flow['affilate'] = Affilatenames(flow['affilate-geo']).map('registry/affilate.pkl')
 
 flow['simcalc-00'] = Simcalc(flow['affilate'], qcount='count  < 10')
 flow['simcalc-10'] = Simcalc(flow['affilate'], qcount='count >= 10 & count  < 50')
@@ -429,9 +494,10 @@ flow['simcalc'] = Flow('Simcalc', lambda x: pandas.concat(x),
                               flow['simcalc-10'],
                               flow['simcalc-50']]).map('sim.pkl')
 
-flow['entity'] = Entity(sim=flow['simcalc'], all=flow['registry-spacetime']).map('entity.pkl')
+flow['entity'] = Entity(sim=flow['simcalc'], all=flow['registry-spacetime']).map('registry/entity.pkl')
 
 flow['self-entity-geoloc'] = Selfloc.fill(flow['entity'], group='entity', loceval='identity')
+flow['self-doc-geoloc'] = Selfloc.fill(flow['self-entity-geoloc'], group='doc', loceval='registry/affilation')
 
 @Flow.From()
 def Geobackprop(entities:pandas.DataFrame):
@@ -459,8 +525,8 @@ def Geobackprop(entities:pandas.DataFrame):
 
   return X
 
-flow['geobackprop'] = Geobackprop(flow['entity']).map('geobackprop.pkl')
+flow['geobackprop'] = Geobackprop(flow['entity']).map('registry/geobackprop.pkl')
 
-flow['self-doc-geoloc'] = Selfloc.fill(flow['geobackprop'], group='doc', loceval='affilation')
+flow['geobackprop-self-doc-geoloc'] = Selfloc.fill(flow['geobackprop'], group='doc', loceval='registry/affilation')
 
 flow['geoloc-eval'] = Selfloc.evalplot(flow['self-doc-geoloc']).map('docs/insight-img/registers/geoloc-eval.png')

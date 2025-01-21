@@ -29,6 +29,7 @@ def classify(entries:pandas.DataFrame, namesmap:pandas.DataFrame,
              k1:str = 'firstnames',
              k2:str = 'lastnames',
              kU:str = 'unclear',
+             kM:list[str] = ['assignee', 'inventor', 'applicant'],
              K:list[str] = []):
   
   assert isinstance(namesmap, pandas.Series)
@@ -49,8 +50,8 @@ def classify(entries:pandas.DataFrame, namesmap:pandas.DataFrame,
   X[v] = X[v].str.split(' ')
 
  #Words
-  W = X.drop(v0, axis=1).explode(v)
-  W = W.reset_index().set_index(v).join(M[ M.isin([l1, l2, lA]) ], how='inner')
+  W = X.reset_index().drop(v0, axis=1).explode(v)
+  W = W.set_index(v).join(M[ M.isin([l1, l2, lA]) ], how='inner')
   nW = W.groupby(I).agg({n: 'first', x: 'count'})
   W = nW[ nW[n] == nW[x] ][[]].join(W.reset_index().set_index(I), how='inner')
   X = X.drop([v, n], axis=1).drop(W.index)
@@ -60,13 +61,13 @@ def classify(entries:pandas.DataFrame, namesmap:pandas.DataFrame,
 
  #Org
   O = Y[ Y[x] == lO ]
-  O = O.set_index(I)[[v0, v, x]+K]
+  O = O.set_index(I)[[v0, v, x]+K+kM]
   O[kU] = False
 
  #People
-  P = Y[ Y[x] != lO ].groupby(I).agg({v:' '.join})
-  Nf = Y[ Y[x] == l1 ].groupby(I).agg({v:' '.join})[v].rename(k1)
-  Nl = Y[ Y[x] == l2 ].groupby(I).agg({v:' '.join})[v].rename(k2)
+  P = Y[ Y[x] != lO ].groupby(I).agg({v:' '.join, **{k:'max' for k in kM }})
+  Nf = Y[ Y[x] == l1 ].groupby(I).agg({v:' '.join, **{k:'max' for k in kM }})[v].rename(k1)
+  Nl = Y[ Y[x] == l2 ].groupby(I).agg({v:' '.join, **{k:'max' for k in kM }})[v].rename(k2)
   P = P.join(Nf, how='left').join(Nl, how='left')
   P[kU] = False
 
