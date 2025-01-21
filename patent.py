@@ -203,6 +203,7 @@ for h in flow.keys():
                                     geodata=fg['Misc']['geodata'],).map(D[h]+'/geoloc/data.pkl')
 
   flow[h]['patent-geoloc'].trigger(plot.NA).map(D[h]+'/geoloc/NA.png')
+  flow[h]['patent-geoloc'].trigger(plot.geodensity).map(D[h]+'/geoloc/map.png')
 
 for h in flow.keys():
   flow[h]['patentify'] = Flow(callback=lambda *x: x, args=[flow[h][k] for k in flow[h].keys()])

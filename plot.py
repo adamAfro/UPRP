@@ -1,8 +1,10 @@
 import pandas, matplotlib.pyplot as plt
+import geopandas as gpd, geoplot as gplt
 from matplotlib.ticker import MaxNLocator
 
 plt.rcParams['axes.spines.top'] = False
 plt.rcParams['axes.spines.right'] = False
+plt.style.use('grayscale')
 
 class Colr:
 
@@ -40,9 +42,10 @@ class Annot:
                   arrowprops=dict(arrowstyle='-', color='black', shrinkA=0, shrinkB=0))
 
 
-def monthly(X:pandas.DataFrame, by:str, title='W danym miesiącu', x='miesiąc'):
+def monthly(X:pandas.DataFrame, by:str, title='W danym miesiącu', x='miesiąc',
+            year='year', month='month'):
 
-  d = X['year'].str.zfill(2)+'-'+X['month'].str.zfill(2)
+  d = X[year].str.zfill(2)+'-'+X[month].str.zfill(2)
 
   M = X.groupby([d, by]).size().unstack(fill_value=0).sort_index()
 
@@ -67,5 +70,25 @@ def NA(X: pandas.DataFrame):
   A.set_ylabel('Liczba wartości')
   A.set_title('Braki danych w kolumnach')
   A.legend()
+
+  return f
+
+def geodensity(X:pandas.DataFrame, coords=['lat', 'lon'], label='city',
+               title:str='Mapa gęstości punktów geolokalizacji'):
+
+  f, A = plt.subplots(1, figsize=(8, 8), tight_layout=True)
+  A.set_title(title)
+
+  P = X.groupby(coords).size().reset_index()
+  P = gpd.GeoDataFrame(X, geometry=gpd.points_from_xy(X[coords[1]], X[coords[0]]))
+  gplt.kdeplot(P, fill=True, cmap=Cmap.good, ax=A)
+
+  if label:
+
+    L = X[coords + [label]].value_counts().reset_index().head(10)
+    L = gpd.GeoDataFrame(L, geometry=gpd.points_from_xy(L[coords[1]], L[coords[0]]))
+
+    for x, y, k in zip(L.geometry.x, L.geometry.y, L[label]):
+      A.annotate(k, xy=(x, y), xytext=(3, 3), textcoords="offset points", fontsize=8, color='black')
 
   return f
