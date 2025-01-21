@@ -5,6 +5,7 @@ from lib.flow import Flow
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.ticker import MaxNLocator
 plt.rcParams['figure.figsize'] = [10, 10]
 
 class Code:
@@ -74,20 +75,21 @@ class Event:
     assert { 'doc' }.issubset(X.index.names)
     return X
 
-  def seriesplot(X:pandas.DataFrame, period:int, nperiod:int, periodkey='__period__'):
+  def plot(events:pandas.DataFrame):
+
+    X = events
 
     assert { 'delay', 'event' }.issubset(X.columns)
+    assert { 'doc' }.issubset(X.index.names)
 
-    X[periodkey] = np.floor(X['delay']/(period*nperiod))*(period*nperiod)
-    X[periodkey] = X[periodkey].astype(int)
-    Tg = X.groupby([periodkey, 'event']).size().unstack(fill_value=0)
-    X = X.drop(columns=periodkey)
+    d = X['year'].str.zfill(2)+'-'+X['month'].str.zfill(2)
 
-    f, ax = plt.subplots(len(Tg.columns), constrained_layout=True, sharex=True, sharey=True)
-    Tg.plot.bar(title=f'Wydarzenia dotyczące patentów na dany $T={nperiod}\cdot{period}$ dni okres od początku rejestrów', 
-                legend=False, xlabel=f'dzień początku okresu', stacked=False, subplots=True, ax=ax)
-
-    return f
+    M = X.groupby([d, 'event']).size().unstack(fill_value=0).sort_index()
+    f, A = plt.subplots(len(M.columns), constrained_layout=True, sharex=True, sharey=True)
+    for i, k in enumerate(M.columns):
+      M[k].plot.bar(xlabel='miesiąc', ax=A[i], ylabel=k, rot=0)
+      A[i].xaxis.set_major_locator(MaxNLocator(integer=True, prune='both'))
+    A[0].set_title('Liczba wydarzen w zależności od miesiąca')
 
   def nplot(X:pandas.DataFrame):
 
