@@ -1,4 +1,4 @@
-import pandas, yaml, matplotlib.pyplot as plt
+import pandas, yaml
 
 from lib.storage import Storage
 from lib.geo import closest
@@ -8,7 +8,7 @@ from util import data as D
 from profiling import flow as f0
 from geoloc import flow as fg
 
-from matplotlib.ticker import MaxNLocator
+import plot
 
 @Flow.From()
 def code(storage:Storage, assignpath:str):
@@ -176,78 +176,33 @@ def geoloc(storage:Storage,
   assert { 'doc' }.issubset(Y.index.names)
   return Y
 
-class Eval:
-
-  def eventplot(events:pandas.DataFrame):
-
-    X = events
-
-    assert { 'delay', 'event' }.issubset(X.columns)
-    assert { 'doc' }.issubset(X.index.names)
-
-    d = X['year'].str.zfill(2)+'-'+X['month'].str.zfill(2)
-
-    M = X.groupby([d, 'event']).size().unstack(fill_value=0).sort_index()
-    f, A = plt.subplots(len(M.columns), constrained_layout=True, sharex=True, sharey=True)
-    for i, k in enumerate(M.columns):
-      M[k].plot.bar(xlabel='miesiąc', ax=A[i], ylabel=k, rot=0)
-      A[i].xaxis.set_major_locator(MaxNLocator(integer=True, prune='both'))
-    A[0].set_title('Liczba wydarzen w zależności od miesiąca')
-
-  def eventnplot(X:pandas.DataFrame):
-
-    assert 'event' in X.columns
-    assert { 'doc' }.issubset(X.index.names)
-
-    n = X.groupby(level=['doc'])['event'].value_counts().unstack(fill_value=0)
-    n = n[ n.sum(axis=1) > 0 ]
-    n.sort_values(by=[k for k in X['event'].dtype.categories], ascending=False)
-
-    f, ax = plt.subplot_mosaic([['R', str(i)] for i in range(len(n.columns))], gridspec_kw={'width_ratios': [3, 1]})
-    X.value_counts('event')[[k for k in X['assignement'].dtype.categories[::-1]]]\
-     .plot.barh(title='Liczba wydarzeń w zależności od typu',
-                xlabel='liczba', ax=ax['R']);
-
-    for i, k in enumerate(n.columns):
-      n[k].value_counts().sort_index().plot.pie(ax=ax[str(i)])
-      ax[str(i)].set_ylabel(k)
-
-    ax['0'].set_title("Liczba patentów\n z wydarzeniem typu")
-    ax[str(len(n.columns)-1)].set_xlabel('ilość wydarzeń');
-
-    return f
-
-  def clsfnplot(X:pandas.DataFrame):
-
-    assert { 'section', 'classification' }.issubset(X.columns)
-    assert { 'doc' }.issubset(X.index.names)
-
-    G = X.groupby(['section', 'classification']).size().unstack(fill_value=0)
-
-    f, ax = plt.subplots(3, constrained_layout=True, sharex=True, sharey=True)
-    G.plot.bar(title='Liczność sekcji patentowych w poszczególnych klasyfikacjach',
-               xlabel='sekcja', stacked=False, subplots=True, legend=False, ax=ax);
-
-    return f
-
 flow = { k: dict() for k in D.keys() }
 
 for h in flow.keys():
 
-  flow[h]['patent-code'] = code(f0[h]['profiling'], assignpath=D[h]+'/assignement.yaml').map(D[h]+'/code.pkl')
+  flow[h]['patent-code'] = code(f0[h]['profiling'], 
+                                assignpath=D[h]+'/assignement.yaml').map(D[h]+'/code/data.pkl')
 
-  flow[h]['patent-geoloc'] = geoloc(f0[h]['profiling'], 
-                                         assignpath=D[h]+'/assignement.yaml', 
-                                         codes=flow[h]['patent-code'], 
-                                         geodata=fg['Misc']['geodata'],).map(D[h]+'/geoloc.pkl')
+  flow[h]['patent-code'].trigger(plot.NA).map(D[h]+'/code/NA.png')
 
   flow[h]['patent-event'] = event(f0[h]['profiling'], 
-                                       assignpath=D[h]+'/assignement.yaml',
-                                       codes=flow[h]['patent-code']).map(D[h]+'/event.pkl')
+                                  assignpath=D[h]+'/assignement.yaml',
+                                  codes=flow[h]['patent-code']).map(D[h]+'/event/data.pkl')
+
+  flow[h]['patent-event'].trigger(plot.NA).map(D[h]+'/event/NA.png')
 
   flow[h]['patent-classify'] = classify(f0[h]['profiling'],
                                         assignpath=D[h]+'/assignement.yaml',
-                                        codes=flow[h]['patent-code']).map(D[h]+'/classify.pkl')
+                                        codes=flow[h]['patent-code']).map(D[h]+'/classify/data.pkl')
+
+  flow[h]['patent-classify'].trigger(plot.NA).map(D[h]+'/classify/NA.png')
+
+  flow[h]['patent-geoloc'] = geoloc(f0[h]['profiling'], 
+                                    assignpath=D[h]+'/assignement.yaml', 
+                                    codes=flow[h]['patent-code'], 
+                                    geodata=fg['Misc']['geodata'],).map(D[h]+'/geoloc/data.pkl')
+
+  flow[h]['patent-geoloc'].trigger(plot.NA).map(D[h]+'/geoloc/NA.png')
 
 for h in flow.keys():
   flow[h]['patentify'] = Flow(callback=lambda *x: x, args=[flow[h][k] for k in flow[h].keys()])

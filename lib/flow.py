@@ -22,6 +22,12 @@ class Flow():
     self.mapping = mapping
     self.output = None
     self.verbose = True
+    self.triggered:list[Flow] = []
+
+  def trigger(self, func):
+    f = Flow(callback=func, args=[self])
+    self.triggered.append(f)
+    return f
 
   def info(self, *x):
     if self.verbose: print(*x, f'({self.name})')
@@ -45,6 +51,8 @@ class Flow():
     self.info(f'call')
     self.output = self.callback(*args, **kwargs)
     self.dump()
+    for f in self.triggered:
+      f.call(forced=True)
     return self.output
 
   def load(self):
@@ -89,13 +97,21 @@ class Flow():
 
   def fdump(self, f0, x):
 
-    import pickle as pkl
+    import pickle as pkl, matplotlib.pyplot as plt, os
+
+    os.makedirs(os.path.dirname(f0), exist_ok=True)
 
     if f0.endswith('.pkl'):
       with open(f0, 'wb') as f:
         pkl.dump(x, f)
         self.info(f'saved {f0}')
         return
+
+    if f0.endswith('.png'):
+      assert isinstance(x, plt.Figure)
+      x.savefig(f0)
+      self.info(f'saved {f0}')
+      return
 
     raise NotImplementedError()
 
