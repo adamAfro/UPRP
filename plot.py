@@ -1,6 +1,7 @@
 import pandas, matplotlib.pyplot as plt, numpy
 import geopandas as gpd, geoplot as gplt
 from matplotlib.ticker import MaxNLocator
+import matplotlib.colors as mcolors
 
 plt.rcParams['axes.spines.top'] = False
 plt.rcParams['axes.spines.right'] = False
@@ -24,6 +25,12 @@ class Cmap:
   visible = 'plasma'
   distinct = 'tab20'
 
+  @staticmethod
+  def NA(x: str, n: int):
+    cmap = plt.get_cmap(x, n)
+    colors = [cmap(i) for i in range(cmap.N)]
+    return mcolors.ListedColormap(colors+[(0, 0, 0, 1)])
+
 class Annot:
 
   def bar(ax, nbarfix=2, rbarfix=0.02, fixh = 12):
@@ -42,6 +49,20 @@ class Annot:
                   bbox=dict(boxstyle="round,pad=0.3", edgecolor='black', facecolor='white', alpha=0.7),
                   ha='center', va='center', xytext=T, textcoords='offset points',
                   arrowprops=dict(arrowstyle='-', color='black', shrinkA=0, shrinkB=0))
+
+def syntdata():
+
+  dates = pandas.date_range(start='2000-01-01', end='2022-12-31', freq='D')
+  categories = ['A', 'B', 'C', 'D']
+  data = pandas.DataFrame({ 'date': dates,
+                            'value1': numpy.random.choice(categories, len(dates)),
+                            'value2': numpy.random.choice(categories, len(dates)),
+                            'value3': numpy.random.rand(len(dates)) })
+
+  for col in ['value1', 'value2', 'value3']:
+    data.loc[data.sample(frac=0.2).index, col] = numpy.nan
+
+  return data
 
 def squarealike(n):
 
@@ -84,7 +105,49 @@ def NA(X: pandas.DataFrame):
 
   return f
 
-def geodisp(X:pandas.DataFrame, coords=['lat', 'lon'], label=None,
+def n(X:pandas.DataFrame, time=None, freq='12M', categories=5, tick=5):
+
+  K = [k for k in X.columns if k != time]
+  K0 = [k for k in K if X[k].nunique() < categories]
+  KL = [k for k in K if X[k].dtype in ['O', 'str', 'object', 'o']]
+
+  for k in KL: X[k] = X[k].str.len()
+
+  KZ = [k for k in K if k not in K0]
+  for k in KZ:
+    X[k] = pandas.cut(X[k], bins=categories).astype(str).replace('nan', 'b.d.')
+
+  if not time: raise NotImplementedError()
+
+  if time:
+    X = X.groupby(pandas.Grouper(key=time, freq=freq))
+    X = pandas.concat([X[k].value_counts(dropna=False).reset_index()\
+              .rename(columns={k: 'value'}).assign(column=k) for k in K])
+
+  T = X.groupby('column')
+  f, A = plt.subplots(T.ngroups, constrained_layout=True, figsize=(8, 1+2*T.ngroups))
+
+  for i, (g, G) in enumerate(T):
+
+    if g in KL: g = f'{g} (ilość znaków)'
+
+    if G.empty: continue
+
+    G = G.fillna('b.d.')
+    G = G.pivot(index=time, columns='value', values='count').fillna(0)
+    if numpy.nan in G.columns:
+      G = G[ [k for k in G.columns if k !=numpy.nan] + [numpy.nan] ]
+    G.index = G.index.date
+
+    G.plot.bar(stacked=True, ax=A[i], xlabel='', rot=0, legend=True, 
+               cmap=Cmap.NA(Cmap.distinct, G.shape[1]))
+
+    A[i].legend(title=g, bbox_to_anchor=(1.05, 1.05), loc='upper left')
+    A[i].xaxis.set_major_locator(MaxNLocator(tick, prune='both'))
+
+  return f
+
+def ngeo(X:pandas.DataFrame, coords=['lat', 'lon'], label=None,
             scale=0.5, growth=25, time=None, freq='12M', 
             color=None):
 
