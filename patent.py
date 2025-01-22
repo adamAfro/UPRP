@@ -180,30 +180,28 @@ flow = { k: dict() for k in D.keys() }
 
 for h in flow.keys():
 
-  flow[h]['patent-code'] = code(f0[h]['profiling'], 
-                                assignpath=D[h]+'/assignement.yaml').map(D[h]+'/code/data.pkl')
+  flow[h]['code'] = code(f0[h]['profiling'], assignpath=D[h]+'/assignement.yaml').map(D[h]+'/code/data.pkl')
 
-  flow[h]['patent-code'].trigger(plot.NA).map(D[h]+'/code/NA.png')
+  flow[h]['code'].trigger(plot.NA).map(D[h]+'/code/NA.png')
 
-  flow[h]['patent-event'] = event(f0[h]['profiling'], 
-                                  assignpath=D[h]+'/assignement.yaml',
-                                  codes=flow[h]['patent-code']).map(D[h]+'/event/data.pkl')
+  flow[h]['event'] = event(f0[h]['profiling'], 
+                           assignpath=D[h]+'/assignement.yaml',
+                           codes=flow[h]['code']).map(D[h]+'/event/data.pkl')
 
-  flow[h]['patent-event'].trigger(plot.NA).map(D[h]+'/event/NA.png')
+  flow[h]['event'].trigger(plot.NA).map(D[h]+'/event/NA.png')
 
-  flow[h]['patent-classify'] = classify(f0[h]['profiling'],
-                                        assignpath=D[h]+'/assignement.yaml',
-                                        codes=flow[h]['patent-code']).map(D[h]+'/classify/data.pkl')
+  flow[h]['classify'] = classify(f0[h]['profiling'],
+                                 assignpath=D[h]+'/assignement.yaml',
+                                 codes=flow[h]['code']).map(D[h]+'/classify/data.pkl')
 
-  flow[h]['patent-classify'].trigger(plot.NA).map(D[h]+'/classify/NA.png')
+  flow[h]['classify'].trigger(plot.NA).map(D[h]+'/classify/NA.png')
 
-  flow[h]['patent-geoloc'] = geoloc(f0[h]['profiling'], 
-                                    assignpath=D[h]+'/assignement.yaml', 
-                                    codes=flow[h]['patent-code'], 
-                                    geodata=fg['Misc']['geodata'],).map(D[h]+'/geoloc/data.pkl')
+  flow[h]['geoloc'] = geoloc(f0[h]['profiling'], 
+                             assignpath=D[h]+'/assignement.yaml', codes=flow[h]['code'], 
+                             geodata=fg['Misc']['geodata'],).map(D[h]+'/geoloc/data.pkl')
 
-  flow[h]['patent-geoloc'].trigger(plot.NA).map(D[h]+'/geoloc/NA.png')
-  flow[h]['patent-geoloc'].trigger(plot.Geodisp.total).map(D[h]+'/geoloc/map.png')
+  flow[h]['geoloc'].trigger(plot.NA).map(D[h]+'/geoloc/NA.png')
+  flow[h]['geoloc'].trigger(plot.Geodisp.total).map(D[h]+'/geoloc/map.png')
 
 for h in flow.keys():
   flow[h]['patentify'] = Flow(callback=lambda *x: x, args=[flow[h][k] for k in flow[h].keys()])

@@ -389,28 +389,30 @@ from util import data as D
 from profiling import flow as f0
 from patent import flow as fP
 
-N0 = Nameclsf({ D['UPRP']+'/assignement.yaml':   f0['UPRP']['profiling'],
+FN0 = Nameclsf({ D['UPRP']+'/assignement.yaml':   f0['UPRP']['profiling'],
                 D['Lens']+'/assignement.yaml':   f0['Lens']['profiling'],
                 D['Google']+'/assignement.yaml': f0['Google']['profiling'] }).map('registry/names.pkl')
 
-X = Pull(f0['UPRP']['profiling'], assignpath=D['UPRP']+'/assignement.yaml').map('registry/pulled.pkl')
+F0 = Pull(f0['UPRP']['profiling'], assignpath=D['UPRP']+'/assignement.yaml').map('registry/pulled.pkl')
 
-N = Textual(X, nameset=N0).map('registry/textual.pkl')
+FN = Textual(F0, nameset=FN0).map('registry/textual.pkl')
 
-GT = Spacetime(N, fP['UPRP']['patent-geoloc'], 
-                          fP['UPRP']['patent-event'], 
-                          fP['UPRP']['patent-classify']).map('registry/spacetime.pkl')
+FGT = Spacetime(FN, fP['UPRP']['geoloc'], fP['UPRP']['event'], 
+                  fP['UPRP']['classify']).map('registry/spacetime.pkl')
 
-GT.trigger(lambda X: plot.Geodisp.periods(X, time='firstdate')).map('registry/geodisp.png')
-GT.trigger(lambda X: plot.Geodisp.periods(X, time='application')).map('registry/geodisp-appl.png')
+FGT.trigger(lambda X: plot.Geodisp.periods(X, time='firstdate')).map('registry/geodisp.png')
+FGT.trigger(lambda X: plot.Geodisp.periods(X, time='application')).map('registry/geodisp-appl.png')
 
-aG = Affilategeo(GT).map('registry/affilate-geo.pkl')
-aN = Affilatenames(aG).map('registry/affilate.pkl')
+FaG = Affilategeo(FGT).map('registry/affilate-geo.pkl')
+FaN = Affilatenames(FaG).map('registry/affilate.pkl')
 
-S000 = Simcalc(aN, qcount='count  < 100').map('registry/sim-000.pkl')
-S100 = Simcalc(aN, qcount='count >= 100').map('registry/sim-100.pkl')
-S = Flow('Simcalc merge', lambda *x: pandas.concat(x), args=[S000, S100]).map('registry/sim.pkl')
+FS000 = Simcalc(FaN, qcount='count  < 100').map('registry/sim-000.pkl')
+FS100 = Simcalc(FaN, qcount='count >= 100').map('registry/sim-100.pkl')
+FS = Flow('Simcalc merge', lambda *x: pandas.concat(x), args=[FS000, FS100]).map('registry/sim.pkl')
 
-E = Entity.arrange(sim=S, all=GT).map('registry/entity.pkl')
+FE = Entity.arrange(sim=FS, all=FGT).map('registry/entity.pkl')
 
-flow = { 'entity': E, 'rpull': X, 'rspacetime':GT }
+flow = { 'registry': {'entity': FE, 
+                      'pull': F0, 
+                      'spacetime':FGT
+                                       } }
