@@ -1,4 +1,4 @@
-import pandas, matplotlib.pyplot as plt
+import pandas, matplotlib.pyplot as plt, numpy
 import geopandas as gpd, geoplot as gplt
 from matplotlib.ticker import MaxNLocator
 
@@ -52,7 +52,8 @@ def squarealike(n):
   return a, b
 
 
-def monthly(X:pandas.DataFrame, by:str, title='W danym miesiącu', x='miesiąc',
+def monthly(X:pandas.DataFrame, by:str, 
+            title='W danym miesiącu', x='miesiąc',
             year='year', month='month'):
 
   d = X[year].str.zfill(2)+'-'+X[month].str.zfill(2)
@@ -83,75 +84,70 @@ def NA(X: pandas.DataFrame):
 
   return f
 
-class Geodisp:
+def geodisp(X:pandas.DataFrame, coords=['lat', 'lon'], label=None,
+            scale=0.5, growth=25, time=None, freq='12M', 
+            color=None):
 
-  def total(X:pandas.DataFrame, coords=['lat', 'lon'],
-            scale=0.5, growth=25, label='city'):
+  from matplotlib.colors import Normalize
 
-    P = X.value_counts(coords).reset_index()
-    P = gpd.GeoDataFrame(P, geometry=gpd.points_from_xy(P[coords[1]], P[coords[0]]))
+  X = gpd.GeoDataFrame(X, geometry=gpd.points_from_xy(X[coords[1]], X[coords[0]]))
+  T = [(None, X)]
 
-    f, A = plt.subplots(1, figsize=(8, 8), tight_layout=True)
-    gplt.pointplot(P, ax=A, extent=P.total_bounds, legend=True, legend_var='hue',
-                   hue='count', cmap=Cmap.visible, scale='count', limits=(scale, scale*growth))
-
-    if label:
-
-      L = X[coords + [label]].value_counts().reset_index().head(10)
-      L = gpd.GeoDataFrame(L, geometry=gpd.points_from_xy(L[coords[1]], L[coords[0]]))
-
-      for x, y, k in zip(L.geometry.x, L.geometry.y, L[label]):
-        A.annotate(k, xy=(x, y), xytext=(3, 3), textcoords="offset points", fontsize=8, color='black')
-
-    return f
-
-  def periods(X:pandas.DataFrame, coords=['lat', 'lon'],
-              scale=0.5, growth=25, time='date', freq='12M', 
-              color=None):
-
-    from matplotlib.colors import Normalize
-
-    X = gpd.GeoDataFrame(X, geometry=gpd.points_from_xy(X[coords[1]], X[coords[0]]))
+  if time:
     T = X.groupby(pandas.Grouper(key=time, freq=freq))
 
-    K = [] if color is None else [color]
-    T = [(g, G.value_counts(coords+['geometry']+K).reset_index()) for g, G in T if not G.empty]
+  K = [] if color is None else [color]
+  T = [(g, G.value_counts(coords+['geometry']+K).reset_index()) for g, G in T if not G.empty]
 
-    M0 = max([G['count'].max() for g, G in T])
-    def maxscale(m, M):
-      return lambda x: scale + scale*growth*x/M0
+  M0 = max([G['count'].max() for g, G in T])
+  def maxscale(m, M):
+    return lambda x: scale + scale*growth*x/M0
 
-    r, c = squarealike(len(T))
-    f, A = plt.subplots(r, c, figsize=(16, 16), tight_layout=True)
-    A = A.flatten()
+  r, c = squarealike(len(T))
+  f, A = plt.subplots(r, c, figsize=(16, 16), tight_layout=True)
+  A = A.flatten() if isinstance(A, numpy.ndarray) else [A]
 
-    if color is None:
-      C = dict(hue='count', cmap=Cmap.visible, norm=Normalize(vmin=0, vmax=M0))
-    else:
-      C = dict(hue=color, cmap=Cmap.distinct)
+  if color is None:
+    C = dict(hue='count', cmap=Cmap.visible, 
+             norm=Normalize(vmin=0, vmax=M0))
+  else:
+    C = dict(hue=color, cmap=Cmap.distinct)
 
-    for i, (g, G) in enumerate(T):
+  if label:
+    E = X[coords + [label]].value_counts().reset_index().head(10)
+    E = gpd.GeoDataFrame(E, geometry=gpd.points_from_xy(E[coords[1]], E[coords[0]]))
 
-      G = G.dropna(subset=coords)
-      if G.empty: 
-        A[i].axis('off')
-        continue
+  for i, (g, G) in enumerate(T):
 
-      P = gpd.GeoDataFrame(G, geometry=G['geometry'])
-
-      L = dict(legend=False)
-      if color is not None:
-        L = dict(legend=True, legend_var='hue')
-        L['legend_kwargs'] = dict(bbox_to_anchor=(1.05, 1), 
-                                loc='upper right', fontsize=8)
-      elif i % c == c-1:
-        L = dict(legend=True, legend_var='hue')
-
-      A[i].set_title(g.strftime('%d.%m.%Y' + ' - ' + freq))
-      gplt.pointplot(P, ax=A[i], extent=X.total_bounds, **L, **C,
-                     scale='count', scale_func=maxscale)
-
-    for i in range(len(T), len(A)):
+    G = G.dropna(subset=coords)
+    if G.empty: 
       A[i].axis('off')
+      continue
 
-    return f
+    P = gpd.GeoDataFrame(G, geometry=G['geometry'])
+
+    L = dict(legend=False)
+    if color is not None:
+      L = dict(legend=True, legend_var='hue')
+      L['legend_kwargs'] = dict(bbox_to_anchor=(1.05, 1), 
+                                loc='upper right', fontsize=8)
+    elif i % c == c-1:
+      L = dict(legend=True, legend_var='hue')
+      L['legend_kwargs'] = dict(shrink=0.5)
+
+    gplt.pointplot(P, ax=A[i], extent=X.total_bounds, **L, **C,
+                    scale='count', scale_func=maxscale)
+
+    if label:
+      for x, y, k in zip(E.geometry.x, E.geometry.y, E[label]):
+        A[i].annotate(k, xy=(x, y), xytext=(3, 3), textcoords="offset points", 
+                      fontsize=8, color='black')
+
+
+    if g:
+      if time: A[i].set_title(g.strftime('%d.%m.%Y' + ' - ' + freq))
+
+  for i in range(len(T), len(A)):
+    A[i].axis('off')
+
+  return f

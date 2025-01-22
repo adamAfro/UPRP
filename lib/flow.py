@@ -15,7 +15,12 @@ class Flow():
     self.verbose = True
     self.triggered:list[Flow] = []
 
-  def trigger(self, func):
+  def trigger(self, func=lambda X: X):
+
+    if isinstance(func, Flow):
+      self.triggered.append(func)
+      return func
+
     f = Flow(callback=func, args=[self])
     self.triggered.append(f)
     return f

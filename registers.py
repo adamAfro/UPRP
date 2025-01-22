@@ -408,29 +408,15 @@ FN = Textual(F0, nameset=FN0).map('registry/textual.pkl')
 FGT = Spacetime(FN, fP['UPRP']['geoloc'], fP['UPRP']['event'], 
                   fP['UPRP']['classify']).map('registry/spacetime.pkl')
 
-FGT.trigger(lambda X: plot.Geodisp.total(X)).map('registry/geodisp-total.png')
-FGT.trigger(lambda X: plot.Geodisp.periods(X, time='firstdate')).map('registry/geodisp-first.png')
-FGT.trigger(lambda X: plot.Geodisp.periods(X, time='application')).map('registry/geodisp.png')
-
 IPC = Flow('IPC', lambda X: X.explode('IPC')[['lat', 'lon', 'IPC', 'application']]\
                              .rename(columns={ 'application': 'date', 'IPC': 'section' }), args=[FGT])
+IPC.trigger(lambda X: plot.geodisp(X, color='section', time='date')).map('registry/geodisp-IPC.png')
 
-IPC.trigger(lambda X: plot.Geodisp.periods(X, color='section')).map('registry/geodisp-IPC.png')
-class Letterplot:
-  def __init__(self, l:str): self.l = l
-  def callback(self, X): return plot.Geodisp.periods(X[ X['section'] == self.l ])
-for l in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'X']:
-  IPC.trigger(Letterplot(l).callback).map(f'registry/geodisp-IPC-{l}.png')
-
-IPCR = Flow('IPCR', lambda X: X.explode('IPCR')[['lat', 'lon', 'IPCR', 'application']]\
-                               .rename(columns={ 'application': 'date', 'IPCR': 'section' }), args=[FGT])
-
-IPCR.trigger(lambda X: plot.Geodisp.periods(X, color='section')).map('registry/geodisp-IPCR.png')
-class Letterplot:
-  def __init__(self, l:str): self.l = l
-  def callback(self, X): return plot.Geodisp.periods(X[ X['section'] == self.l ])
-for l in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'X']:
-  IPCR.trigger(Letterplot(l).callback).map(f'registry/geodisp-IPCR-{l}.png')
+FGTplots = FGT.trigger()
+FGTplots.trigger(lambda X: plot.geodisp(X, label='city')).map('registry/geodisp-total.png')
+FGTplots.trigger(lambda X: plot.geodisp(X, time='firstdate')).map('registry/geodisp-first.png')
+FGTplots.trigger(lambda X: plot.geodisp(X, time='application')).map('registry/geodisp.png')
+FGTplots.trigger(IPC)
 
 FaG = Affilategeo(FGT).map('registry/affilate-geo.pkl')
 FaN = Affilatenames(FaG).map('registry/affilate.pkl')
@@ -444,6 +430,4 @@ FE = Entity.arrange(sim=FS, all=FGT).map('registry/entity.pkl')
 flow = { 'registry': {'entity': FE, 
                       'pull': F0, 
                       'spacetime':FGT,
-                      'IPC': IPC,
-                      'IPCR': IPCR
-                                       } }
+                      'geoplot':FGTplots } }
