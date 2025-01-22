@@ -21,6 +21,7 @@ class Cmap:
   mid = 'YlOrBr'
   attention = 'Oranges'
   warning = 'Reds'
+  visible = 'plasma'
 
 class Annot:
 
@@ -40,6 +41,12 @@ class Annot:
                   bbox=dict(boxstyle="round,pad=0.3", edgecolor='black', facecolor='white', alpha=0.7),
                   ha='center', va='center', xytext=T, textcoords='offset points',
                   arrowprops=dict(arrowstyle='-', color='black', shrinkA=0, shrinkB=0))
+
+def squarealike(n):
+
+  m = int(n**0.5)
+  if m**2 == n: return m, m
+  return m+1, m
 
 
 def monthly(X:pandas.DataFrame, by:str, title='W danym miesiącu', x='miesiąc',
@@ -73,22 +80,58 @@ def NA(X: pandas.DataFrame):
 
   return f
 
-def geodensity(X:pandas.DataFrame, coords=['lat', 'lon'], label='city',
-               title:str='Mapa gęstości punktów geolokalizacji'):
+class Geodisp:
 
-  f, A = plt.subplots(1, figsize=(8, 8), tight_layout=True)
-  A.set_title(title)
+  def total(X:pandas.DataFrame, coords=['lat', 'lon'],
+            scale=0.5, growth=25, label='city'):
 
-  P = X.groupby(coords).size().reset_index()
-  P = gpd.GeoDataFrame(X, geometry=gpd.points_from_xy(X[coords[1]], X[coords[0]]))
-  gplt.kdeplot(P, fill=True, cmap=Cmap.good, ax=A)
+    P = X.value_counts(coords).reset_index()
+    P = gpd.GeoDataFrame(P, geometry=gpd.points_from_xy(P[coords[1]], P[coords[0]]))
 
-  if label:
+    f, A = plt.subplots(1, figsize=(8, 8), tight_layout=True)
+    gplt.pointplot(P, ax=A, extent=P.total_bounds, legend=True, legend_var='hue',
+                   hue='count', cmap=Cmap.visible, scale='count', limits=(scale, scale*growth))
 
-    L = X[coords + [label]].value_counts().reset_index().head(10)
-    L = gpd.GeoDataFrame(L, geometry=gpd.points_from_xy(L[coords[1]], L[coords[0]]))
+    if label:
 
-    for x, y, k in zip(L.geometry.x, L.geometry.y, L[label]):
-      A.annotate(k, xy=(x, y), xytext=(3, 3), textcoords="offset points", fontsize=8, color='black')
+      L = X[coords + [label]].value_counts().reset_index().head(10)
+      L = gpd.GeoDataFrame(L, geometry=gpd.points_from_xy(L[coords[1]], L[coords[0]]))
 
-  return f
+      for x, y, k in zip(L.geometry.x, L.geometry.y, L[label]):
+        A.annotate(k, xy=(x, y), xytext=(3, 3), textcoords="offset points", fontsize=8, color='black')
+
+    return f
+
+  def periods(X:pandas.DataFrame, coords=['lat', 'lon'],
+              scale=0.5, growth=25, time='date', freq='12M'):
+
+    from matplotlib.colors import Normalize
+
+    X = gpd.GeoDataFrame(X, geometry=gpd.points_from_xy(X[coords[1]], X[coords[0]]))
+    T = X.groupby(pandas.Grouper(key=time, freq=freq))
+    T = [(g, G.value_counts(coords+['geometry']).reset_index()) for g, G in T]
+
+    M0 = max([G['count'].max() for g, G in T])
+    def maxscale(m, M):
+      return lambda x: scale + scale*growth*x/M0
+
+    r, c = squarealike(len(T))
+    f, A = plt.subplots(r, c, figsize=(15, 15), tight_layout=True)
+    A = A.flatten()
+
+    for i, (g, G) in enumerate(T):
+
+      G = G.dropna(subset=coords)
+      P = gpd.GeoDataFrame(G, geometry=G['geometry'])
+
+      legend = dict(legend=True, legend_var='hue') if i % c == c-1 else dict(legend=False)
+
+      A[i].set_title('Od ' + g.strftime('%d.%m.%Y'))
+      gplt.pointplot(P, ax=A[i], extent=X.total_bounds, **legend,
+                     hue='count', cmap=Cmap.visible, norm = Normalize(vmin=0, vmax=M0),
+                     scale='count', scale_func=maxscale)
+
+    for i in range(len(T), len(A)):
+      A[i].axis('off')
+
+    return f

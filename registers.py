@@ -4,6 +4,7 @@ from lib.name import mapnames
 from lib.flow import Flow
 import matplotlib.pyplot as plt
 from util import strnorm
+import plot
 
 pandas.set_option('future.no_silent_downcasting', True)
 
@@ -182,8 +183,15 @@ def Spacetime(textual:pandas.DataFrame,
   X = textual
 
   T = event
+  T['date'] = pandas.to_datetime(T[['year', 'month', 'day']])
   X = X.reset_index().set_index('doc')\
-      .join(T.groupby('doc')['delay'].min(), how='left').reset_index()
+      .join(T.groupby('doc')['date'].min(), how='left').reset_index()
+  X = X.rename(columns={'date': 'firstdate'})
+
+  A = T[ T['event'] == 'application' ].reset_index().drop_duplicates(['doc', 'date'])
+  X = X.set_index('doc')\
+       .join(A.set_index('doc')['date'], how='left').reset_index()
+  X = X.rename(columns={'date': 'application'})
 
   G = geoloc.set_index('city', append=True)
   X = X.set_index(['doc', 'city']).join(G, how='left').reset_index()
@@ -197,7 +205,7 @@ def Spacetime(textual:pandas.DataFrame,
 
   X = X.reset_index().set_index('id')
 
-  assert { 'doc', 'lat', 'lon', 'delay', 'organisation' }.issubset(X.columns)
+  assert { 'doc', 'lat', 'lon', 'firstdate', 'application', 'organisation' }.issubset(X.columns)
   assert any([ c.startswith('clsf-') for c in X.columns ])
   assert { 'id' }.issubset(X.index.names)
 
@@ -239,12 +247,12 @@ def Affilatenames(registry:pandas.DataFrame):
   O = U.loc[ o[ o == True ].index ]
 
  #nameset'mk
-  X[['firstnames', 'lastnames', 'norm']] = \
-    X[['firstnames', 'lastnames', 'norm']].fillna('').astype(str)
-  X['nameset'] = (X['firstnames'] + ' ' + X['norm'] + ' ' + X['lastnames'])
+  X[['firstnames', 'lastnames', 'value']] = \
+    X[['firstnames', 'lastnames', 'value']].fillna('').astype(str)
+  X['nameset'] = (X['firstnames'] + ' ' + X['value'] + ' ' + X['lastnames'])
   X['nameset'] = X['nameset'].str.strip().str.split()
   X['nameset'] = X['nameset'].apply(lambda x: frozenset([x[0], x[-1]]) if x else frozenset())
-  O['nameset'] = O['norm'].apply(lambda x: frozenset({x}))
+  O['nameset'] = O['value'].apply(lambda x: frozenset({x}))
   Y = pandas.concat([X, O])
 
  #affilating
@@ -267,7 +275,7 @@ def Simcalc(affilated:pandas.DataFrame, qcount:str):
   k0 = 'nameset'
   k1 = 'firstnames'
   k2 = 'lastnames'
-  kn = 'norm'
+  kn = 'value'
   i = 'id'
 
   c = 'clsf-'
@@ -393,6 +401,9 @@ GT = Spacetime(N, fP['UPRP']['patent-geoloc'],
                           fP['UPRP']['patent-event'], 
                           fP['UPRP']['patent-classify']).map('registry/spacetime.pkl')
 
+GT.trigger(lambda X: plot.Geodisp.periods(X, time='firstdate')).map('registry/geodisp.png')
+GT.trigger(lambda X: plot.Geodisp.periods(X, time='application')).map('registry/geodisp-appl.png')
+
 aG = Affilategeo(GT).map('registry/affilate-geo.pkl')
 aN = Affilatenames(aG).map('registry/affilate.pkl')
 
@@ -402,4 +413,4 @@ S = Flow('Simcalc merge', lambda *x: pandas.concat(x), args=[S000, S100]).map('r
 
 E = Entity.arrange(sim=S, all=GT).map('registry/entity.pkl')
 
-flow = { 'entity': E, 'rpull': X }
+flow = { 'entity': E, 'rpull': X, 'rspacetime':GT }

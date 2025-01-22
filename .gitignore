@@ -24,6 +24,7 @@ prom
 *.xml
 *.txt
 *.zip
+*.png
 
 .vscode
 
