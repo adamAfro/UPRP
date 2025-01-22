@@ -2,13 +2,57 @@
 
 
 
+\subsection{Dane przestrzenne}
+
+Dane przestrzenne odnoszą się do miejsc z jakimi są powiązane
+osoby albo organizacje związane z patentami. Pozostawia to więc 
+różne możliwości analizy przestrzennej:
+
+\begin{enumerate}
+\item[$A$:] przypisanie każdego patentu do pojedynczej lokalizacji;
+\item[$B$:] przypisanie patentu do wielu lokalizacji.
+\end{enumerate}
+
+W przypadku $A$ powstaje problem przypisania głównej lokalizacji.
+Jest to kwestia $A_1$ priorytetowania organizacji ponad osoby, bądź
+odwrotnie, oraz $A_2$ wyboru głównej osoby/organizacji.
+Problem $A_1$ wiąże się z potencjalnymi różnicami w modelu zależnie
+od wybranego podejścia. Problem $A_2$ może być niejednoznaczny
+w rozwiązaniu z powodu zbytn małego zakresu informacji zawartych w danych.
+
+Dalsza analiza odnosi się wyłącznie do podejścia $B$.
+Patent może mieć więc kilka lokalizacji, żadna nie jest określona jako główna.
+
+Problemem jest także to, że dane zawierają wyłącznie nazwy miast, 
+więc ich umieszczenie na mapie wiąże się z wadami: 
+nazwy nie są unikalne --- w takim przypadku używany jest algorytm minimalizacji 
+odległości, tak żeby wybrać optymalną kombinację. 
+Wynika z tego oczywiste obicążenie. 
+Po za tym nazwy mniejszych miejscowości mogą być duplikatami
+nazw miast. Pewne powiązanie jest w takim przypadku niemożliwe
+w wykonalny sposób na podstawie patentowych informacji.
+Co za tym idzie rozważane są wyłącznie lokacje uważane za polskie miasta.
+\todonote{przypis}
+
+
+
+\begin{figure}[H]\centering
+\includegraphics[width=\textwidth]{../registry/geodisp-total.png}
+\caption{Geolokalizacje,
+         w~Polsce,
+         osób~i~organizacji 
+         pełniących~role~patentowe 
+         w~aplikacjach~patentowych}
+\label{fig:geodisp.png}
+\end{figure}
+
+
+
 \subsection{Rejestr dat związanych z patentami}
 
-Poszczególne czynności związane z ochroną patentów są rejestrowane
-przez urzędy i są dostępne w wymienionych zbiorach danych.
-Takie wydarzenia są powiązane z konkretną datą kalendarzową,
-co pozwala na wyznaczenie czasu pojawienia się danej informacji
-w systemie. Można wyróżnić 9 typów dat:
+Poszczególne czynności związane z ochroną patentów są rejestrowane.
+Każde wydarzenie jest powiązane z konkretną datą kalendarzową.
+Można wyróżnić kilka typów wydarzeń związanych z patentami:
 
 \begin{itemize}
 \item publiczne ujawnienie \foreign{ang}{exhibition}
@@ -24,30 +68,24 @@ w systemie. Można wyróżnić 9 typów dat:
 \end{itemize}
 \todonote{potrz. źródło}
 
+\begin{figure}[H]\centering
+\includegraphics[width=\textwidth]{../registry/geodisp.png}
+\caption{Geolokalizacje,
+         w~Polsce,
+         osób~i~organizacji 
+         pełniących~role~patentowe 
+         w~aplikacjach~patentowych,
+         z~danego~okresu,
+         w~kolejnych~latach}
+\label{fig:geodisp.png}
+\end{figure}
+
 
 
 \subsection{Klasyfikacje patentów}
 
 Klasyfikacje patentowe to systemy, które pozwalają na przypisanie
 patentów do odpowiednich dziedzin.
-
-
-
-\section{Dane przestrzenne}
-
-Dane przestrzenne odnoszą się do miejsc z jakimi są powiązane
-osoby albo organizacji związane z patentami. Patent może mieć więc
-kilka lokalizacji, żadna nie jest określona jako główna.
-\todonote{w sumie można by wyznaczyć główną lokację
-          jako miast organizacji jeśli jakaś jest}
-
-Dane zawierają wyłącznie nazwy miast, więc ich umieszczenie na
-mapie wiąże się z wadami: nazwy nie są unikalne --- w takim
-przypadku używany jest algorytm minimalizacji odległości, tak
-żeby wybrać optymalną kombinację. Wynika z tego oczywiste obicążenie.
-Po za tym nazwy mniejszych miejscowości mogą być duplikatami
-nazw miast. Pewne powiązanie jest w takim przypadku niemożliwe
-w wykonalny sposób na podstawie patentowych informacji.
 
 
 
@@ -150,3 +188,16 @@ jako wspólny wysiłek w kierunku standaryzacji klasyfikacji.
 
 \ac{IPCR} powstał przez rewizję systemu \ac{IPC}. Zawiera dodatkowe
 symbole dodające prezycji do klasyfikacji.
+
+\begin{figure}[H]\centering
+\includegraphics[width=\textwidth]{../registry/geodisp-IPC.png}
+\caption{Geolokalizacje,
+         w~Polsce,
+         osób~i~organizacji 
+         pełniących~role~patentowe 
+         w~aplikacjach~patentowych
+         o~wskazanych~sekcjach~IPC,
+         z~danego~okresu,
+         w~kolejnych~latach}
+\label{fig:geodisp.png}
+\end{figure}

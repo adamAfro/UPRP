@@ -408,6 +408,7 @@ FN = Textual(F0, nameset=FN0).map('registry/textual.pkl')
 FGT = Spacetime(FN, fP['UPRP']['geoloc'], fP['UPRP']['event'], 
                   fP['UPRP']['classify']).map('registry/spacetime.pkl')
 
+FGT.trigger(lambda X: plot.Geodisp.total(X)).map('registry/geodisp-total.png')
 FGT.trigger(lambda X: plot.Geodisp.periods(X, time='firstdate')).map('registry/geodisp-first.png')
 FGT.trigger(lambda X: plot.Geodisp.periods(X, time='application')).map('registry/geodisp.png')
 
