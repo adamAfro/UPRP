@@ -197,11 +197,19 @@ def Spacetime(textual:pandas.DataFrame,
   X = X.set_index(['doc', 'city']).join(G, how='left').reset_index()
 
   X = X.set_index('doc')
-  C = clsf
-  C['clsf'] = C['section']
-  C = pandas.get_dummies(C[['clsf']], prefix_sep='-')
-  C = C.groupby('doc').sum()
-  X = X.join(C, how='left')
+  C0 = clsf
+  C0['clsf'] = C0['section']
+  C0 = pandas.get_dummies(C0[['clsf']], prefix_sep='-')
+  C0 = C0.groupby('doc').sum()
+  X = X.join(C0, how='left')
+
+  for c in ['IPC', 'IPCR', 'CPC']:
+
+    C = clsf[ clsf['classification'] == c ]
+    C = C.reset_index().drop_duplicates(['doc', 'classification', 'section'])
+    C = C.pivot_table(index='doc', columns='classification', 
+                      values='section', aggfunc=list)
+    X = X.join(C, how='left')
 
   X = X.reset_index().set_index('id')
 
@@ -400,8 +408,28 @@ FN = Textual(F0, nameset=FN0).map('registry/textual.pkl')
 FGT = Spacetime(FN, fP['UPRP']['geoloc'], fP['UPRP']['event'], 
                   fP['UPRP']['classify']).map('registry/spacetime.pkl')
 
-FGT.trigger(lambda X: plot.Geodisp.periods(X, time='firstdate')).map('registry/geodisp.png')
-FGT.trigger(lambda X: plot.Geodisp.periods(X, time='application')).map('registry/geodisp-appl.png')
+FGT.trigger(lambda X: plot.Geodisp.periods(X, time='firstdate')).map('registry/geodisp-first.png')
+FGT.trigger(lambda X: plot.Geodisp.periods(X, time='application')).map('registry/geodisp.png')
+
+IPC = Flow('IPC', lambda X: X.explode('IPC')[['lat', 'lon', 'IPC', 'application']]\
+                             .rename(columns={ 'application': 'date', 'IPC': 'section' }), args=[FGT])
+
+IPC.trigger(lambda X: plot.Geodisp.periods(X, color='section')).map('registry/geodisp-IPC.png')
+class Letterplot:
+  def __init__(self, l:str): self.l = l
+  def callback(self, X): return plot.Geodisp.periods(X[ X['section'] == self.l ])
+for l in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'X']:
+  IPC.trigger(Letterplot(l).callback).map(f'registry/geodisp-IPC-{l}.png')
+
+IPCR = Flow('IPCR', lambda X: X.explode('IPCR')[['lat', 'lon', 'IPCR', 'application']]\
+                               .rename(columns={ 'application': 'date', 'IPCR': 'section' }), args=[FGT])
+
+IPCR.trigger(lambda X: plot.Geodisp.periods(X, color='section')).map('registry/geodisp-IPCR.png')
+class Letterplot:
+  def __init__(self, l:str): self.l = l
+  def callback(self, X): return plot.Geodisp.periods(X[ X['section'] == self.l ])
+for l in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'X']:
+  IPCR.trigger(Letterplot(l).callback).map(f'registry/geodisp-IPCR-{l}.png')
 
 FaG = Affilategeo(FGT).map('registry/affilate-geo.pkl')
 FaN = Affilatenames(FaG).map('registry/affilate.pkl')
@@ -414,5 +442,7 @@ FE = Entity.arrange(sim=FS, all=FGT).map('registry/entity.pkl')
 
 flow = { 'registry': {'entity': FE, 
                       'pull': F0, 
-                      'spacetime':FGT
+                      'spacetime':FGT,
+                      'IPC': IPC,
+                      'IPCR': IPCR
                                        } }
