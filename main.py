@@ -27,7 +27,7 @@ def Fetch(queries:pandas.Series, URL:str, outdir:str):
 from util import data as D
 from profiling import flow as f0
 from patent import flow as fP
-from registers import flow as fA
+from registry import flow as fA
 from geoloc import flow as fG
 
 from raport import flow as fR
