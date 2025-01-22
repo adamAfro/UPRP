@@ -22,6 +22,7 @@ class Cmap:
   attention = 'Oranges'
   warning = 'Reds'
   visible = 'plasma'
+  distinct = 'tab20'
 
 class Annot:
 
@@ -46,7 +47,9 @@ def squarealike(n):
 
   m = int(n**0.5)
   if m**2 == n: return m, m
-  return m+1, m
+  a, b = m, m
+  while a*b < n: b += 1
+  return a, b
 
 
 def monthly(X:pandas.DataFrame, by:str, title='W danym miesiącu', x='miesiąc',
@@ -103,32 +106,49 @@ class Geodisp:
     return f
 
   def periods(X:pandas.DataFrame, coords=['lat', 'lon'],
-              scale=0.5, growth=25, time='date', freq='12M'):
+              scale=0.5, growth=25, time='date', freq='12M', 
+              color=None):
 
     from matplotlib.colors import Normalize
 
     X = gpd.GeoDataFrame(X, geometry=gpd.points_from_xy(X[coords[1]], X[coords[0]]))
     T = X.groupby(pandas.Grouper(key=time, freq=freq))
-    T = [(g, G.value_counts(coords+['geometry']).reset_index()) for g, G in T]
+
+    K = [] if color is None else [color]
+    T = [(g, G.value_counts(coords+['geometry']+K).reset_index()) for g, G in T if not G.empty]
 
     M0 = max([G['count'].max() for g, G in T])
     def maxscale(m, M):
       return lambda x: scale + scale*growth*x/M0
 
     r, c = squarealike(len(T))
-    f, A = plt.subplots(r, c, figsize=(15, 15), tight_layout=True)
+    f, A = plt.subplots(r, c, figsize=(16, 16), tight_layout=True)
     A = A.flatten()
+
+    if color is None:
+      C = dict(hue='count', cmap=Cmap.visible, norm=Normalize(vmin=0, vmax=M0))
+    else:
+      C = dict(hue=color, cmap=Cmap.distinct)
 
     for i, (g, G) in enumerate(T):
 
       G = G.dropna(subset=coords)
+      if G.empty: 
+        A[i].axis('off')
+        continue
+
       P = gpd.GeoDataFrame(G, geometry=G['geometry'])
 
-      legend = dict(legend=True, legend_var='hue') if i % c == c-1 else dict(legend=False)
+      L = dict(legend=False)
+      if color is not None:
+        L = dict(legend=True, legend_var='hue')
+        L['legend_kwargs'] = dict(bbox_to_anchor=(1.05, 1), 
+                                loc='upper right', fontsize=8)
+      elif i % c == c-1:
+        L = dict(legend=True, legend_var='hue')
 
-      A[i].set_title('Od ' + g.strftime('%d.%m.%Y'))
-      gplt.pointplot(P, ax=A[i], extent=X.total_bounds, **legend,
-                     hue='count', cmap=Cmap.visible, norm = Normalize(vmin=0, vmax=M0),
+      A[i].set_title(g.strftime('%d.%m.%Y' + ' - ' + freq))
+      gplt.pointplot(P, ax=A[i], extent=X.total_bounds, **L, **C,
                      scale='count', scale_func=maxscale)
 
     for i in range(len(T), len(A)):
