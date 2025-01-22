@@ -60,6 +60,7 @@ def event(storage:Storage, assignpath:str, codes:pandas.DataFrame):
   X['year'] = X['value'].dt.year.astype(str)
   X['month'] = X['value'].dt.month.astype(str)
   X['day'] = X['value'].dt.day.astype(str)
+  X['date'] = pandas.to_datetime(X[['year', 'month', 'day']])
   X['delay'] = (X['value'] - X['value'].min()).dt.days.astype(int)
   X = X.drop(columns='value')
 
@@ -69,7 +70,7 @@ def event(storage:Storage, assignpath:str, codes:pandas.DataFrame):
 
   X = X.join(codes, how='left')
 
-  assert { 'event', 'year', 'month', 'day', 'delay', 'country', 'number' }.issubset(X.columns)
+  assert { 'event', 'year', 'date', 'month', 'day', 'delay', 'country', 'number' }.issubset(X.columns)
   assert { 'doc' }.issubset(X.index.names)
   return X
 
@@ -182,25 +183,23 @@ for h in flow.keys():
 
   flow[h]['code'] = code(f0[h]['profiling'], assignpath=D[h]+'/assignement.yaml').map(D[h]+'/code/data.pkl')
 
-  flow[h]['code'].trigger(plot.NA).map(D[h]+'/code/NA.png')
+  flow[h]['code'].trigger(plot.n).map(D[h]+'/code/NA.png')
 
   flow[h]['event'] = event(f0[h]['profiling'], 
                            assignpath=D[h]+'/assignement.yaml',
                            codes=flow[h]['code']).map(D[h]+'/event/data.pkl')
 
-  flow[h]['event'].trigger(plot.NA).map(D[h]+'/event/NA.png')
+  flow[h]['event'].trigger(lambda X: plot.n(X[['event', 'date']], time='date')).map(D[h]+'/event/series.png')
 
   flow[h]['classify'] = classify(f0[h]['profiling'],
                                  assignpath=D[h]+'/assignement.yaml',
                                  codes=flow[h]['code']).map(D[h]+'/classify/data.pkl')
 
-  flow[h]['classify'].trigger(plot.NA).map(D[h]+'/classify/NA.png')
+  flow[h]['classify'].trigger(plot.n).map(D[h]+'/classify/NA.png')
 
   flow[h]['geoloc'] = geoloc(f0[h]['profiling'], 
                              assignpath=D[h]+'/assignement.yaml', codes=flow[h]['code'], 
                              geodata=fg['Misc']['geodata'],).map(D[h]+'/geoloc/data.pkl')
-
-  flow[h]['geoloc'].trigger(plot.NA).map(D[h]+'/geoloc/NA.png')
 
 for h in flow.keys():
   flow[h]['patentify'] = Flow(callback=lambda *x: x, args=[flow[h][k] for k in flow[h].keys()])

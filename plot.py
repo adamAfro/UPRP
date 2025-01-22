@@ -134,6 +134,7 @@ def n(X:pandas.DataFrame, group=None,
 
   T = X.groupby('column')
   f, A = plt.subplots(T.ngroups, constrained_layout=True, figsize=(8, 1+2*T.ngroups))
+  A = A.flatten() if isinstance(A, numpy.ndarray) else [A]
 
   for i, (g, G) in enumerate(T):
 
@@ -141,7 +142,7 @@ def n(X:pandas.DataFrame, group=None,
 
     if G.empty: continue
 
-    G = G.fillna('b.d.')
+    G['value'] = G['value'].astype(str).fillna('b.d.')
     G = G.pivot(index=g0, columns='value', values='count').fillna(0)
     if 'b.d.' in G.columns:
       G = G[ [k for k in G.columns if k !='b.d.'] + ['b.d.'] ]

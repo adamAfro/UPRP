@@ -183,7 +183,6 @@ def Spacetime(textual:pandas.DataFrame,
   X = textual
 
   T = event
-  T['date'] = pandas.to_datetime(T[['year', 'month', 'day']])
   X = X.reset_index().set_index('doc')\
       .join(T.groupby('doc')['date'].min(), how='left').reset_index()
   X = X.rename(columns={'date': 'firstdate'})
