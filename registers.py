@@ -213,7 +213,7 @@ def Spacetime(textual:pandas.DataFrame,
 
   X = X.reset_index().set_index('id')
 
-  assert { 'doc', 'lat', 'lon', 'firstdate', 'application', 'organisation' }.issubset(X.columns)
+  assert { 'doc', 'lat', 'lon', 'loceval', 'firstdate', 'application', 'organisation' }.issubset(X.columns)
   assert any([ c.startswith('clsf-') for c in X.columns ])
   assert { 'id' }.issubset(X.index.names)
 
@@ -408,12 +408,17 @@ FN = Textual(F0, nameset=FN0).map('registry/textual.pkl')
 FGT = Spacetime(FN, fP['UPRP']['geoloc'], fP['UPRP']['event'], 
                   fP['UPRP']['classify']).map('registry/spacetime.pkl')
 
-IPC = Flow('IPC', lambda X: X.explode('IPC')[['lat', 'lon', 'IPC', 'application']]\
+IPC = Flow('IPC', lambda X: X.explode('IPC')[['city', 'lat', 'lon', 'loceval', 'IPC', 'application']]\
                              .rename(columns={ 'application': 'date', 'IPC': 'section' }), args=[FGT])
-IPC.trigger(lambda X: plot.ngeo(X, color='section', time='date')).map('registry/geodisp-IPC.png')
+IPC.trigger(lambda X: plot.ngeo(X, color='section', time='date'))\
+   .map('registry/geodisp-IPC.png')
+IPC.trigger(lambda X: plot.n(X[['city', 'loceval', 'section']], group='section'))\
+   .map('registry/IPC-NA-geodisp.png')
+IPC.trigger(lambda X: plot.n(X[['city', 'loceval', 'section', 'date']], time='date'))\
+   .map('registry/IPC-NA-periods.png')
 
 FGTplots = FGT.trigger()
-FGTplots.trigger(lambda X: plot.n(X[['lat', 'lon', 'city', 'application']], time='application'))\
+FGTplots.trigger(lambda X: plot.n(X[['city', 'loceval', 'application']], time='application'))\
         .map('registry/geodisp-NA.png')
 
 FGTplots.trigger(lambda X: plot.ngeo(X, label='city')).map('registry/geodisp-total.png')

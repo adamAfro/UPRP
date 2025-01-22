@@ -105,11 +105,17 @@ def NA(X: pandas.DataFrame):
 
   return f
 
-def n(X:pandas.DataFrame, time=None, freq='12M', categories=5, tick=5):
+def n(X:pandas.DataFrame, group=None,
+      time=None, freq='12M',
+      categories=12, tick=5):
 
-  K = [k for k in X.columns if k != time]
+  g0 = None
+  if time: g0 = time
+  if group: g0 = group
+
+  K = [k for k in X.columns if k != g0]
   K0 = [k for k in K if X[k].nunique() < categories]
-  KL = [k for k in K if X[k].dtype in ['O', 'str', 'object', 'o']]
+  KL = [k for k in K if (k not in K0) and (X[k].dtype in ['O', 'str', 'object', 'o'])]
 
   for k in KL: X[k] = X[k].str.len()
 
@@ -117,12 +123,14 @@ def n(X:pandas.DataFrame, time=None, freq='12M', categories=5, tick=5):
   for k in KZ:
     X[k] = pandas.cut(X[k], bins=categories).astype(str).replace('nan', 'b.d.')
 
-  if not time: raise NotImplementedError()
+  if not g0: raise NotImplementedError()
 
-  if time:
-    X = X.groupby(pandas.Grouper(key=time, freq=freq))
-    X = pandas.concat([X[k].value_counts(dropna=False).reset_index()\
-              .rename(columns={k: 'value'}).assign(column=k) for k in K])
+  if group: X = X.groupby(g0)
+
+  if time: X = X.groupby(pandas.Grouper(key=g0, freq=freq))
+
+  X = pandas.concat([X[k].value_counts(dropna=False).reset_index()\
+            .rename(columns={k: 'value'}).assign(column=k) for k in K])
 
   T = X.groupby('column')
   f, A = plt.subplots(T.ngroups, constrained_layout=True, figsize=(8, 1+2*T.ngroups))
@@ -134,16 +142,18 @@ def n(X:pandas.DataFrame, time=None, freq='12M', categories=5, tick=5):
     if G.empty: continue
 
     G = G.fillna('b.d.')
-    G = G.pivot(index=time, columns='value', values='count').fillna(0)
-    if numpy.nan in G.columns:
-      G = G[ [k for k in G.columns if k !=numpy.nan] + [numpy.nan] ]
-    G.index = G.index.date
+    G = G.pivot(index=g0, columns='value', values='count').fillna(0)
+    if 'b.d.' in G.columns:
+      G = G[ [k for k in G.columns if k !='b.d.'] + ['b.d.'] ]
+
+    if time: G.index = G.index.date
 
     G.plot.bar(stacked=True, ax=A[i], xlabel='', rot=0, legend=True, 
                cmap=Cmap.NA(Cmap.distinct, G.shape[1]))
 
     A[i].legend(title=g, bbox_to_anchor=(1.05, 1.05), loc='upper left')
-    A[i].xaxis.set_major_locator(MaxNLocator(tick, prune='both'))
+
+    if time: A[i].xaxis.set_major_locator(MaxNLocator(tick, prune='both'))
 
   return f
 
