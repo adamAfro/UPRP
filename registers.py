@@ -410,12 +410,15 @@ FGT = Spacetime(FN, fP['UPRP']['geoloc'], fP['UPRP']['event'],
 
 IPC = Flow('IPC', lambda X: X.explode('IPC')[['lat', 'lon', 'IPC', 'application']]\
                              .rename(columns={ 'application': 'date', 'IPC': 'section' }), args=[FGT])
-IPC.trigger(lambda X: plot.geodisp(X, color='section', time='date')).map('registry/geodisp-IPC.png')
+IPC.trigger(lambda X: plot.ngeo(X, color='section', time='date')).map('registry/geodisp-IPC.png')
 
 FGTplots = FGT.trigger()
-FGTplots.trigger(lambda X: plot.geodisp(X, label='city')).map('registry/geodisp-total.png')
-FGTplots.trigger(lambda X: plot.geodisp(X, time='firstdate')).map('registry/geodisp-first.png')
-FGTplots.trigger(lambda X: plot.geodisp(X, time='application')).map('registry/geodisp.png')
+FGTplots.trigger(lambda X: plot.n(X[['lat', 'lon', 'city', 'application']], time='application'))\
+        .map('registry/geodisp-NA.png')
+
+FGTplots.trigger(lambda X: plot.ngeo(X, label='city')).map('registry/geodisp-total.png')
+FGTplots.trigger(lambda X: plot.ngeo(X, time='firstdate')).map('registry/geodisp-first.png')
+FGTplots.trigger(lambda X: plot.ngeo(X, time='application')).map('registry/geodisp.png')
 FGTplots.trigger(IPC)
 
 FaG = Affilategeo(FGT).map('registry/affilate-geo.pkl')
