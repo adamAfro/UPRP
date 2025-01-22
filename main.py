@@ -29,11 +29,12 @@ from profiling import flow as f0
 from patent import flow as fP
 from registry import flow as fA
 from geoloc import flow as fG
+from subject import flow as fS
 
 from raport import flow as fR
 
 flow = dict()
-for f in [f0, fP, fR, fA, fG]:
+for f in [f0, fP, fR, fA, fG, fS]:
   for k in f.keys():
 
     if isinstance(f[k], dict):
