@@ -136,11 +136,11 @@ def intbins(v: pandas.Series, n: int, start=None):
 
   return y
 
-def n(X:pandas.DataFrame, group=None,
-      time=None, freq='12M',
-      categories=12, xtick=None, 
-      xbin=None, xbinstart=None,
-      NA='b.d.'):
+def count(X:pandas.DataFrame, group=None,
+         time=None, freq='12M',
+         categories=12, xtick=None, 
+         xbin=None, xbinstart=None,
+         NA='b.d.'):
 
   g0 = None
   if time: g0 = time
@@ -217,9 +217,9 @@ def n(X:pandas.DataFrame, group=None,
 
   return f
 
-def ngeo(X:pandas.DataFrame, coords=['lat', 'lon'], label=None,
-            scale=0.5, growth=25, time=None, freq='12M', 
-            color=None, border=False, fill=None):
+def map(X:pandas.DataFrame, coords=['lat', 'lon'], label=None,
+        scale=0.5, growth=25, time=None, freq='12M', 
+        color=None, border=False, fill=None):
 
   w = gcrs.WebMercator()
   m = pow
@@ -306,43 +306,46 @@ flow = dict()
 
 for h in D.keys():
 
-  fP[h]['code'].trigger(n).map(D[h]+'/code.png')
-  fP[h]['event'].trigger(lambda X: n(X[['event', 'date']], time='date')).map(D[h]+'/event.png')
-  fP[h]['classify'].trigger(n).map(D[h]+'/classify.png')
+  fP[h]['code'].trigger(count).map(D[h]+'/code.png')
+  fP[h]['event'].trigger(lambda X: count(X[['event', 'date']], time='date')).map(D[h]+'/event.png')
+  fP[h]['classify'].trigger(count).map(D[h]+'/classify.png')
 
 spacetime = fR['registry']['spacetime'].trigger(lambda X: X.assign(location=X['city'].isna()))
 
-spacetime.trigger(lambda X: n(X[['location', 'loceval', 'application']], time='application'))\
+spacetime.trigger(lambda X: count(X[['location', 'loceval', 'application']], time='application', xtick=5))\
          .map('registry/NA-loc-geo.png')
 
-spacetime.trigger(lambda X: ngeo(X, label='location')).map('registry/map-geo.png')
-spacetime.trigger(lambda X: ngeo(X, time='firstdate')).map('registry/map-geo-periods-first.png')
-spacetime.trigger(lambda X: ngeo(X, time='application')).map('registry/map-geo-periods.png')
+spacetime.trigger(lambda X: map(X, label='location')).map('registry/map.png')
+spacetime.trigger(lambda X: map(X, time='firstdate')).map('registry/map-periods-first.png')
+spacetime.trigger(lambda X: map(X, time='application')).map('registry/map-periods.png')
 
 IPC = spacetime.trigger(lambda *X: X[0].explode('IPC')[['location', 'lat', 'lon', 'loceval', 'IPC', 'application']]\
                                        .rename(columns={ 'application': 'date', 'IPC': 'section' }))
 
-IPC.trigger(lambda X: ngeo(X, color='section', time='date'))\
-   .map('registry/map-geo-IPC.png')
-IPC.trigger(lambda X: n(X[['location', 'loceval', 'section']], group='section'))\
+IPC.trigger(lambda X: map(X, color='section', time='date'))\
+   .map('registry/map-IPC.png')
+IPC.trigger(lambda X: count(X[['location', 'loceval', 'section']], group='section'))\
    .map('registry/NA-IPC-loc-geo.png')
 
 
 sim = fS['subject']['simcalc'].trigger()
-sim.trigger(lambda X: n(X.reset_index(drop=True), group='geomatch', categories=5))\
+sim.trigger(lambda X: count(X.reset_index(drop=True), group='geomatch', categories=5))\
    .map('subject/Y-sim-geo.png')
-sim.trigger(lambda X: n(X.reset_index(drop=True), group='nameaffil', categories=8, xbin=3, xbinstart=5))\
+sim.trigger(lambda X: count(X.reset_index(drop=True), group='nameaffil', categories=8, xbin=3, xbinstart=5))\
    .map('subject/Y-sim-affil.png')
 
-identities = fS['subject']['fillgeo'].trigger()
+def strrole(x, K:list[str]):
+  y = '-'.join([k for k in K if x[k] == 1])
+  return y if y else None
+roles = fS['subject']['fillgeo'].trigger(lambda X: X.assign(role=X.apply(strrole, K=['assignee', 'inventor', 'applicant', 'organisation'], axis=1)))
 
-identities.trigger(lambda X: n(X[['assignee', 'inventor', 'applicant', 'loceval']].reset_index(drop=True), group='loceval'))\
-          .map('subject/NA-geo-role.png')
+roles.trigger(lambda X: count(X[['role', 'loceval']].reset_index(drop=True), group='role'))\
+     .map('subject/NA-geo-role.png')
 
-all = Flow(callback=lambda *x: x, args=[spacetime, IPC, sim, identities])
+all = Flow(callback=lambda *x: x, args=[spacetime, IPC, sim, roles])
 
 flow = { 'plot': { 'all': all,
                    'spacetime': spacetime,
                    'IPC': IPC,
                    'sim': sim,
-                   'identities': identities } }
+                   'roles': roles } }
