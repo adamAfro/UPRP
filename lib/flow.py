@@ -92,6 +92,9 @@ class Flow():
         self.info(f'loaded {f0}')
         return Y
 
+    if f0.endswith('.png'):
+      return None
+
     raise NotImplementedError()
 
   def dump(self):
