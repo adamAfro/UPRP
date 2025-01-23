@@ -73,7 +73,7 @@ def simcalc(affilated:pandas.DataFrame):
   kG = ['lat', 'lon']
 
   kC = [k for k in X.columns if k.startswith(c)]
-  
+
   class kX: G='geoaffil'; N='nameaffil'; C='clsfmatch'; D='clsfdiff'
   class kY: G='geoaffil'; N='nameaffil'; C='clsfmatch'; D='clsfdiff'; M='geomatch'
 
@@ -81,9 +81,10 @@ def simcalc(affilated:pandas.DataFrame):
   X[k0] = (X[k1] + ' ' + X[kn] + ' ' + X[k2]).str.strip().str.split()
   X[k0] = X[k0].apply(lambda x: frozenset([x[0], x[-1]]) if x else None)
 
-  z = X.nameset.apply(len) < 2
-  if z.sum() > 0: Warning('(X.nameset.apply(len) < 2).sum() > 0')
-  X = X[ z ]
+  X = X[ X['organisation'].fillna(False) == False ]
+  z = X['nameset'].apply(len) < 2
+  if z.sum() > 0:
+    print(Warning(f'(X.nameset.apply(len) < 2).sum() == {z.sum()}'))
 
  #Nameset
   X = X.reset_index().set_index(k0)
@@ -185,9 +186,9 @@ def fillgeobpr(entities:pandas.DataFrame, group:str, loceval:str):
     if d == 0: break
     print(-d, "geo NA")
 
-    affil0 = affilgeo(X)
-    affil = affilnames(affil0)
-    sim = simcalc(affil)
+    affilG = affilgeo(X)
+    affilN = affilnames(affilG)
+    sim = simcalc(affilN)
     identified = identify(sim=sim, all=X)
     geofilled = fillgeo(identified, group=group, loceval=loceval)
 
