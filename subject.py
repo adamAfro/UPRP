@@ -57,7 +57,7 @@ def affilnames(registry:pandas.DataFrame):
   return Y
 
 @Flow.From('calculating similarity')
-def simcalc(affilated:pandas.DataFrame, qcount:str):
+def simcalc(affilated:pandas.DataFrame):
 
   import tqdm
 
@@ -80,8 +80,6 @@ def simcalc(affilated:pandas.DataFrame, qcount:str):
   X[[k1, k2, kn]] = X[[k1, k2, kn]].fillna('').astype(str)
   X[k0] = (X[k1] + ' ' + X[kn] + ' ' + X[k2]).str.strip().str.split()
   X[k0] = X[k0].apply(lambda x: frozenset([x[0], x[-1]]) if x else None)
-
-  X = X[ X[k0].isin(X.value_counts(k0).to_frame().query(qcount).index) ]
 
   z = X.nameset.apply(len) < 2
   if z.sum() > 0: Warning('(X.nameset.apply(len) < 2).sum() > 0')
@@ -156,21 +154,20 @@ def identify(sim:pandas.DataFrame, all:pandas.DataFrame):
 
 from registry import flow as f0
 
-FaG = affilgeo(f0['registry']['spacetime']).map('subject/affilate-geo.pkl')
-FaN = affilnames(FaG).map('subject/affilate.pkl')
+affil0 = affilgeo(f0['registry']['spacetime']).map('subject/affilate-geo.pkl')
+affil = affilnames(affil0).map('subject/affilate.pkl')
 
-FS000 = simcalc(FaN, qcount='count  < 100').map('subject/sim-000.pkl')
-FS100 = simcalc(FaN, qcount='count >= 100').map('subject/sim-100.pkl')
-FS = Flow('simcalc merge', lambda *x: pandas.concat(x), args=[FS000, FS100]).map('subject/sim.pkl')
+sim = simcalc(affil).map('subject/sim.pkl')
 
-simplot = FS.trigger()
+simplot = sim.trigger()
 simplot.trigger(lambda X: plot.n(X.reset_index(drop=True), group='geomatch', categories=5))\
        .map('subject/similarities-geo.png')
 simplot.trigger(lambda X: plot.n(X.reset_index(drop=True), group='nameaffil', categories=5, tick=10))\
        .map('subject/similarities-nameaffil.png')
 
-FE = identify(sim=FS, all=f0['registry']['spacetime']).map('subject/entity.pkl')
+identities = identify(sim=sim, all=f0['registry']['spacetime']).map('subject/entity.pkl')
 
-flow = { 'subject': { 'identify': FE, 
+flow = { 'subject': { 'identify': identities,
+                      'simcalc': sim, 
                       'simplot': simplot,
-                      'affilate': FaN } }
+                      'affilate': affil } }
