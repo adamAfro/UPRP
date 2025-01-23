@@ -107,21 +107,30 @@ def NA(X: pandas.DataFrame):
 
 def n(X:pandas.DataFrame, group=None,
       time=None, freq='12M',
-      categories=12, tick=5):
+      categories=12, tick=None):
 
   g0 = None
   if time: g0 = time
   if group: g0 = group
 
   K = [k for k in X.columns if k != g0]
-  K0 = [k for k in K if X[k].nunique() < categories]
+  K0 = [k for k in K if X[k].nunique() <= categories]
+
   KL = [k for k in K if (k not in K0) and (X[k].dtype in ['O', 'str', 'object', 'o'])]
 
   for k in KL: X[k] = X[k].str.len()
 
   KZ = [k for k in K if k not in K0]
   for k in KZ:
-    X[k] = pandas.cut(X[k], bins=categories).astype(str).replace('nan', 'b.d.')
+    if X[k].quantile(0.5) < 1:
+      X[k] = pandas.cut(X[k], bins=categories, include_lowest=True, right=False)
+    else:
+      r = (X[k].max() - X[k].min())/categories
+      R = numpy.arange(numpy.floor(X[k].min()).astype(int),
+                       numpy.ceil(X[k].max()).astype(int) + r, r)
+
+      X[k] = pandas.cut(X[k], bins=R, include_lowest=True, right=False, precision=0)
+      X[k] = X[k].apply(lambda x: f'{int(x.left)} - {int(x.right)}' if pandas.notna(x) else 'b.d.')
 
   if not g0: raise NotImplementedError()
 
@@ -133,7 +142,9 @@ def n(X:pandas.DataFrame, group=None,
             .rename(columns={k: 'value'}).assign(column=k) for k in K])
 
   T = X.groupby('column')
-  f, A = plt.subplots(T.ngroups, constrained_layout=True, figsize=(8, 1+2*T.ngroups))
+  f, A = plt.subplots(T.ngroups, constrained_layout=True, 
+                      sharex=True, sharey=True,
+                      figsize=(8, 1+2*T.ngroups))
   A = A.flatten() if isinstance(A, numpy.ndarray) else [A]
 
   for i, (g, G) in enumerate(T):
@@ -154,7 +165,9 @@ def n(X:pandas.DataFrame, group=None,
 
     A[i].legend(title=g, bbox_to_anchor=(1.05, 1.05), loc='upper left')
 
-    if time: A[i].xaxis.set_major_locator(MaxNLocator(tick, prune='both'))
+    if tick: A[i].xaxis.set_major_locator(MaxNLocator(tick, prune='both'))
+
+  A[-1].set_xlabel(g0)
 
   return f
 
