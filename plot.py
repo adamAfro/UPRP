@@ -139,7 +139,8 @@ def intbins(v: pandas.Series, n: int, start=None):
 def n(X:pandas.DataFrame, group=None,
       time=None, freq='12M',
       categories=12, xtick=None, 
-      xbin=None, xbinstart=None):
+      xbin=None, xbinstart=None,
+      NA='b.d.'):
 
   g0 = None
   if time: g0 = time
@@ -163,17 +164,17 @@ def n(X:pandas.DataFrame, group=None,
     else:
       X[k] = intbins(X[k], categories)
 
-    X[k].cat.add_categories('b.d.')
+    X[k].cat.add_categories(NA)
     o[k] = X[k].dtype.categories.tolist()
 
   if not g0: raise NotImplementedError()
 
   X[[k for k in X.columns if k != g0]] = \
-    X[[k for k in X.columns if k != g0]].astype(str).fillna('b.d.')
+    X[[k for k in X.columns if k != g0]].astype(str).fillna(NA)
   if group:
     if xbin: X[g0] = intbins(X[g0], xbin, xbinstart)
     X = X.groupby(g0)
-    oX = [g for g in X.groups if g != 'b.d.']+['b.d.']
+    oX = [g for g in X.groups if g != NA]+[NA]
 
   if time: X = X.groupby(pandas.Grouper(key=g0, freq=freq))
 
@@ -192,13 +193,16 @@ def n(X:pandas.DataFrame, group=None,
 
     if V.empty: continue
 
-    V['value'] = V['value'].astype(str).fillna('b.d.')
+    V['value'] = V['value'].replace('nan', NA)
+    V['value'] = V['value'].astype(str).fillna(NA)
     V = V.pivot(index=g0, columns='value', values='count').fillna(0)
 
    #sort
     if group: V = V.reindex(oX)
     if v in KZ:
       V = V[[k for k in o[v] if k in V.columns] + [k for k in V.columns if k not in o[v]]]
+    elif (NA in V.columns) and V.columns[-1] != NA:
+      V = V[[k for k in V.columns if k != NA]+[NA]]
 
     if time: V.index = V.index.date
 
