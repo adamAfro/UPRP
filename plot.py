@@ -1,7 +1,8 @@
 import pandas, matplotlib.pyplot as plt, numpy
-import geopandas as gpd, geoplot as gplt
+import geopandas as gpd, geoplot as gplt, geoplot.crs as gcrs
 from matplotlib.ticker import MaxNLocator
 import matplotlib.colors as mcolors
+from matplotlib.colors import Normalize
 
 plt.rcParams['axes.spines.top'] = False
 plt.rcParams['axes.spines.right'] = False
@@ -173,9 +174,11 @@ def n(X:pandas.DataFrame, group=None,
 
 def ngeo(X:pandas.DataFrame, coords=['lat', 'lon'], label=None,
             scale=0.5, growth=25, time=None, freq='12M', 
-            color=None):
+            color=None, border=False, fill=None):
 
-  from matplotlib.colors import Normalize
+  w = gcrs.WebMercator()
+  if border or fill:
+    m = gpd.read_file('map/powiaty.shp').to_crs(epsg=4326)
 
   X = gpd.GeoDataFrame(X, geometry=gpd.points_from_xy(X[coords[1]], X[coords[0]]))
   T = [(None, X)]
@@ -191,7 +194,8 @@ def ngeo(X:pandas.DataFrame, coords=['lat', 'lon'], label=None,
     return lambda x: scale + scale*growth*x/M0
 
   r, c = squarealike(len(T))
-  f, A = plt.subplots(r, c, figsize=(16, 16), tight_layout=True)
+  f, A = plt.subplots(r, c, figsize=(16, 16), tight_layout=True,
+                      subplot_kw={'projection': w})
   A = A.flatten() if isinstance(A, numpy.ndarray) else [A]
 
   if color is None:
@@ -205,6 +209,10 @@ def ngeo(X:pandas.DataFrame, coords=['lat', 'lon'], label=None,
     E = gpd.GeoDataFrame(E, geometry=gpd.points_from_xy(E[coords[1]], E[coords[0]]))
 
   for i, (g, G) in enumerate(T):
+
+    if border:
+      A[i] = gplt.polyplot(m, ax=A[i], projection=w, extent=m.total_bounds, 
+                           edgecolor=Colr.neutral)
 
     G = G.dropna(subset=coords)
     if G.empty: 
@@ -222,13 +230,8 @@ def ngeo(X:pandas.DataFrame, coords=['lat', 'lon'], label=None,
       L = dict(legend=True, legend_var='hue')
       L['legend_kwargs'] = dict(shrink=0.5)
 
-    gplt.pointplot(P, ax=A[i], extent=X.total_bounds, **L, **C,
-                    scale='count', scale_func=maxscale)
-
-    if label:
-      for x, y, k in zip(E.geometry.x, E.geometry.y, E[label]):
-        A[i].annotate(k, xy=(x, y), xytext=(3, 3), textcoords="offset points", 
-                      fontsize=8, color='black')
+    gplt.pointplot(P, ax=A[i], extent=m.total_bounds, **L, **C,
+                   scale='count', scale_func=maxscale, projection=w)
 
 
     if g:
