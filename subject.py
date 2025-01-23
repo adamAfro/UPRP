@@ -163,7 +163,14 @@ FS000 = simcalc(FaN, qcount='count  < 100').map('subject/sim-000.pkl')
 FS100 = simcalc(FaN, qcount='count >= 100').map('subject/sim-100.pkl')
 FS = Flow('simcalc merge', lambda *x: pandas.concat(x), args=[FS000, FS100]).map('subject/sim.pkl')
 
+simplot = FS.trigger()
+simplot.trigger(lambda X: plot.n(X.reset_index(drop=True), group='geomatch', categories=5))\
+       .map('subject/similarities-geo.png')
+simplot.trigger(lambda X: plot.n(X.reset_index(drop=True), group='nameaffil', categories=5, tick=10))\
+       .map('subject/similarities-nameaffil.png')
+
 FE = identify(sim=FS, all=f0['registry']['spacetime']).map('subject/entity.pkl')
 
-flow = { 'subject': { 'identify': FE,
+flow = { 'subject': { 'identify': FE, 
+                      'simplot': simplot,
                       'affilate': FaN } }
