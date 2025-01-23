@@ -54,7 +54,7 @@ class Annot:
 def syntdata():
 
   dates = pandas.date_range(start='2000-01-01', end='2022-12-31', freq='D')
-  categories = ['A', 'B', 'C', 'D']
+  categories = ['A','A','A', 'B', 'B', 'B', 'C', 'D']
   data = pandas.DataFrame({ 'date': dates,
                             'value1': numpy.random.choice(categories, len(dates)),
                             'value2': numpy.random.choice(categories, len(dates)),
@@ -106,9 +106,37 @@ def NA(X: pandas.DataFrame):
 
   return f
 
+def intbins(v: pandas.Series, n: int, start=None):
+
+  M = v.max()
+  m = start if start else v.min()
+
+ #range
+  r = (M - m) / n
+  R = [int(m+i*r) for i in range(n+1)]
+  R = [(R[i]+1*(i != 0), R[i+1]) for i in range(len(R)-1)]
+
+  def find(x):
+    for i, (a, b) in enumerate(R):
+      if a <= x <= b: return (a, b)
+    return (x, x) #dla sortowania
+
+  def strfy(x):
+    if x is None: return 'b.d.'
+    if x[0] == x[1]: return str(x[0])
+    return f'{x[0]}-{x[1]}'
+
+  y0 = v.apply(find)
+  y = pandas.Categorical(y0.apply(strfy),
+                         categories=[strfy(x) for x in sorted(y0.unique())], 
+                         ordered=True)
+
+  return y
+
 def n(X:pandas.DataFrame, group=None,
       time=None, freq='12M',
-      categories=12, tick=None):
+      categories=12, xtick=12, 
+      xbin=None, xbinstart=None):
 
   g0 = None
   if time: g0 = time
@@ -122,20 +150,24 @@ def n(X:pandas.DataFrame, group=None,
   for k in KL: X[k] = X[k].str.len()
 
   KZ = [k for k in K if k not in K0]
+
+ #order
+  o = {}
+
   for k in KZ:
     if X[k].quantile(0.5) < 1:
       X[k] = pandas.cut(X[k], bins=categories, include_lowest=True, right=False)
     else:
-      r = (X[k].max() - X[k].min())/categories
-      R = numpy.arange(numpy.floor(X[k].min()).astype(int),
-                       numpy.ceil(X[k].max()).astype(int) + r, r)
+      X[k] = intbins(X[k], categories)
 
-      X[k] = pandas.cut(X[k], bins=R, include_lowest=True, right=False, precision=0)
-      X[k] = X[k].apply(lambda x: f'{int(x.left)} - {int(x.right)}' if pandas.notna(x) else 'b.d.')
+    o[k] = X[k].dtype.categories.tolist()
 
   if not g0: raise NotImplementedError()
 
-  if group: X = X.groupby(g0)
+  if group:
+    if xbin: X[g0] = intbins(X[g0], xbin, xbinstart)
+    X = X.groupby(g0)
+    oX = [g for g in X.groups if g != 'b.d.']+['b.d.']
 
   if time: X = X.groupby(pandas.Grouper(key=g0, freq=freq))
 
@@ -148,25 +180,28 @@ def n(X:pandas.DataFrame, group=None,
                       figsize=(8, 1+2*T.ngroups))
   A = A.flatten() if isinstance(A, numpy.ndarray) else [A]
 
-  for i, (g, G) in enumerate(T):
+  for i, (v, V) in enumerate(T):
 
-    if g in KL: g = f'{g} (ilość znaków)'
+    if v in KL: v = f'{v} (ilość znaków)'
 
-    if G.empty: continue
+    if V.empty: continue
 
-    G['value'] = G['value'].astype(str).fillna('b.d.')
-    G = G.pivot(index=g0, columns='value', values='count').fillna(0)
-    if 'b.d.' in G.columns:
-      G = G[ [k for k in G.columns if k !='b.d.'] + ['b.d.'] ]
+    V['value'] = V['value'].astype(str).fillna('b.d.')
+    V = V.pivot(index=g0, columns='value', values='count').fillna(0)
 
-    if time: G.index = G.index.date
+   #sort
+    V = V.reindex(oX)
+    if v in KZ:
+      V = V[[k for k in o[v] if k in V.columns] + [k for k in V.columns if k not in o[v]]]
 
-    G.plot.bar(stacked=True, ax=A[i], xlabel='', rot=0, legend=True, 
-               cmap=Cmap.NA(Cmap.distinct, G.shape[1]))
+    if time: V.index = V.index.date
 
-    A[i].legend(title=g, bbox_to_anchor=(1.05, 1.05), loc='upper left')
+    V.plot.bar(stacked=True, ax=A[i], xlabel='', rot=0, legend=True, 
+               cmap=Cmap.NA(Cmap.distinct, V.shape[1]))
 
-    if tick: A[i].xaxis.set_major_locator(MaxNLocator(tick, prune='both'))
+    A[i].legend(title=v, bbox_to_anchor=(1.05, 1.05), loc='upper left')
+
+    if xtick: A[i].xaxis.set_major_locator(MaxNLocator(xtick))
 
   A[-1].set_xlabel(g0)
 

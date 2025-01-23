@@ -209,7 +209,7 @@ sim = simcalc(affilN).map('subject/sim.pkl')
 simplot = sim.trigger()
 simplot.trigger(lambda X: plot.n(X.reset_index(drop=True), group='geomatch', categories=5))\
        .map('subject/similarities-geo.png')
-simplot.trigger(lambda X: plot.n(X.reset_index(drop=True), group='nameaffil', categories=5, tick=10))\
+simplot.trigger(lambda X: plot.n(X.reset_index(drop=True), group='nameaffil', xbinstart=5, xbin=3, xtick=8, categories=5))\
        .map('subject/similarities-nameaffil.png')
 
 identities = identify(sim=sim, all=affilN).map('subject/entity.pkl')
