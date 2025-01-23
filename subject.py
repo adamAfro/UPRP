@@ -200,10 +200,10 @@ def fillgeobpr(entities:pandas.DataFrame, group:str, loceval:str):
 
 from registry import flow as f0
 
-affil0 = affilgeo(f0['registry']['spacetime']).map('subject/affilate-geo.pkl')
-affil = affilnames(affil0).map('subject/affilate.pkl')
+affilG = affilgeo(f0['registry']['2013']).map('subject/affilate-geo.pkl')
+affilN = affilnames(affilG).map('subject/affilate.pkl')
 
-sim = simcalc(affil).map('subject/sim.pkl')
+sim = simcalc(affilN).map('subject/sim.pkl')
 
 simplot = sim.trigger()
 simplot.trigger(lambda X: plot.n(X.reset_index(drop=True), group='geomatch', categories=5))\
@@ -211,7 +211,7 @@ simplot.trigger(lambda X: plot.n(X.reset_index(drop=True), group='geomatch', cat
 simplot.trigger(lambda X: plot.n(X.reset_index(drop=True), group='nameaffil', categories=5, tick=10))\
        .map('subject/similarities-nameaffil.png')
 
-identities = identify(sim=sim, all=f0['registry']['spacetime']).map('subject/entity.pkl')
+identities = identify(sim=sim, all=affilN).map('subject/entity.pkl')
 
 geofilled = fillgeo(entities=identities, group='entity', loceval='identity')
 geofilledBPR = fillgeobpr(geofilled, group='entity', loceval='identity-BPR')
@@ -222,4 +222,4 @@ flow = { 'subject': { 'fillgeo0': geofilled,
                       'identify': identities,
                       'simcalc': sim, 
                       'simplot': simplot,
-                      'affilate': affil } }
+                      'affilate': affilN } }

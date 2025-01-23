@@ -250,6 +250,7 @@ FGTplots.trigger(lambda X: plot.ngeo(X, time='firstdate')).map('registry/geodisp
 FGTplots.trigger(lambda X: plot.ngeo(X, time='application')).map('registry/geodisp.png')
 FGTplots.trigger(IPC)
 
-flow = { 'registry': {'pull': F0, 
+flow = { 'registry': {'2013': Flow(callback=lambda *X: X[0][ (X[0]['firstdate'] > '2013-01-01') | (X[0]['application'] > '2013-01-01') ], args=[FGT]),
+                      'pull': F0, 
                       'spacetime':FGT,
                       'geoplot':FGTplots } }
