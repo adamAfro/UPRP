@@ -30,11 +30,12 @@ from patent import flow as fP
 from registry import flow as fA
 from geoloc import flow as fG
 from subject import flow as fS
+from plot import flow as fp
 
 from raport import flow as fR
 
 flow = dict()
-for f in [f0, fP, fR, fA, fG, fS]:
+for f in [f0, fP, fR, fA, fG, fS, fp]:
   for k in f.keys():
 
     if isinstance(f[k], dict):

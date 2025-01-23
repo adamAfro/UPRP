@@ -216,7 +216,6 @@ def Spacetime(textual:pandas.DataFrame,
 
   return X
 
-import plot
 from util import data as D
 from profiling import flow as f0
 from patent import flow as fP
@@ -232,25 +231,6 @@ FN = Textual(F0, nameset=FN0).map('registry/textual.pkl')
 FGT = Spacetime(FN, fP['UPRP']['geoloc'], fP['UPRP']['event'], 
                   fP['UPRP']['classify']).map('registry/spacetime.pkl')
 
-IPC = Flow('IPC', lambda X: X.explode('IPC')[['city', 'lat', 'lon', 'loceval', 'IPC', 'application']]\
-                             .rename(columns={ 'application': 'date', 'IPC': 'section' }), args=[FGT])
-IPC.trigger(lambda X: plot.ngeo(X, color='section', time='date'))\
-   .map('registry/geodisp-IPC.png')
-IPC.trigger(lambda X: plot.n(X[['city', 'loceval', 'section']], group='section'))\
-   .map('registry/IPC-NA-geodisp.png')
-IPC.trigger(lambda X: plot.n(X[['city', 'loceval', 'section', 'date']], time='date'))\
-   .map('registry/IPC-NA-periods.png')
-
-FGTplots = FGT.trigger()
-FGTplots.trigger(lambda X: plot.n(X[['city', 'loceval', 'application']], time='application'))\
-        .map('registry/geodisp-NA.png')
-
-FGTplots.trigger(lambda X: plot.ngeo(X, label='city')).map('registry/geodisp-total.png')
-FGTplots.trigger(lambda X: plot.ngeo(X, time='firstdate')).map('registry/geodisp-first.png')
-FGTplots.trigger(lambda X: plot.ngeo(X, time='application')).map('registry/geodisp.png')
-FGTplots.trigger(IPC)
-
 flow = { 'registry': {'2013': Flow(callback=lambda *X: X[0][ (X[0]['firstdate'] > '2013-01-01') | (X[0]['application'] > '2013-01-01') ], args=[FGT]),
                       'pull': F0, 
-                      'spacetime':FGT,
-                      'geoplot':FGTplots } }
+                      'spacetime':FGT } }

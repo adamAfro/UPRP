@@ -1,6 +1,5 @@
 import pandas
 from lib.flow import Flow
-import plot
 
 @Flow.From()
 def affilgeo(registry:pandas.DataFrame):
@@ -175,30 +174,6 @@ def fillgeo(entities:pandas.DataFrame, group:str, loceval:str):
 
   return E
 
-@Flow.From()
-def fillgeobpr(entities:pandas.DataFrame, group:str, loceval:str):
-
-  X = entities
-  n = X['loceval'].isna().sum()
-
-  while(n > 0):
-
-    if d == 0: break
-    print(-d, "geo NA")
-
-    affilG = affilgeo(X)
-    affilN = affilnames(affilG)
-    sim = simcalc(affilN)
-    identified = identify(sim=sim, all=X)
-    geofilled = fillgeo(identified, group=group, loceval=loceval)
-
-    X = geofilled()
-
-    d = n - X['loceval'].isna().sum()
-    n = n - d
-
-  return X
-
 from registry import flow as f0
 
 affilG = affilgeo(f0['registry']['2013']).map('subject/affilate-geo.pkl')
@@ -206,26 +181,12 @@ affilN = affilnames(affilG).map('subject/affilate.pkl')
 
 sim = simcalc(affilN).map('subject/sim.pkl')
 
-simplot = sim.trigger()
-simplot.trigger(lambda X: plot.n(X.reset_index(drop=True), group='geomatch', categories=5))\
-       .map('subject/similarities-geo.png')
-simplot.trigger(lambda X: plot.n(X.reset_index(drop=True), group='nameaffil', categories=8, xbin=3, xbinstart=5))\
-       .map('subject/similarities-nameaffil.png')
-
 identities = identify(sim=sim, all=f0['registry']['2013']).map('subject/entity.pkl')
 
-identities.trigger(lambda X: plot.n(X[['assignee', 'inventor', 'applicant', 'loceval']].reset_index(drop=True), group='loceval'))\
-          .map('subject/identities-geo-role.png')
+geofilled0 = fillgeo(entities=identities, group='entity', loceval='identity')
+geofilled = fillgeo(entities=geofilled0, group='doc', loceval='document').map('subject/filled.pkl')
 
-geofilled = fillgeo(entities=identities, group='entity', loceval='identity')
-docgeofilled = fillgeo(entities=geofilled, group='doc', loceval='document').map('subject/filled.pkl')
-
-geofilledBPR = fillgeobpr(geofilled, group='entity', loceval='identity-BPR')
-docgeofilledBPR = fillgeo(geofilledBPR, group='doc', loceval='document-BPR')
-
-flow = { 'subject': { 'fillgeo0': docgeofilled,
-                      'fillgeo': docgeofilledBPR,
+flow = { 'subject': { 'fillgeo': geofilled,
                       'identify': identities,
                       'simcalc': sim, 
-                      'simplot': simplot,
                       'affilate': affilN } }

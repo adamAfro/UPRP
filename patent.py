@@ -8,8 +8,6 @@ from util import data as D
 from profiling import flow as f0
 from geoloc import flow as fg
 
-import plot
-
 @Flow.From()
 def code(storage:Storage, assignpath:str):
 
@@ -183,19 +181,13 @@ for h in flow.keys():
 
   flow[h]['code'] = code(f0[h]['profiling'], assignpath=D[h]+'/assignement.yaml').map(D[h]+'/code/data.pkl')
 
-  flow[h]['code'].trigger(plot.n).map(D[h]+'/code/NA.png')
-
   flow[h]['event'] = event(f0[h]['profiling'], 
                            assignpath=D[h]+'/assignement.yaml',
                            codes=flow[h]['code']).map(D[h]+'/event/data.pkl')
 
-  flow[h]['event'].trigger(lambda X: plot.n(X[['event', 'date']], time='date')).map(D[h]+'/event/series.png')
-
   flow[h]['classify'] = classify(f0[h]['profiling'],
                                  assignpath=D[h]+'/assignement.yaml',
                                  codes=flow[h]['code']).map(D[h]+'/classify/data.pkl')
-
-  flow[h]['classify'].trigger(plot.n).map(D[h]+'/classify/NA.png')
 
   flow[h]['geoloc'] = geoloc(f0[h]['profiling'], 
                              assignpath=D[h]+'/assignement.yaml', codes=flow[h]['code'], 

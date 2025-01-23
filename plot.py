@@ -281,3 +281,56 @@ def ngeo(X:pandas.DataFrame, coords=['lat', 'lon'], label=None,
     A[i].axis('off')
 
   return f
+
+
+
+from lib.flow import Flow
+from util import data as D
+from patent import flow as fP
+from registry import flow as fR
+from subject import flow as fS
+
+flow = dict()
+
+for h in D.keys():
+
+  fP[h]['code'].trigger(n).map(D[h]+'/code.png')
+  fP[h]['event'].trigger(lambda X: n(X[['event', 'date']], time='date')).map(D[h]+'/event.png')
+  fP[h]['classify'].trigger(n).map(D[h]+'/classify.png')
+
+spacetime = fR['registry']['spacetime'].trigger(lambda X: X.assign(location=X['city'].isna()))
+
+spacetime.trigger(lambda X: n(X[['location', 'loceval', 'application']], time='application'))\
+         .map('registry/NA-loc-geo.png')
+
+spacetime.trigger(lambda X: ngeo(X, label='location')).map('registry/map-geo.png')
+spacetime.trigger(lambda X: ngeo(X, time='firstdate')).map('registry/map-geo-periods-first.png')
+spacetime.trigger(lambda X: ngeo(X, time='application')).map('registry/map-geo-periods.png')
+
+IPC = spacetime.trigger(lambda *X: X[0].explode('IPC')[['location', 'lat', 'lon', 'loceval', 'IPC', 'application']]\
+                                       .rename(columns={ 'application': 'date', 'IPC': 'section' }))
+
+IPC.trigger(lambda X: ngeo(X, color='section', time='date'))\
+   .map('registry/map-geo-IPC.png')
+IPC.trigger(lambda X: n(X[['location', 'loceval', 'section']], group='section'))\
+   .map('registry/NA-IPC-loc-geo.png')
+
+
+sim = fS['subject']['simcalc'].trigger()
+sim.trigger(lambda X: n(X.reset_index(drop=True), group='geomatch', categories=5))\
+   .map('subject/Y-sim-geo.png')
+sim.trigger(lambda X: n(X.reset_index(drop=True), group='nameaffil', categories=8, xbin=3, xbinstart=5))\
+   .map('subject/Y-sim-affil.png')
+
+identities = fS['subject']['fillgeo'].trigger()
+
+identities.trigger(lambda X: n(X[['assignee', 'inventor', 'applicant', 'loceval']].reset_index(drop=True), group='loceval'))\
+          .map('subject/NA-geo-role.png')
+
+all = Flow(callback=lambda *x: x, args=[spacetime, IPC, sim, identities])
+
+flow = { 'plot': { 'all': all,
+                   'spacetime': spacetime,
+                   'IPC': IPC,
+                   'sim': sim,
+                   'identities': identities } }
