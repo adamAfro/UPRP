@@ -218,24 +218,53 @@ def count(X:pandas.DataFrame, group=None,
 
   return f
 
-def map(X:pandas.DataFrame, coords=['lat', 'lon'], label=None,
-        scale=0.5, growth=25, time=None, freq='12M', 
-        color=None, border=False, fill=None, kde=None):
+def map(X:pandas.DataFrame, coords=['lat', 'lon'], 
+        label=None,
+        point=None, growth=10,
+        regions=None,
+        group=None, time=None, freq='12M',
+        color=None, border=False, kde=None):
 
   w = gcrs.WebMercator()
 
-  X = gpd.GeoDataFrame(X, geometry=gpd.points_from_xy(X[coords[1]], X[coords[0]]))
-  T = [(None, X)]
+  X = gpd.GeoDataFrame(X, geometry=gpd.points_from_xy(X[coords[1]], X[coords[0]]), crs='EPSG:4326')
 
-  if time:
+  if regions is not None:
+
+    R = gpd.sjoin(X, regions, op='within')
+    R = R.groupby(['index_right']+[k for k in[time, group] if k])
+    R = R.size().reset_index().rename(columns={0: 'count'})
+    R = regions.join(R.set_index('index_right'))
+    R['count'] = R['count'].fillna(0).astype(int)
+
+    if group:
+      R = R.groupby(group)
+    elif time:
+      R = R.groupby(pandas.Grouper(key=time, freq=freq))
+    else:
+      R = [(None, R)]
+
+    R0 = max([G['count'].max() for g, G in R])
+
+    if color is None:
+
+      CR = dict(hue='count', cmap=Cmap.visible, 
+                norm=Normalize(vmin=0, vmax=R0))
+
+    else:
+      CR = dict(hue=color, cmap=Cmap.distinct)
+
+  if group:
+    T = X.groupby(group)
+  elif time:
     T = X.groupby(pandas.Grouper(key=time, freq=freq))
+  else:
+    T = [(None, X)]
 
   K = [] if color is None else [color]
   T = [(g, G.value_counts(coords+['geometry']+K).reset_index()) for g, G in T if not G.empty]
 
-  M0 = max([G['count'].max() for g, G in T])
-  def maxscale(m, M):
-    return lambda x: scale + scale*growth*x/M0
+  T0 = max([G['count'].max() for g, G in T])
 
   r, c = squarealike(len(T))
   f, A = plt.subplots(r, c, figsize=(16, 16),
@@ -243,13 +272,15 @@ def map(X:pandas.DataFrame, coords=['lat', 'lon'], label=None,
 
   A = A.flatten() if isinstance(A, numpy.ndarray) else [A]
 
-  if color is None:
+  if point:
 
-    C = dict(hue='count', cmap=Cmap.visible, 
-             norm=Normalize(vmin=0, vmax=M0))
+    if color is None:
 
-  else:
-    C = dict(hue=color, cmap=Cmap.distinct)
+      C = dict(hue='count', cmap=Cmap.visible, 
+              norm=Normalize(vmin=0, vmax=T0))
+
+    else:
+      C = dict(hue=color, cmap=Cmap.distinct)
 
   if label:
     E = X[coords + [label]].value_counts().reset_index().head(10)
@@ -279,17 +310,24 @@ def map(X:pandas.DataFrame, coords=['lat', 'lon'], label=None,
 
     if kde:
       gplt.kdeplot(P, ax=A[i], extent=pol.total_bounds, projection=w, 
-                    weights=P['color'] if color else P['count'], 
-                    levels=kde, **L, cmap=Cmap.neutral)
+                   weights=P['color'] if color else P['count'], 
+                   levels=kde, **L, cmap=Cmap.neutral)
 
-    gplt.pointplot(P, ax=A[i], extent=pol.total_bounds, **L, **C,
-                  scale='count', scale_func=maxscale, projection=w)
+    if point:
+      def maxscale(m, M): return lambda x: point + point*growth*x/T0
+      gplt.pointplot(P, ax=A[i], extent=pol.total_bounds, **L, **C,
+                     scale='count', scale_func=maxscale, projection=w)
 
+
+    if regions is not None:
+
+      gplt.choropleth(R.get_group(g), ax=A[i], extent=pol.total_bounds, **L, **CR, projection=w)
 
     if g:
       if time: A[i].set_title(g.strftime('%d.%m.%Y' + ' - ' + freq))
+      else: A[i].set_title(g)
 
-  if not color:
+  if point and (not color):
 
     f.subplots_adjust(bottom=0.1)
     sm = plt.cm.ScalarMappable(cmap=C['cmap'], norm=C['norm'])
@@ -337,22 +375,24 @@ roles = fS['subject']['fillgeo'].trigger(lambda X: X.assign(role=X.apply(strrole
 roles.trigger(lambda X: count(X[['role', 'loceval']].reset_index(drop=True), group='role'))\
      .map('subject/NA-geo-role.png')
 
-roles.trigger(lambda X: map(X, kde=16)).map('subject/kde.png')
-roles.trigger(lambda X: map(X, time='firstdate')).map('subject/map-periods-first.png')
-roles.trigger(lambda X: map(X, time='application')).map('subject/map-periods.png')
+# roles.trigger(lambda X: map(X, point=1, kde=16)).map('subject/map.png')
+# roles.trigger(lambda X: map(X, point=1, kde=8, time='firstdate')).map('subject/map-periods-first.png')
+# roles.trigger(lambda X: map(X, point=1, kde=8, time='application')).map('subject/map-periods.png')
 
 IPC = roles.trigger(lambda *X: X[0].explode('IPC')[['loceval', 'lat', 'lon', 'IPC', 'application']]\
                                    .rename(columns={ 'application': 'date', 'IPC': 'section' }))
 
-IPC.trigger(lambda X: count(X[['loceval', 'section']], group='section'))\
-   .map('subject/NA-IPC-geo.png')
-IPC.trigger(lambda X: map(X, color='section', time='date'))\
-   .map('subject/map-IPC.png')
+# IPC.trigger(lambda X: count(X[['loceval', 'section']], group='section'))\
+#    .map('subject/NA-IPC-geo.png')
+# IPC.trigger(lambda X: map(X, point=1, color='section', time='date'))\
+#    .map('subject/map-IPC.png')
 
-for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'X']:
-  IPC.trigger(lambda *X, k=k: map(X[0][X[0]['section'] == k], time='date')).map(f'subject/map-IPC-{k}.png')
+IPC.trigger(lambda *X: map(X[0], regions=pow, group='section')).map(f'subject/map-IPC.png')
 
-for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'X']:
+for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']:
+  IPC.trigger(lambda *X, k=k: map(X[0][X[0]['section'] == k], time='date', regions=pow)).map(f'subject/map-IPC-{k}-periods.png')
+
+for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']:
   IPC.trigger(lambda *X, k=k: count(X[0][X[0]['section'] == k][['loceval', 'date']], time='date')).map(f'subject/NA-IPC-loc-{k}.png')
 
 all = Flow(callback=lambda *x: x, args=[spacetime, IPC, sim, roles])
@@ -361,4 +401,6 @@ flow = { 'plot': { 'all': all,
                    'spacetime': spacetime,
                    'IPC': IPC,
                    'sim': sim,
-                   'roles': roles } }
+                   'roles': roles,
+                   'debug': Flow(callback=lambda *X: map(X[0], kde=16), args=[fS['subject']['fillgeo']]).map('subject/kde.png')
+                   } }
