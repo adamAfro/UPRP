@@ -209,10 +209,13 @@ sim = simcalc(affilN).map('subject/sim.pkl')
 simplot = sim.trigger()
 simplot.trigger(lambda X: plot.n(X.reset_index(drop=True), group='geomatch', categories=5))\
        .map('subject/similarities-geo.png')
-simplot.trigger(lambda X: plot.n(X.reset_index(drop=True), group='nameaffil', xbinstart=5, xbin=3, xtick=8, categories=5))\
+simplot.trigger(lambda X: plot.n(X.reset_index(drop=True), group='nameaffil', categories=8, xbin=3, xbinstart=5))\
        .map('subject/similarities-nameaffil.png')
 
-identities = identify(sim=sim, all=affilN).map('subject/entity.pkl')
+identities = identify(sim=sim, all=f0['registry']['2013']).map('subject/entity.pkl')
+
+identities.trigger(lambda X: plot.n(X[['assignee', 'inventor', 'applicant', 'loceval']].reset_index(drop=True), group='loceval'))\
+          .map('subject/identities-geo-role.png')
 
 geofilled = fillgeo(entities=identities, group='entity', loceval='identity')
 geofilledBPR = fillgeobpr(geofilled, group='entity', loceval='identity-BPR')
