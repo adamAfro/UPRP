@@ -152,6 +152,52 @@ def identify(sim:pandas.DataFrame, all:pandas.DataFrame):
 
   return Y
 
+@Flow.From()
+def fillgeo(entities:pandas.DataFrame, group:str, loceval:str):
+
+  import tqdm
+
+  assert group in entities.columns
+
+  E = entities
+  G = E.groupby(group)
+
+  for g, G in tqdm.tqdm(G, total=G.ngroups):
+
+    n = G[['lat', 'lon']].value_counts()
+    if n.empty: continue
+
+    m = n.idxmax()
+    E.loc[G.index, 'loceval'] = loceval
+    E.loc[G.index, 'lat'] = G['lat'].fillna(m[0])
+    E.loc[G.index, 'lon'] = G['lon'].fillna(m[1])
+
+  return E
+
+@Flow.From()
+def fillgeobpr(entities:pandas.DataFrame, group:str, loceval:str):
+
+  X = entities
+  n = X['loceval'].isna().sum()
+
+  while(n > 0):
+
+    if d == 0: break
+    print(-d, "geo NA")
+
+    affil0 = affilgeo(X)
+    affil = affilnames(affil0)
+    sim = simcalc(affil)
+    identified = identify(sim=sim, all=X)
+    geofilled = fillgeo(identified, group=group, loceval=loceval)
+
+    X = geofilled()
+
+    d = n - X['loceval'].isna().sum()
+    n = n - d
+
+  return X
+
 from registry import flow as f0
 
 affil0 = affilgeo(f0['registry']['spacetime']).map('subject/affilate-geo.pkl')
@@ -167,7 +213,13 @@ simplot.trigger(lambda X: plot.n(X.reset_index(drop=True), group='nameaffil', ca
 
 identities = identify(sim=sim, all=f0['registry']['spacetime']).map('subject/entity.pkl')
 
-flow = { 'subject': { 'identify': identities,
+geofilled = fillgeo(entities=identities, group='entity', loceval='identity')
+geofilledBPR = fillgeobpr(geofilled, group='entity', loceval='identity-BPR')
+docgeofilled = fillgeo(geofilledBPR, group='doc', loceval='document')
+
+flow = { 'subject': { 'fillgeo0': geofilled,
+                      'fillgeo': docgeofilled,
+                      'identify': identities,
                       'simcalc': sim, 
                       'simplot': simplot,
                       'affilate': affil } }
