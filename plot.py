@@ -137,7 +137,9 @@ def intbins(v: pandas.Series, n: int, start=None):
 
   return y
 
-def count(X:pandas.DataFrame, group=None,
+def count(X:pandas.DataFrame, 
+          stacked=True,
+          group=None,
          time=None, freq='12M',
          categories=12, xtick=None, 
          xbin=None, xbinstart=None,
@@ -207,7 +209,7 @@ def count(X:pandas.DataFrame, group=None,
 
     if time: V.index = V.index.date
 
-    V.plot.bar(stacked=True, ax=A[i], xlabel='', rot=0, legend=True, 
+    V.plot.bar(stacked=stacked, ax=A[i], xlabel='', rot=0, legend=True, 
                cmap=Cmap.NA(Cmap.distinct, V.shape[1]))
 
     A[i].legend(title=v, bbox_to_anchor=(1.05, 1.05), loc='upper left')
@@ -347,6 +349,7 @@ from util import data as D
 from patent import flow as fP
 from registry import flow as fR
 from subject import flow as fS
+from external import flow as fE
 
 flow = dict()
 
@@ -394,6 +397,12 @@ for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']:
 
 for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']:
   IPC.trigger(lambda *X, k=k: count(X[0][X[0]['section'] == k][['loceval', 'date']], time='date')).map(f'subject/NA-IPC-loc-{k}.png')
+
+
+compGUS = Flow(callback=lambda *X: count(pandas.concat([X[0].assign(src='GUS'), X[1].assign(src='UPRP').assign(year=X[1]['application'].dt.year)])[['src', 'year']],
+                                         group='year', stacked=False), args=[fE['GUS']['UPRP'], fS['subject']['fillgeo']])
+compGUS.map('GUS/comprasion.png')
+
 
 all = Flow(callback=lambda *x: x, args=[spacetime, IPC, sim, roles])
 
