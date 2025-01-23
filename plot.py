@@ -234,13 +234,16 @@ def ngeo(X:pandas.DataFrame, coords=['lat', 'lon'], label=None,
     return lambda x: scale + scale*growth*x/M0
 
   r, c = squarealike(len(T))
-  f, A = plt.subplots(r, c, figsize=(16, 16), tight_layout=True,
+  f, A = plt.subplots(r, c, figsize=(16, 16),
                       subplot_kw={'projection': w})
+
   A = A.flatten() if isinstance(A, numpy.ndarray) else [A]
 
   if color is None:
+
     C = dict(hue='count', cmap=Cmap.visible, 
              norm=Normalize(vmin=0, vmax=M0))
+
   else:
     C = dict(hue=color, cmap=Cmap.distinct)
 
@@ -266,9 +269,6 @@ def ngeo(X:pandas.DataFrame, coords=['lat', 'lon'], label=None,
       L = dict(legend=True, legend_var='hue')
       L['legend_kwargs'] = dict(bbox_to_anchor=(1.05, 1), 
                                 loc='upper right', fontsize=8)
-    elif i % c == c-1:
-      L = dict(legend=True, legend_var='hue')
-      L['legend_kwargs'] = dict(shrink=0.5)
 
     gplt.pointplot(P, ax=A[i], extent=m.total_bounds, **L, **C,
                    scale='count', scale_func=maxscale, projection=w)
@@ -276,6 +276,14 @@ def ngeo(X:pandas.DataFrame, coords=['lat', 'lon'], label=None,
 
     if g:
       if time: A[i].set_title(g.strftime('%d.%m.%Y' + ' - ' + freq))
+
+  if color is None:
+
+    f.subplots_adjust(bottom=0.1)
+    sm = plt.cm.ScalarMappable(cmap=C['cmap'], norm=C['norm'])
+    sm.set_array([])
+    f.colorbar(sm, cax=f.add_axes([0.1, 0.05, 0.8, 0.01]), 
+               orientation='horizontal')
 
   for i in range(len(T), len(A)):
     A[i].axis('off')
