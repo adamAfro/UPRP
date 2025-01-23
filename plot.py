@@ -10,6 +10,7 @@ plt.style.use('grayscale')
 
 pow = gpd.read_file('map/powiaty.shp').to_crs(epsg=4326)
 woj = gpd.read_file('map/wojewodztwa.shp').to_crs(epsg=4326)
+pol = gpd.read_file('map/polska.shp').to_crs(epsg=4326)
 
 class Colr:
 
@@ -219,10 +220,9 @@ def count(X:pandas.DataFrame, group=None,
 
 def map(X:pandas.DataFrame, coords=['lat', 'lon'], label=None,
         scale=0.5, growth=25, time=None, freq='12M', 
-        color=None, border=False, fill=None):
+        color=None, border=False, fill=None, kde=None):
 
   w = gcrs.WebMercator()
-  m = pow
 
   X = gpd.GeoDataFrame(X, geometry=gpd.points_from_xy(X[coords[1]], X[coords[0]]))
   T = [(None, X)]
@@ -258,8 +258,11 @@ def map(X:pandas.DataFrame, coords=['lat', 'lon'], label=None,
   for i, (g, G) in enumerate(T):
 
     if border:
-      A[i] = gplt.polyplot(m, ax=A[i], projection=w, extent=m.total_bounds, 
-                           edgecolor=Colr.neutral)
+      A[i] = gplt.polyplot(pow, ax=A[i], projection=w, extent=pol.total_bounds, 
+                           edgecolor=Colr.neutral, linewidth=border)
+    else:
+      A[i] = gplt.polyplot(pol, ax=A[i], projection=w, extent=pol.total_bounds, 
+                           edgecolor=Colr.neutral, linewidth=1)
 
     G = G.dropna(subset=coords)
     if G.empty: 
@@ -274,14 +277,19 @@ def map(X:pandas.DataFrame, coords=['lat', 'lon'], label=None,
       L['legend_kwargs'] = dict(bbox_to_anchor=(1.05, 1), 
                                 loc='upper right', fontsize=8)
 
-    gplt.pointplot(P, ax=A[i], extent=m.total_bounds, **L, **C,
-                   scale='count', scale_func=maxscale, projection=w)
+    if kde:
+      gplt.kdeplot(P, ax=A[i], extent=pol.total_bounds, projection=w, 
+                    weights=P['color'] if color else P['count'], 
+                    levels=kde, **L, cmap=Cmap.neutral)
+
+    gplt.pointplot(P, ax=A[i], extent=pol.total_bounds, **L, **C,
+                  scale='count', scale_func=maxscale, projection=w)
 
 
     if g:
       if time: A[i].set_title(g.strftime('%d.%m.%Y' + ' - ' + freq))
 
-  if color is None:
+  if not color:
 
     f.subplots_adjust(bottom=0.1)
     sm = plt.cm.ScalarMappable(cmap=C['cmap'], norm=C['norm'])
@@ -315,19 +323,6 @@ spacetime = fR['registry']['spacetime'].trigger(lambda X: X.assign(location=X['c
 spacetime.trigger(lambda X: count(X[['location', 'loceval', 'application']], time='application', xtick=5))\
          .map('registry/NA-loc-geo.png')
 
-spacetime.trigger(lambda X: map(X, label='location')).map('registry/map.png')
-spacetime.trigger(lambda X: map(X, time='firstdate')).map('registry/map-periods-first.png')
-spacetime.trigger(lambda X: map(X, time='application')).map('registry/map-periods.png')
-
-IPC = spacetime.trigger(lambda *X: X[0].explode('IPC')[['location', 'lat', 'lon', 'loceval', 'IPC', 'application']]\
-                                       .rename(columns={ 'application': 'date', 'IPC': 'section' }))
-
-IPC.trigger(lambda X: map(X, color='section', time='date'))\
-   .map('registry/map-IPC.png')
-IPC.trigger(lambda X: count(X[['location', 'loceval', 'section']], group='section'))\
-   .map('registry/NA-IPC-loc-geo.png')
-
-
 sim = fS['subject']['simcalc'].trigger()
 sim.trigger(lambda X: count(X.reset_index(drop=True), group='geomatch', categories=5))\
    .map('subject/Y-sim-geo.png')
@@ -341,6 +336,24 @@ roles = fS['subject']['fillgeo'].trigger(lambda X: X.assign(role=X.apply(strrole
 
 roles.trigger(lambda X: count(X[['role', 'loceval']].reset_index(drop=True), group='role'))\
      .map('subject/NA-geo-role.png')
+
+roles.trigger(lambda X: map(X, kde=16)).map('subject/kde.png')
+roles.trigger(lambda X: map(X, time='firstdate')).map('subject/map-periods-first.png')
+roles.trigger(lambda X: map(X, time='application')).map('subject/map-periods.png')
+
+IPC = roles.trigger(lambda *X: X[0].explode('IPC')[['loceval', 'lat', 'lon', 'IPC', 'application']]\
+                                   .rename(columns={ 'application': 'date', 'IPC': 'section' }))
+
+IPC.trigger(lambda X: count(X[['loceval', 'section']], group='section'))\
+   .map('subject/NA-IPC-geo.png')
+IPC.trigger(lambda X: map(X, color='section', time='date'))\
+   .map('subject/map-IPC.png')
+
+for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'X']:
+  IPC.trigger(lambda *X, k=k: map(X[0][X[0]['section'] == k], time='date')).map(f'subject/map-IPC-{k}.png')
+
+for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'X']:
+  IPC.trigger(lambda *X, k=k: count(X[0][X[0]['section'] == k][['loceval', 'date']], time='date')).map(f'subject/NA-IPC-loc-{k}.png')
 
 all = Flow(callback=lambda *x: x, args=[spacetime, IPC, sim, roles])
 
