@@ -8,6 +8,9 @@ plt.rcParams['axes.spines.top'] = False
 plt.rcParams['axes.spines.right'] = False
 plt.style.use('grayscale')
 
+pow = gpd.read_file('map/powiaty.shp').to_crs(epsg=4326)
+woj = gpd.read_file('map/wojewodztwa.shp').to_crs(epsg=4326)
+
 class Colr:
 
   neutral = 'blue'
@@ -193,7 +196,7 @@ def n(X:pandas.DataFrame, group=None,
     V = V.pivot(index=g0, columns='value', values='count').fillna(0)
 
    #sort
-    V = V.reindex(oX)
+    if group: V = V.reindex(oX)
     if v in KZ:
       V = V[[k for k in o[v] if k in V.columns] + [k for k in V.columns if k not in o[v]]]
 
@@ -215,8 +218,7 @@ def ngeo(X:pandas.DataFrame, coords=['lat', 'lon'], label=None,
             color=None, border=False, fill=None):
 
   w = gcrs.WebMercator()
-  if border or fill:
-    m = gpd.read_file('map/powiaty.shp').to_crs(epsg=4326)
+  m = pow
 
   X = gpd.GeoDataFrame(X, geometry=gpd.points_from_xy(X[coords[1]], X[coords[0]]))
   T = [(None, X)]
