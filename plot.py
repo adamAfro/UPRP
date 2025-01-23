@@ -135,7 +135,7 @@ def intbins(v: pandas.Series, n: int, start=None):
 
 def n(X:pandas.DataFrame, group=None,
       time=None, freq='12M',
-      categories=12, xtick=12, 
+      categories=12, xtick=None, 
       xbin=None, xbinstart=None):
 
   g0 = None
@@ -160,10 +160,13 @@ def n(X:pandas.DataFrame, group=None,
     else:
       X[k] = intbins(X[k], categories)
 
+    X[k].cat.add_categories('b.d.')
     o[k] = X[k].dtype.categories.tolist()
 
   if not g0: raise NotImplementedError()
 
+  X[[k for k in X.columns if k != g0]] = \
+    X[[k for k in X.columns if k != g0]].astype(str).fillna('b.d.')
   if group:
     if xbin: X[g0] = intbins(X[g0], xbin, xbinstart)
     X = X.groupby(g0)
@@ -171,7 +174,7 @@ def n(X:pandas.DataFrame, group=None,
 
   if time: X = X.groupby(pandas.Grouper(key=g0, freq=freq))
 
-  X = pandas.concat([X[k].value_counts(dropna=False).reset_index()\
+  X = pandas.concat([X[k].value_counts().reset_index()\
             .rename(columns={k: 'value'}).assign(column=k) for k in K])
 
   T = X.groupby('column')
