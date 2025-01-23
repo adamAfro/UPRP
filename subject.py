@@ -169,7 +169,7 @@ def fillgeo(entities:pandas.DataFrame, group:str, loceval:str):
     if n.empty: continue
 
     m = n.idxmax()
-    E.loc[G.index, 'loceval'] = loceval
+    E.loc[G.index, 'loceval'] = E.loc[G.index, 'loceval'].fillna(loceval)
     E.loc[G.index, 'lat'] = G['lat'].fillna(m[0])
     E.loc[G.index, 'lon'] = G['lon'].fillna(m[1])
 
@@ -218,11 +218,13 @@ identities.trigger(lambda X: plot.n(X[['assignee', 'inventor', 'applicant', 'loc
           .map('subject/identities-geo-role.png')
 
 geofilled = fillgeo(entities=identities, group='entity', loceval='identity')
-geofilledBPR = fillgeobpr(geofilled, group='entity', loceval='identity-BPR')
-docgeofilled = fillgeo(geofilledBPR, group='doc', loceval='document')
+docgeofilled = fillgeo(entities=geofilled, group='doc', loceval='document').map('subject/filled.pkl')
 
-flow = { 'subject': { 'fillgeo0': geofilled,
-                      'fillgeo': docgeofilled,
+geofilledBPR = fillgeobpr(geofilled, group='entity', loceval='identity-BPR')
+docgeofilledBPR = fillgeo(geofilledBPR, group='doc', loceval='document-BPR')
+
+flow = { 'subject': { 'fillgeo0': docgeofilled,
+                      'fillgeo': docgeofilledBPR,
                       'identify': identities,
                       'simcalc': sim, 
                       'simplot': simplot,
