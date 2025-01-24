@@ -143,7 +143,8 @@ def count(X:pandas.DataFrame,
          time=None, freq='12M',
          categories=12, xtick=None, 
          xbin=None, xbinstart=None,
-         NA='b.d.'):
+         NA='b.d.',
+         appendix:dict[str,pandas.Series]={}):
 
   g0 = None
   if time: g0 = time
@@ -181,13 +182,20 @@ def count(X:pandas.DataFrame,
 
   if time: X = X.groupby(pandas.Grouper(key=g0, freq=freq))
 
-  X = pandas.concat([X[k].value_counts().reset_index()\
-            .rename(columns={k: 'value'}).assign(column=k) for k in K])
+  T = pandas.concat([X[k].value_counts().reset_index()\
+            .rename(columns={k: '__legend__'})\
+            .assign(__axes__=k) for k in K])\
+            .set_index(['__legend__', g0])
 
-  T = X.groupby('column')
-  f, A = plt.subplots(T.ngroups, constrained_layout=True, 
+  for k, A in appendix.items():
+    A.index.names = ['__legend__', g0]
+    T = pandas.concat([T, A.to_frame().assign(__axes__=k)])
+
+  T = [(v, V['count']) for v, V in T.groupby('__axes__') if not V.empty]
+
+  f, A = plt.subplots(len(T), constrained_layout=True, 
                       sharex=True, sharey=True,
-                      figsize=(8, 1+2*T.ngroups))
+                      figsize=(8, 1+2*len(T)))
   A = A.flatten() if isinstance(A, numpy.ndarray) else [A]
 
   for i, (v, V) in enumerate(T):
@@ -196,9 +204,10 @@ def count(X:pandas.DataFrame,
 
     if V.empty: continue
 
-    V['value'] = V['value'].replace('nan', NA)
-    V['value'] = V['value'].astype(str).fillna(NA)
-    V = V.pivot(index=g0, columns='value', values='count').fillna(0)
+    V = V.reset_index()
+    V['__legend__'] = V['__legend__'].replace('nan', NA)
+    V['__legend__'] = V['__legend__'].astype(str).fillna(NA)
+    V = V.pivot(index=g0, columns='__legend__', values='count').fillna(0)
 
    #sort
     if group: V = V.reindex(oX)
