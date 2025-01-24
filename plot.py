@@ -408,7 +408,8 @@ for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']:
   IPC.trigger(lambda *X, k=k: count(X[0][X[0]['section'] == k][['loceval', 'date']], time='date')).map(f'subject/NA-IPC-loc-{k}.png')
 
 
-compGUS = Flow(callback=lambda *X: count(pandas.concat([X[0].assign(src='GUS'), X[1].assign(src='UPRP').assign(year=X[1]['application'].dt.year)])[['src', 'year']],
+compGUS = Flow(callback=lambda *X: count(X[1].assign(year=X[1]['application'].dt.year).groupby('doc')['year'].min().reset_index().assign(src='UPRP')[['src', 'year']],
+                                         appendix={'src': X[0].assign(src='GUS').set_index(['src', 'year'])['count']},
                                          group='year', stacked=False), args=[fE['GUS']['UPRP'], fS['subject']['fillgeo']])
 compGUS.map('GUS/comprasion.png')
 
