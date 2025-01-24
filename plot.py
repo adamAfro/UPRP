@@ -144,6 +144,7 @@ def count(X:pandas.DataFrame,
          categories=12, xtick=None, 
          xbin=None, xbinstart=None,
          NA='b.d.',
+         trend=False,
          appendix:dict[str,pandas.Series]={}):
 
   g0 = None
@@ -220,6 +221,12 @@ def count(X:pandas.DataFrame,
 
     V.plot.bar(stacked=stacked, ax=A[i], xlabel='', rot=0, legend=True, 
                cmap=Cmap.NA(Cmap.distinct, V.shape[1]))
+
+    if trend:
+      At = A[i].twinx()
+      V = V/V.max()
+      V.plot(ax=At, cmap=Cmap.NA(Cmap.distinct, V.shape[1]), legend=True, marker='o', linestyle='--')
+      At.legend(title="Względny trend")
 
     A[i].legend(title=v, bbox_to_anchor=(1.05, 1.05), loc='upper left')
 
@@ -410,7 +417,8 @@ for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']:
 
 compGUS = Flow(callback=lambda *X: count(X[1].assign(year=X[1]['application'].dt.year).groupby('doc')['year'].min().reset_index().assign(src='UPRP')[['src', 'year']],
                                          appendix={'src': X[0].assign(src='GUS').set_index(['src', 'year'])['count']},
-                                         group='year', stacked=False), args=[fE['GUS']['UPRP'], fS['subject']['fillgeo']])
+                                         group='year', stacked=False, trend=True), 
+                                         args=[fE['GUS']['UPRP'], fS['subject']['fillgeo']])
 compGUS.map('GUS/comprasion.png')
 
 
