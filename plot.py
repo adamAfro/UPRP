@@ -441,6 +441,5 @@ flow = { 'plot': { 'all': all,
                    'spacetime': spacetime,
                    'IPC': IPC,
                    'sim': sim,
-                   'roles': roles,
-                   'debug': Flow(callback=lambda *X: map(X[0], kde=16), args=[fS['subject']['fillgeo']]).map('subject/kde.png')
+                   'roles': roles
                    } }
