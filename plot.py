@@ -160,6 +160,10 @@ def count(X:pandas.DataFrame,
 
   KZ = [k for k in K if k not in K0]
 
+  if len(K) == 0:
+    X['__legend__'] = 1
+    K = ['__legend__']
+
  #order
   o = {}
 
@@ -174,8 +178,7 @@ def count(X:pandas.DataFrame,
 
   if not g0: raise NotImplementedError()
 
-  X[[k for k in X.columns if k != g0]] = \
-    X[[k for k in X.columns if k != g0]].astype(str).fillna(NA)
+  X[K] = X[K].astype(str).fillna(NA)
   if group:
     if xbin: X[g0] = intbins(X[g0], xbin, xbinstart)
     X = X.groupby(g0)
@@ -222,13 +225,16 @@ def count(X:pandas.DataFrame,
     V.plot.bar(stacked=stacked, ax=A[i], xlabel='', rot=0, legend=True, 
                cmap=Cmap.NA(Cmap.distinct, V.shape[1]))
 
+    if V.shape[1] > 1: 
+      A[i].legend(title=v, bbox_to_anchor=(1.05, 1.05), loc='upper left')
+    else:
+      A[i].legend().remove()
+
     if trend:
       At = A[i].twinx()
       V = V/V.max()
       V.plot(ax=At, cmap=Cmap.NA(Cmap.distinct, V.shape[1]), legend=True, marker='o', linestyle='--')
       At.legend(title="Względny trend")
-
-    A[i].legend(title=v, bbox_to_anchor=(1.05, 1.05), loc='upper left')
 
     if xtick: A[i].xaxis.set_major_locator(MaxNLocator(xtick))
 
