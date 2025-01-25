@@ -145,6 +145,7 @@ def count(X:pandas.DataFrame,
          xbin=None, xbinstart=None,
          NA='b.d.',
          trend=False,
+         trendix:dict[str,pandas.Series]={},
          appendix:dict[str,pandas.Series]={}):
 
   g0 = None
@@ -161,8 +162,8 @@ def count(X:pandas.DataFrame,
   KZ = [k for k in K if k not in K0]
 
   if len(K) == 0:
-    X['__legend__'] = 1
-    K = ['__legend__']
+    X[''] = 1
+    K = ['']
 
  #order
   o = {}
@@ -231,6 +232,12 @@ def count(X:pandas.DataFrame,
       A[i].legend().remove()
 
     if trend:
+
+      if v in trendix:
+        for k in trendix[v].columns:
+          V[k] = trendix[v][k]
+
+      V = V.rename(columns={ '1': 'ogółem' })
       At = A[i].twinx()
       V = V/V.max()
       V.plot(ax=At, cmap=Cmap.NA(Cmap.distinct, V.shape[1]), legend=True, marker='o', linestyle='--')
