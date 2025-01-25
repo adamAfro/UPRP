@@ -231,6 +231,7 @@ FN = Textual(F0, nameset=FN0).map('registry/textual.pkl')
 FGT = Spacetime(FN, fP['UPRP']['geoloc'], fP['UPRP']['event'], 
                   fP['UPRP']['classify']).map('registry/spacetime.pkl')
 
-flow = { 'registry': {'2013': Flow(callback=lambda *X: X[0][ (X[0]['firstdate'] > '2013-01-01') | (X[0]['application'] > '2013-01-01') ], args=[FGT]),
+sel2013 = lambda X: ((X['application'] >= '2013-01-01') & (X['application'] <= '2022-12-31'))
+flow = { 'registry': {'2013': Flow(callback=lambda *X: X[0][sel2013(X[0])], args=[FGT]),
                       'pull': F0, 
                       'spacetime':FGT } }
