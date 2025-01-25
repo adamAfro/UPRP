@@ -239,9 +239,12 @@ def count(X:pandas.DataFrame,
 
       V = V.rename(columns={ '1': 'ogółem' })
       At = A[i].twinx()
-      V = V/V.max()
+      V = V/V.iloc[0]
       V.plot(ax=At, cmap=Cmap.NA(Cmap.distinct, V.shape[1]), legend=True, marker='o', linestyle='--')
-      At.legend(title="Względny trend")
+      At.legend(title="Trend względem\npierwszej obserwacji")
+
+      if V.shape[1] - trendix[v].shape[1] == 1: 
+        At.legend(title="Trend względem\npierwszej obserwacji", bbox_to_anchor=(1.05, 1.05), loc='upper left')
 
     if xtick: A[i].xaxis.set_major_locator(MaxNLocator(xtick))
 
