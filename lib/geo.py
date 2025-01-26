@@ -1,4 +1,4 @@
-import pandas
+import pandas, numpy
 from geopy.distance import geodesic
 
 def closest(namedgeo: pandas.DataFrame,
@@ -78,3 +78,38 @@ def combgen(choices:list[list], Y0=[], i=0):
   if i == len(choices): return [Y0]
 
   return [c for I in choices[i] for c in combgen(choices, Y0 + [I], i + 1) ]
+
+
+
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+
+def cluster(geo:pandas.DataFrame, method:str, coords:list[str], keys=[], k:int=2, innerperc=False):
+
+  X = geo
+
+  X = X.dropna(subset=coords)
+  N = X.groupby(coords)[keys].count().reset_index()
+
+  if innerperc:
+    N[keys] = N[keys].apply(lambda x: x/x.sum(), axis=1)
+
+  K0 = ['__xrad__', '__yrad__']
+  K = K0 + keys
+  N[K0] = numpy.radians(N[coords])
+  N[K] = StandardScaler().fit_transform(N[K])
+
+  if method == 'kmeans':
+    Y = KMeans(n_clusters=k, random_state=0).fit(N[K])
+  else:
+    raise NotImplementedError()
+
+  N['cluster'] = Y.labels_
+
+  i = X.index.names
+  N = N.set_index(coords)['cluster']
+  X = X.reset_index().set_index(coords).join(N)
+  X = X.reset_index().set_index(i)
+  X['cluster'] = X['cluster'].astype(str)
+
+  return X
