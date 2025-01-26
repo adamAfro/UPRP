@@ -424,10 +424,10 @@ IPC = roles.trigger(lambda *X: X[0].explode('IPC')[['loceval', 'lat', 'lon', 'IP
 # IPC.trigger(lambda X: map(X, point=1, color='section', time='date'))\
 #    .map('subject/map-IPC.png')
 
-IPC.trigger(lambda *X: map(X[0], regions=pow, group='section')).map(f'subject/map-IPC.png')
+IPC.trigger(lambda *X: map(X[0], regions=pow(), group='section')).map(f'subject/map-IPC-reg.png')
 
 for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']:
-  IPC.trigger(lambda *X, k=k: map(X[0][X[0]['section'] == k], time='date', regions=pow)).map(f'subject/map-IPC-{k}-periods.png')
+  IPC.trigger(lambda *X, k=k: map(X[0][X[0]['section'] == k], time='date', regions=pow())).map(f'subject/map-IPC-{k}-periods.png')
 
 for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']:
   IPC.trigger(lambda *X, k=k: count(X[0][X[0]['section'] == k][['loceval', 'date']], time='date')).map(f'subject/NA-IPC-loc-{k}.png')
