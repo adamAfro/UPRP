@@ -1,5 +1,7 @@
 import pandas, numpy
 from geopy.distance import geodesic
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
 
 def closest(namedgeo: pandas.DataFrame,
           group: str, name: str, lat: str, lon: str):
@@ -80,9 +82,6 @@ def combgen(choices:list[list], Y0=[], i=0):
   return [c for I in choices[i] for c in combgen(choices, Y0 + [I], i + 1) ]
 
 
-
-from sklearn.cluster import KMeans
-from sklearn.preprocessing import StandardScaler
 
 def cluster(geo:pandas.DataFrame, method:str, coords:list[str], keys=[], k:int=2, innerperc=False):
 
