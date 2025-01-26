@@ -1,4 +1,4 @@
-import pandas, re, yaml
+import pandas, re, yaml, numpy
 import xml.etree.ElementTree as ET
 from pyproj import Transformer
 from lib.storage import Storage
@@ -64,27 +64,39 @@ def distcalc(cities:pandas.DataFrame, coords:list[str]):
   return Y
 
 @Flow.From()
-def stats(geo:pandas.DataFrame, dist:pandas.DataFrame, coords:list[str]):
-
-  import tqdm
+def stats(geo:pandas.DataFrame, dist:pandas.DataFrame, coords:list[str], rads=[]):
 
   X = geo
   D = dist
 
   X = X.dropna(subset=coords)
-  N = X.value_counts(subset=coords)
-  n = N.sum()
-  D = D.loc[:, [ g for g in D.columns if g in X[coords].values ]]
 
-  for g in D.columns:
-    D.loc[:, g] = D.loc[:, g] * N.loc[g]
+  i0 = X.index
+  X = X.reset_index()
 
-  X['meandist'] = 0.0
-  for i, x in tqdm.tqdm(X.iterrows(), total=n):
-    d = D.loc[(x['lat'], x['lon'])]
-    if isinstance(d, pandas.DataFrame):
-      raise Exception('Multiple values')
-    X.loc[i, 'meandist'] = d.sum()/n
+  I = [g for g in D.columns if g in X[coords].values]
+  D = D.loc[I, I].sort_index()
+
+  N = X.value_counts(subset=coords).sort_index()
+  X = X.set_index(coords)
+
+  for r in rads+[int(numpy.ceil(D.max().max()))]:
+
+    R = D.copy()
+
+   #poprawka na liczności
+    L = (R <= r).astype(int)
+    L = L.apply(lambda v: v.rename(None)*N, axis=1)
+    L = L.sort_index()
+
+   #ważenie przez liczność
+    R = R * L
+
+   #średnia dla danej liczności
+    R = R.sum(axis=1) / L.sum(axis=1)
+    X = X.join(R.rename(f'meandist{r}').astype(float))
+
+  X = X.reset_index().set_index(i0)
 
   return X
 

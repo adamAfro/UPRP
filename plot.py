@@ -260,6 +260,9 @@ def map(X:pandas.DataFrame, coords=['lat', 'lon'],
         group=None, time=None, freq='12M',
         color=None, border=False, kde=None):
 
+  conticolor = pandas.api.types.is_numeric_dtype(X[color]) or\
+               (point and (not color))
+
   w = gcrs.WebMercator()
 
   X = gpd.GeoDataFrame(X, geometry=gpd.points_from_xy(X[coords[1]], X[coords[0]]), crs='EPSG:4326')
@@ -309,11 +312,11 @@ def map(X:pandas.DataFrame, coords=['lat', 'lon'],
 
   if point:
 
-    if color is None:
-
-      C = dict(hue='count', cmap=Cmap.visible, 
-              norm=Normalize(vmin=0, vmax=T0))
-
+    if conticolor:
+      if color:
+        C = dict(hue=color, cmap=Cmap.visible, norm=None)#TODO group
+      else:
+        C = dict(hue='count', cmap=Cmap.visible, norm=Normalize(vmin=0, vmax=T0))
     else:
       C = dict(hue=color, cmap=Cmap.distinct)
 
@@ -338,7 +341,7 @@ def map(X:pandas.DataFrame, coords=['lat', 'lon'],
     P = gpd.GeoDataFrame(G, geometry=G['geometry'])
 
     L = dict(legend=False)
-    if color is not None:
+    if not conticolor:
       L = dict(legend=True, legend_var='hue')
       L['legend_kwargs'] = dict(bbox_to_anchor=(1.05, 1), 
                                 loc='upper right', fontsize=8)
@@ -362,7 +365,7 @@ def map(X:pandas.DataFrame, coords=['lat', 'lon'],
       if time: A[i].set_title(g.strftime('%d.%m.%Y' + ' - ' + freq))
       else: A[i].set_title(g)
 
-  if point and (not color):
+  if conticolor:
 
     f.subplots_adjust(bottom=0.1)
     sm = plt.cm.ScalarMappable(cmap=C['cmap'], norm=C['norm'])
@@ -445,9 +448,12 @@ compGUS = Flow(callback=lambda *X: count(X[1].assign(year=X[1]['application'].dt
                                          args=[fE['GUS']['UPRP'], fS['subject']['fillgeo']])
 compGUS.map('GUS/comprasion.png')
 
-stats = Flow(callback=lambda *X: count(X[0][['meandist']].round(0), group='meandist', xbin=10),
-              args=[fS['subject']['stats']])
-
+stats = fS['subject']['stats'].trigger()
+stats.trigger(lambda *X: count(X[0][['meandist761']].round(0), group='meandist761', xbin=5)).map('subject/Y-geostats.png')
+stats.trigger(lambda *X: map(X[0][['meandist761', 'lat', 'lon']], point=5, color='meandist761')).map('subject/map-geostats-761.png')
+stats.trigger(lambda *X: map(X[0][['meandist100', 'lat', 'lon']], point=5, color='meandist100')).map('subject/map-geostats-100.png')
+stats.trigger(lambda *X: map(X[0][['meandist50', 'lat', 'lon']], point=5, color='meandist50')).map('subject/map-geostats-50.png')
+stats.trigger(lambda *X: map(X[0][['meandist20', 'lat', 'lon']], point=5, color='meandist20')).map('subject/map-geostats-20.png')
 
 all = Flow(callback=lambda *x: x, args=[spacetime, IPC, sim, roles])
 

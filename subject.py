@@ -187,9 +187,11 @@ identities = identify(sim=sim, all=f0['registry']['2013']).map('subject/entity.p
 geofilled0 = fillgeo(entities=identities, group='entity', loceval='identity')
 geofilled = fillgeo(entities=geofilled0, group='doc', loceval='document').map('subject/filled.pkl')
 
-stats = geoloc.stats(geofilled, geoloc.flow['Misc']['dist'], coords=['lat', 'lon']).map('subject/stats.pkl')
+stats = geoloc.stats(geofilled, geoloc.flow['Misc']['dist'], coords=['lat', 'lon'], 
+                     rads=[20, 50, 100]).map('subject/stats.pkl')
 
 flow = { 'subject': { 'fillgeo': geofilled,
                       'identify': identities,
                       'simcalc': sim, 
-                      'affilate': affilN } }
+                      'affilate': affilN,
+                      'stats': stats } }
