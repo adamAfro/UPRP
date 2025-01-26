@@ -435,11 +435,8 @@ for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']:
 for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']:
   IPC.trigger(lambda *X, k=k: count(X[0][X[0]['section'] == k][['loceval', 'date']], time='date')).map(f'subject/NA-IPC-loc-{k}.png')
 
-clusters = fS['subject']['fillgeo'].trigger(lambda *X: lib.geo.cluster(X[0], 'kmeans', coords=['lat', 'lon'], innerperc=True,
-                                                                       keys=[f'clsf-{k}' for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']], k=4))
-
-clusters.trigger(lambda X: map(X, point=5, color='cluster')).map('subject/map-kmeans.png')
-clusters.trigger(lambda X: map(X, point=1, color='cluster', time='application')).map('subject/map-kmeans-periods.png')
+fS['subject']['cluster'].trigger(lambda X: map(X, point=5, color='cluster')).map('subject/clusters/map-kmeans.png')
+fS['subject']['cluster'].trigger(lambda X: map(X, point=1, color='cluster', time='application')).map('subject/clusters/map-kmeans-periods.png')
 
 
 compGUS = Flow(callback=lambda *X: count(X[1].assign(year=X[1]['application'].dt.year).groupby('doc')['year'].min().reset_index().assign(src='UPRP')[['src', 'year']],
@@ -450,10 +447,11 @@ compGUS.map('GUS/comprasion.png')
 
 stats = fS['subject']['stats'].trigger()
 stats.trigger(lambda *X: count(X[0][['meandist761']].round(0), group='meandist761', xbin=5)).map('subject/Y-geostats.png')
-stats.trigger(lambda *X: map(X[0][['meandist761', 'lat', 'lon']], point=5, color='meandist761')).map('subject/map-geostats-761.png')
-stats.trigger(lambda *X: map(X[0][['meandist100', 'lat', 'lon']], point=5, color='meandist100')).map('subject/map-geostats-100.png')
-stats.trigger(lambda *X: map(X[0][['meandist50', 'lat', 'lon']], point=5, color='meandist50')).map('subject/map-geostats-50.png')
-stats.trigger(lambda *X: map(X[0][['meandist20', 'lat', 'lon']], point=5, color='meandist20')).map('subject/map-geostats-20.png')
+stats.trigger(lambda *X: map(X[0][['meandist761', 'lat', 'lon']], point=5, color='meandist761', kde=16)).map('subject/map-geostats-761.png')
+stats.trigger(lambda *X: map(X[0][['meandist100', 'lat', 'lon']], point=5, color='meandist100', kde=16)).map('subject/map-geostats-100.png')
+
+cluststats = fS['subject']['cluststats'].trigger(lambda *X: map(X[0][['meandist100', 'lat', 'lon', 'cluster']], group='cluster',
+                                                                point=5, color='meandist100', kde=8)).map('subject/clusters/map-geostats-100.png')
 
 all = Flow(callback=lambda *x: x, args=[spacetime, IPC, sim, roles])
 

@@ -1,4 +1,4 @@
-import pandas
+import pandas, lib
 from lib.flow import Flow
 import geoloc
 
@@ -187,11 +187,27 @@ identities = identify(sim=sim, all=f0['registry']['2013']).map('subject/entity.p
 geofilled0 = fillgeo(entities=identities, group='entity', loceval='identity')
 geofilled = fillgeo(entities=geofilled0, group='doc', loceval='document').map('subject/filled.pkl')
 
+clusters = geofilled.trigger(lambda *X: lib.geo.cluster(X[0], 'kmeans', coords=['lat', 'lon'], innerperc=True,
+                                                        keys=[f'clsf-{k}' for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']], k=4))
+
+def applyclust(clu:Flow):
+
+  F = []
+  for g, G in clu().groupby('cluster'):
+    f = geoloc.stats(G, geoloc.flow['Misc']['dist'], coords=['lat', 'lon'], rads=[100])\
+              .map(f'subject/clusters/stats-{g}.pkl')
+
+    F.append(f)
+
+  return Flow(callback=lambda *X: pandas.concat(X), args=F)
+
 stats = geoloc.stats(geofilled, geoloc.flow['Misc']['dist'], coords=['lat', 'lon'], 
-                     rads=[20, 50, 100]).map('subject/stats.pkl')
+                     rads=[20, 50, 100]).map('subject/geostats.pkl')
 
 flow = { 'subject': { 'fillgeo': geofilled,
+                      'cluster': clusters,
                       'identify': identities,
                       'simcalc': sim, 
                       'affilate': affilN,
-                      'stats': stats } }
+                      'stats': stats,
+                      'cluststats': applyclust(clusters) } }
