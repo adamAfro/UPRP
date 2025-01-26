@@ -3,14 +3,15 @@ import geopandas as gpd, geoplot as gplt, geoplot.crs as gcrs
 from matplotlib.ticker import MaxNLocator
 import matplotlib.colors as mcolors
 from matplotlib.colors import Normalize
+from lib.flow import Flow
 
 plt.rcParams['axes.spines.top'] = False
 plt.rcParams['axes.spines.right'] = False
 plt.style.use('grayscale')
 
-pow = gpd.read_file('map/powiaty.shp').to_crs(epsg=4326)
-woj = gpd.read_file('map/wojewodztwa.shp').to_crs(epsg=4326)
-pol = gpd.read_file('map/polska.shp').to_crs(epsg=4326)
+pow = Flow(callback=lambda *a: gpd.read_file('map/powiaty.shp').to_crs(epsg=4326))
+woj = Flow(callback=lambda *a: gpd.read_file('map/wojewodztwa.shp').to_crs(epsg=4326))
+pol = Flow(callback=lambda *a: gpd.read_file('map/polska.shp').to_crs(epsg=4326))
 
 class Colr:
 
@@ -323,10 +324,10 @@ def map(X:pandas.DataFrame, coords=['lat', 'lon'],
   for i, (g, G) in enumerate(T):
 
     if border:
-      A[i] = gplt.polyplot(pow, ax=A[i], projection=w, extent=pol.total_bounds, 
+      A[i] = gplt.polyplot(pow(), ax=A[i], projection=w, extent=pol().total_bounds, 
                            edgecolor=Colr.neutral, linewidth=border)
     else:
-      A[i] = gplt.polyplot(pol, ax=A[i], projection=w, extent=pol.total_bounds, 
+      A[i] = gplt.polyplot(pol(), ax=A[i], projection=w, extent=pol().total_bounds, 
                            edgecolor=Colr.neutral, linewidth=1)
 
     G = G.dropna(subset=coords)
@@ -343,19 +344,19 @@ def map(X:pandas.DataFrame, coords=['lat', 'lon'],
                                 loc='upper right', fontsize=8)
 
     if kde:
-      gplt.kdeplot(P, ax=A[i], extent=pol.total_bounds, projection=w, 
+      gplt.kdeplot(P, ax=A[i], extent=pol().total_bounds, projection=w, 
                    weights=P['color'] if color else P['count'], 
                    levels=kde, **L, cmap=Cmap.neutral)
 
     if point:
       def maxscale(m, M): return lambda x: point + point*growth*x/T0
-      gplt.pointplot(P, ax=A[i], extent=pol.total_bounds, **L, **C,
+      gplt.pointplot(P, ax=A[i], extent=pol().total_bounds, **L, **C,
                      scale='count', scale_func=maxscale, projection=w)
 
 
     if regions is not None:
 
-      gplt.choropleth(R.get_group(g), ax=A[i], extent=pol.total_bounds, **L, **CR, projection=w)
+      gplt.choropleth(R.get_group(g), ax=A[i], extent=pol().total_bounds, **L, **CR, projection=w)
 
     if g:
       if time: A[i].set_title(g.strftime('%d.%m.%Y' + ' - ' + freq))
