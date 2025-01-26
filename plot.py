@@ -348,7 +348,7 @@ def map(X:pandas.DataFrame, coords=['lat', 'lon'],
 
     if kde:
       gplt.kdeplot(P, ax=A[i], extent=pol().total_bounds, projection=w, 
-                   weights=P['color'] if color else P['count'], 
+                   weights=P[color] if color else P['count'], 
                    levels=kde, **L, cmap=Cmap.neutral)
 
     if point:
