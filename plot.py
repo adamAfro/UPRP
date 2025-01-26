@@ -445,6 +445,9 @@ compGUS = Flow(callback=lambda *X: count(X[1].assign(year=X[1]['application'].dt
                                          args=[fE['GUS']['UPRP'], fS['subject']['fillgeo']])
 compGUS.map('GUS/comprasion.png')
 
+stats = Flow(callback=lambda *X: count(X[0][['meandist']].round(0), group='meandist', xbin=10),
+              args=[fS['subject']['stats']])
+
 
 all = Flow(callback=lambda *x: x, args=[spacetime, IPC, sim, roles])
 

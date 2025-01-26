@@ -4,6 +4,7 @@ from pyproj import Transformer
 from lib.storage import Storage
 from lib.geo import closest
 from lib.flow import Flow
+from lib.geo import distmx
 
 @Flow.From()
 def GMLParse(path:str):
@@ -50,6 +51,43 @@ def GeoXLSXload(path:str):
 
     return L
 
+@Flow.From()
+def distcalc(cities:pandas.DataFrame, coords:list[str]):
+
+  X = cities
+
+  X = X.dropna(subset=coords)
+  X = X[ X['type'] == 'miasto' ]
+  X = X.set_index(coords, drop=False)
+  Y = distmx(X, coords[1], coords[0])
+
+  return Y
+
+@Flow.From()
+def stats(geo:pandas.DataFrame, dist:pandas.DataFrame, coords:list[str]):
+
+  import tqdm
+
+  X = geo
+  D = dist
+
+  X = X.dropna(subset=coords)
+  N = X.value_counts(subset=coords)
+  n = N.sum()
+  D = D.loc[:, [ g for g in D.columns if g in X[coords].values ]]
+
+  for g in D.columns:
+    D.loc[:, g] = D.loc[:, g] * N.loc[g]
+
+  X['meandist'] = 0.0
+  for i, x in tqdm.tqdm(X.iterrows(), total=n):
+    d = D.loc[(x['lat'], x['lon'])]
+    if isinstance(d, pandas.DataFrame):
+      raise Exception('Multiple values')
+    X.loc[i, 'meandist'] = d.sum()/n
+
+  return X
+
 flow = dict()
 
 flow['Geoportal'] = dict()
@@ -57,3 +95,4 @@ flow['Geoportal']['parse'] = GMLParse(path='geoportal.gov.pl/wfs/name.gml').map(
 
 flow['Misc'] = dict()
 flow['Misc']['geodata'] = GeoXLSXload(path='prom/df_adresses_with_coordinates.xlsx').map('prom/df_adresses_with_coordinates.pkl')
+flow['Misc']['dist'] = distcalc(flow['Misc']['geodata'], coords=['lat', 'lon']).map('prom/dists.pkl')

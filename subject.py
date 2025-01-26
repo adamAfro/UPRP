@@ -1,5 +1,6 @@
 import pandas
 from lib.flow import Flow
+import geoloc
 
 @Flow.From()
 def affilgeo(registry:pandas.DataFrame):
@@ -185,6 +186,8 @@ identities = identify(sim=sim, all=f0['registry']['2013']).map('subject/entity.p
 
 geofilled0 = fillgeo(entities=identities, group='entity', loceval='identity')
 geofilled = fillgeo(entities=geofilled0, group='doc', loceval='document').map('subject/filled.pkl')
+
+stats = geoloc.stats(geofilled, geoloc.flow['Misc']['dist'], coords=['lat', 'lon']).map('subject/stats.pkl')
 
 flow = { 'subject': { 'fillgeo': geofilled,
                       'identify': identities,
