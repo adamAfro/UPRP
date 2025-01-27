@@ -260,7 +260,7 @@ def map(X:pandas.DataFrame, coords=['lat', 'lon'],
         group=None, time=None, freq='12M',
         color=None, border=False, kde=None):
 
-  conticolor = pandas.api.types.is_numeric_dtype(X[color]) or\
+  conticolor = ((color is not None) and pandas.api.types.is_numeric_dtype(X[color])) or\
                (point and (not color))
 
   w = gcrs.WebMercator()
@@ -415,17 +415,17 @@ roles = fS['subject']['fillgeo'].trigger(lambda X: X.assign(role=X.apply(strrole
 roles.trigger(lambda X: count(X[['role', 'loceval']].reset_index(drop=True), group='role'))\
      .map('subject/NA-geo-role.png')
 
-# roles.trigger(lambda X: map(X, point=1, kde=16)).map('subject/map.png')
-# roles.trigger(lambda X: map(X, point=1, kde=8, time='firstdate')).map('subject/map-periods-first.png')
-# roles.trigger(lambda X: map(X, point=1, kde=8, time='application')).map('subject/map-periods.png')
+roles.trigger(lambda X: map(X, point=3, kde=16)).map('subject/map.png')
+roles.trigger(lambda X: map(X, point=1, kde=8, time='firstdate')).map('subject/map-periods-first.png')
+roles.trigger(lambda X: map(X, point=1, kde=8, time='application')).map('subject/map-periods.png')
 
 IPC = roles.trigger(lambda *X: X[0].explode('IPC')[['loceval', 'lat', 'lon', 'IPC', 'application']]\
                                    .rename(columns={ 'application': 'date', 'IPC': 'section' }))
 
-# IPC.trigger(lambda X: count(X[['loceval', 'section']], group='section'))\
-#    .map('subject/NA-IPC-geo.png')
-# IPC.trigger(lambda X: map(X, point=1, color='section', time='date'))\
-#    .map('subject/map-IPC.png')
+IPC.trigger(lambda X: count(X[['loceval', 'section']], group='section'))\
+   .map('subject/NA-IPC-geo.png')
+IPC.trigger(lambda X: map(X, point=1, color='section', time='date'))\
+   .map('subject/map-IPC.png')
 
 IPC.trigger(lambda *X: map(X[0], regions=pow(), group='section')).map(f'subject/map-IPC-reg.png')
 
@@ -453,7 +453,7 @@ stats.trigger(lambda *X: map(X[0][['meandist100', 'lat', 'lon']], point=5, color
 cluststats = fS['subject']['cluststats'].trigger(lambda *X: map(X[0][['meandist100', 'lat', 'lon', 'cluster']], group='cluster',
                                                                 point=5, color='meandist100', kde=8)).map('subject/clusters/map-geostats-100.png')
 
-all = Flow(callback=lambda *x: x, args=[spacetime, IPC, sim, roles])
+all = Flow(callback=lambda *x: x, args=[spacetime, IPC, sim, roles, compGUS])
 
 flow = { 'plot': { 'all': all,
                    'spacetime': spacetime,
