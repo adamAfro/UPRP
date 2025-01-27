@@ -84,8 +84,15 @@
 \newtheorem{uwaga}{Uwaga}[chapter]
 \newtheorem{wniosek}{Wniosek}[chapter]
 
-\newcommand{\srcuprp}{\footnotesize{Źródło: opracowanie własne; źródło danych: 
-                      Urząd Patentowy Rzeczypospolitej Polski}}
+\newcommand{\fig}[2]{
+\begin{figure}[H]\centering
+\includegraphics[width=\textwidth]{#1}
+\caption{#2}
+\label{fig:#1}
+\end{figure}}
+
+\newcommand{\srcuprp}{Źródło: opracowanie własne; źródło danych: 
+                      Urząd Patentowy Rzeczypospolitej Polski}
 
 %%%%% więcej możliwości w~dokumentacji amsthm
 
