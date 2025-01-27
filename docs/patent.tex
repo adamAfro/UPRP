@@ -1,13 +1,9 @@
 \section{Dane patentowe}
 
-\begin{uwaga}
-W większości przypadków dane dotyczące podmiotów pełniących role patentowe
-nie zawierają informacji o tym czy są to osoby, czy organizacje.
-Problem jest rozwiązany w następnych rozdziałach, poniższe wykresy
-dotyczą obu rodzajów podmiotów pełniących role patentowe.
-\end{uwaga}
-
-
+W danych ze zbioru \ac{UPRP} można wyróżnić kilka kategorii informacji
+związanych z badanym tematem. Są to daty związane z procesem urzędowym
+patentu, klasyfikacje patentowe, dane przestrzenne oraz dane osobowe
+osób związanych z patentami.
 
 \subsection{Dane przestrzenne}
 
@@ -25,7 +21,9 @@ Jest to kwestia $A_1$ priorytetowania organizacji ponad osoby, bądź
 odwrotnie, oraz $A_2$ wyboru głównej osoby/organizacji.
 Problem $A_1$ wiąże się z potencjalnymi różnicami w modelu zależnie
 od wybranego podejścia. Problem $A_2$ może być niejednoznaczny
-w rozwiązaniu z powodu zbytn małego zakresu informacji zawartych w danych.
+w rozwiązaniu z powodu zbyt małego zakresu informacji zawartych w danych.
+Wymagałoby to dodatkowych danych z samego procesu powstawania wynalazku,
+co jest poza zakresem tej pracy.
 
 Dalsza analiza odnosi się wyłącznie do podejścia $B$.
 Patent może mieć więc kilka lokalizacji, żadna nie jest określona jako główna.
@@ -41,27 +39,30 @@ w wykonalny sposób na podstawie patentowych informacji.
 Co za tym idzie rozważane są wyłącznie lokacje uważane za polskie miasta.
 \todonote{przypis}
 
+Mimo powyższych uproszczeń braki danych ciągle są obecne. Ich uzupełnianie
+jest opisane w dalszej części pracy. Poniżej znajdują się 2 wykresy. 
+Pierwszy przedstawiaja ilość danych dotyczących osób, dla których 
+umieszczono informacje o lokalizacji. Widać w nim datę graniczną początkową,
+która świadczy o momencie rozpoczęcia rejestrowania danych lokalizacyjnych.
+Interesujący jest również spadek w roku 2004. Należy przypuszczać, że wynika
+on ze zmiany metodologii zbierania danych osobowych po przystąpieniu
+Polski do Unii Europejskiej.
+Dla lat 2013-2022, czyli okresu zainteresowania analizy,
+widać względną stabilność ilości danych z widocznym
+spadkiem ich przyrostu rocznego. 
+
 
 
 \begin{figure}[H]\centering
-\includegraphics[width=\textwidth]{../registry/geodisp-total.png}
-\caption{Geolokalizacje,
+\includegraphics[width=\textwidth]{../registry/NA-loc-geo.png}
+\caption{Stan~uzupełnienia~informacji
+         o~geolokalizacjach,
          w~Polsce,
          osób~i~organizacji 
          pełniących~role~patentowe 
          w~aplikacjach~patentowych}
-\label{fig:geodisp.png}
+\srcuprp
 \end{figure}
-
-\begin{figure}[H]\centering
-\includegraphics[width=\textwidth]{../registry/geodisp-NA.png}
-\caption{Ilość rejestrów  
-         zawierających lokalizacje oraz
-         zawierajacych geolokalizacje
-         w~kolejnych~latach}
-\label{fig:geodisp.png}
-\end{figure}
-
 
 
 \subsection{Rejestr dat związanych z patentami}
@@ -87,20 +88,22 @@ Można wyróżnić kilka typów wydarzeń związanych z patentami:
 \begin{figure}[H]\centering
 \includegraphics[width=\textwidth]{../api.uprp.gov.pl/event/series.png}
 \caption{Wydarzenia związane z patentami w kolejnych latach}
-\label{fig:geodisp.png}
+\srcuprp
+\label{fig:NA-loc-geo.png}
 \end{figure}
 
-\begin{figure}[H]\centering
-\includegraphics[width=\textwidth]{../registry/geodisp.png}
-\caption{Geolokalizacje,
-         w~Polsce,
-         osób~i~organizacji 
-         pełniących~role~patentowe 
-         w~aplikacjach~patentowych,
-         z~danego~okresu,
-         w~kolejnych~latach}
-\label{fig:geodisp.png}
-\end{figure}
+Powyższy wykres (\ref{fig:NA-loc-geo.png}) obrazuje kolejne lata i to jakie
+działania podejmował urząd w stosunku do składanych patentów. Urząd funkcjonuje
+ponad 100 lat\todonote{od którego roku lepiej nap.} i widać to także na wykresie.
+Widać na nim historyczne zdarzenia takie jak 2 Wojna Światowa (spadek w latach 39-45) 
+oraz upadek ustroju komunistycznego w Polsce w latach (nagłwy wzrost 89-90) oraz
+przystąpienie Polski do Unii Europejskiej (spadek w 2004).
+Zmiany ustrojowe wiążą się także ze zmianem rozkładu rejestrowanych wydarzeń.
+Przed latami 90 rejestrowane były wyłącznie daty aplikacji i grantów.
+Następnie zaczęto rejestrować także inne, wcześniej wymienione, 
+wydarzenia związane z patentami.
+
+
 
 
 
@@ -212,37 +215,10 @@ jako wspólny wysiłek w kierunku standaryzacji klasyfikacji.
 symbole dodające prezycji do klasyfikacji.
 
 \begin{figure}[H]\centering
-\includegraphics[width=\textwidth]{../registry/geodisp-IPC.png}
-\caption{Geolokalizacje,
-         w~Polsce,
-         osób~i~organizacji 
-         pełniących~role~patentowe 
-         w~aplikacjach~patentowych
-         o~wskazanych~sekcjach~IPC,
-         z~danego~okresu,
-         w~kolejnych~latach}
-\label{fig:geodisp.png}
+\includegraphics[draft, width=\textwidth]{api.uprp.gov.pl/classify/dist.png}
+\caption{Ilość patentów w danych klasyfikacjach}
 \end{figure}
 
-
-
-\begin{figure}[H]\centering
-\includegraphics[width=\textwidth]{../registry/IPC-NA-geodisp.png}
-\caption{Ilość rejestrów kategorii
-         zawierających lokalizacje oraz
-         zawierajacych geolokalizacje}
-\label{fig:geodisp.png}
-\end{figure}
-
-
-
-\begin{figure}[H]\centering
-\includegraphics[width=\textwidth]{../registry/IPC-NA-periods.png}
-\caption{Ilość rejestrów kategorii
-         oraz wykazy lokalizacji i geolokalizacji
-         w~kolejnych~latach}
-\label{fig:geodisp.png}
-\end{figure}
 
 \begin{uwaga}
 Rejestr kategorii nie jest równoznaczny z patentem. Patenty
