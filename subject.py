@@ -194,14 +194,14 @@ def applyclust(clu:Flow):
 
   F = []
   for g, G in clu().groupby('cluster'):
-    f = geoloc.stats(G, geoloc.flow['Misc']['dist'], coords=['lat', 'lon'], rads=[100])\
+    f = geoloc.statunit(G, geoloc.flow['Misc']['dist'], coords=['lat', 'lon'], rads=[100])\
               .map(f'subject/clusters/stats-{g}.pkl')
 
     F.append(f)
 
   return Flow(callback=lambda *X: pandas.concat(X), args=F)
 
-stats = geoloc.stats(geofilled, geoloc.flow['Misc']['dist'], coords=['lat', 'lon'], 
+geostatunit = geoloc.statunit(geofilled, geoloc.flow['Misc']['dist'], coords=['lat', 'lon'], 
                      rads=[20, 50, 100]).map('subject/geostats.pkl')
 
 flow = { 'subject': { 'fillgeo': geofilled,
@@ -209,5 +209,5 @@ flow = { 'subject': { 'fillgeo': geofilled,
                       'identify': identities,
                       'simcalc': sim, 
                       'affilate': affilN,
-                      'stats': stats,
+                      'geostatunit': geostatunit,
                       'cluststats': applyclust(clusters) } }

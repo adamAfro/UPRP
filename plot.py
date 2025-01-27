@@ -446,10 +446,10 @@ compGUS = Flow(callback=lambda *X: count(X[1].assign(year=X[1]['application'].dt
                                          args=[fE['GUS']['UPRP'], fS['subject']['fillgeo']])
 compGUS.map('GUS/comprasion.png')
 
-stats = fS['subject']['stats'].trigger()
-stats.trigger(lambda *X: count(X[0][['meandist761']].round(0), group='meandist761', xbin=5)).map('subject/Y-geostats.png')
-stats.trigger(lambda *X: map(X[0][['meandist761', 'lat', 'lon']], point=5, color='meandist761', kde=16)).map('subject/map-geostats-761.png')
-stats.trigger(lambda *X: map(X[0][['meandist100', 'lat', 'lon']], point=5, color='meandist100', kde=16)).map('subject/map-geostats-100.png')
+geostatunit = fS['subject']['geostatunit'].trigger()
+geostatunit.trigger(lambda *X: count(X[0][['meandist761']].round(0), group='meandist761', xbin=5)).map('subject/Y-geostats.png')
+geostatunit.trigger(lambda *X: map(X[0][['meandist761', 'lat', 'lon']], point=5, color='meandist761', kde=16)).map('subject/map-geostats-761.png')
+geostatunit.trigger(lambda *X: map(X[0][['meandist100', 'lat', 'lon']], point=5, color='meandist100', kde=16)).map('subject/map-geostats-100.png')
 
 cluststats = fS['subject']['cluststats'].trigger(lambda *X: map(X[0][['meandist100', 'lat', 'lon', 'cluster']], group='cluster',
                                                                 point=5, color='meandist100', kde=8)).map('subject/clusters/map-geostats-100.png')

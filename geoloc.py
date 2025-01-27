@@ -64,7 +64,7 @@ def distcalc(cities:pandas.DataFrame, coords:list[str]):
   return Y
 
 @Flow.From()
-def stats(geo:pandas.DataFrame, dist:pandas.DataFrame, coords:list[str], rads=[]):
+def statunit(geo:pandas.DataFrame, dist:pandas.DataFrame, coords:list[str], rads=[]):
 
   X = geo
   D = dist
