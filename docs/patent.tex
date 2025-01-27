@@ -148,13 +148,70 @@ Następnie zaczęto rejestrować także inne, wcześniej wymienione,
 wydarzenia związane z patentami.
 
 
+Zmienność danych geolokalizacyjnych oraz datowych jest niewidoczna, co obrazuje
+poniższy wykres. W ciągu lat 2013-2022 nie widać znaczących zmian w kolejnych latach.
+Można wyróżnić liczności z roku 2015 roku jako względnie wysokie dla Warszawy oraz 
+okręgu Katowic. Jak wcześniej zauważono są to główne ośrodki patentowe w Polsce.
 
-
+\fig{../subject/map-periods.png}{
+  Mapa~rozrzutu~geolokalizacji~osób
+  pełniących~role~patentowe
+  z~liniami~estymacji~gęstości~jądrowej
+  w~różnych~okresach~czasu\newline\srcuprp
+}
 
 \subsection{Klasyfikacje patentów}
 
 Klasyfikacje patentowe to systemy, które pozwalają na przypisanie
 patentów do odpowiednich dziedzin.
+
+
+
+\newpage
+\subsubsection{Średni dystans do innych osób}
+
+Obszary peryferyjne to miejsca odległe od centrów, w tym przypadku
+głównych źródeł aplikacji patentowych. Wyznaczamy je poprzez obliczenie
+średniego dystansu do innych osób pełniących role patentowe.
+Oprócz dystansu do każdego innego punktu, warto jest ograniczyć
+tę statystykę do pewnego obszaru. Jak wcześniej zaznaczono, Polska
+nie jest jednorodna przestrzennie pod tym względem, stąd peryferyjność
+nie może być rozumiana tylko na krajowym poziomie, ale również lokalnym.
+
+\begin{uwaga}
+Średnia odległość po między geolokalizacjami patentowymi jest ważona, gdzie
+ilość patentów pochodzących z danej lokalizacji jest wagą.
+\end{uwaga}
+
+\fig{../subject/map-geostats-761.png}{
+  Średni~dystans~do~innych~osób~pełniących~role~patentowe w~Polsce\newline\srcuprp
+\newline Rozmiar --- ilość patentów; kolor --- średni dystans.
+}
+
+Rysunek \ref{fig:../subject/map-geostats-761.png} przedstawia średni dystans
+do innych osób pełniących role patentowe w Polsce. Widać, że Warszawa
+jest najbardziej centralnym punktem, co jest zgodne z wcześniejszymi
+obserwacjami. To samo dotyczy okręgu Katowic. Widać jednak, że oprócz
+tych aglomeracji istnieją też 2 obszary wyróżniające się od reszty kraju.
+Są to obszar łączony Wielkopolski i Dolnego Śląska.\todonote{potrzeb. mapa
+z granic. woj.} oraz miasto Łódź. Na podstawie tej statystyki należy przypuszczać,
+że są to regiony o względnej bliskości do innych źródeł patentowych na poziomie krajowym.
+
+\fig{../subject/map-geostats-100.png}{
+  Średni~dystans~do~innych~osób~pełniących~role~patentowe
+  w~Polsce~w~okręgu~o~promieniu~100~kilometrów\newline\srcuprp
+\newline Rozmiar --- ilość patentów; kolor --- średni dystans.
+}
+
+Na rysunku \ref{fig:../subject/map-geostats-100.png} przedstawiono ten sam
+wskaźnik, ale ograniczony do obszaru o promieniu 100 kilometrów.
+Widać na nim dużo wyraźniej, że obszary Wielkopolski i Dolnego Śląska
+oraz obszar Katowic mają względnie wysoką bliskość. Linie estymacji gęstości
+jądrowej pokazują, że inaczej może być dla Warszawy. Mimo liczności patentów
+pochodzących z miasta i okolic nie jest ono tak centralne jak mogłoby się
+wydawać. 
+
+
 
 
 
