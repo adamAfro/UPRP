@@ -431,7 +431,7 @@ IPC.trigger(lambda X: map(X, point=1, color='section', time='date'))\
 IPC.trigger(lambda *X: map(X[0], regions=pow(), group='section')).map(f'subject/map-IPC-reg.png')
 
 for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']:
-  IPC.trigger(lambda *X, k=k: map(X[0][X[0]['section'] == k], time='date', regions=pow())).map(f'subject/map-IPC-{k}-periods.png')
+  IPC.trigger(lambda *X, k=k: map(X[0][X[0]['section'] == k], time='date', point=1, kde=12)).map(f'subject/map-IPC-{k}-periods.png')
 
 for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']:
   IPC.trigger(lambda *X, k=k: count(X[0][X[0]['section'] == k][['loceval', 'date']], time='date')).map(f'subject/NA-IPC-loc-{k}.png')
