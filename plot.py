@@ -260,8 +260,7 @@ def map(X:pandas.DataFrame, coords=['lat', 'lon'],
         group=None, time=None, freq='12M',
         color=None, border=False, kde=None):
 
-  conticolor = ((color is not None) and pandas.api.types.is_numeric_dtype(X[color])) or\
-               (point and (not color))
+  conticolor = ((color is not None) and pandas.api.types.is_numeric_dtype(X[color])) or (not color)
 
   w = gcrs.WebMercator()
 
@@ -284,11 +283,11 @@ def map(X:pandas.DataFrame, coords=['lat', 'lon'],
 
     R0 = max([G['count'].max() for g, G in R])
 
-    if color is None:
-
-      CR = dict(hue='count', cmap=Cmap.visible, 
-                norm=Normalize(vmin=0, vmax=R0))
-
+    if conticolor:
+      if color:
+        CR = dict(hue=color, cmap=Cmap.visible, norm=None)#TODO group
+      else:
+        CR = dict(hue='count', cmap=Cmap.visible, norm=Normalize(vmin=0, vmax=R0))
     else:
       CR = dict(hue=color, cmap=Cmap.distinct)
 
@@ -364,6 +363,8 @@ def map(X:pandas.DataFrame, coords=['lat', 'lon'],
     if g:
       if time: A[i].set_title(g.strftime('%d.%m.%Y' + ' - ' + freq))
       else: A[i].set_title(g)
+
+  if regions is not None: C = CR#workaround(!)
 
   if conticolor:
 
