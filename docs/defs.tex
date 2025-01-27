@@ -21,6 +21,7 @@
 \usepackage{needspace}
 \usepackage{fancyhdr}
 \usepackage{graphicx}
+\usepackage{multicol}
 \usepackage{amsmath}
 \usepackage{amsthm}
 \usepackage{amssymb}
@@ -87,6 +88,13 @@
 \newcommand{\fig}[2]{
 \begin{figure}[H]\centering
 \includegraphics[width=\textwidth]{#1}
+\caption{#2}
+\label{fig:#1}
+\end{figure}}
+
+\newcommand{\halffig}[2]{
+\begin{figure}[H]\centering
+\includegraphics[width=0.5\textwidth]{#1}
 \caption{#2}
 \label{fig:#1}
 \end{figure}}
