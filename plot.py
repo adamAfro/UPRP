@@ -224,7 +224,7 @@ def map(X:pandas.DataFrame, coords=['lat', 'lon'],
         label=None,
         point=None, growth=10,
         regions=None,
-        group=None, time=None, freq='12M',
+        group=None, time=None, freq='Y',
         color=None, border=False, kde=None):
 
   conticolor = ((color is not None) and pandas.api.types.is_numeric_dtype(X[color])) or (not color)
@@ -244,7 +244,8 @@ def map(X:pandas.DataFrame, coords=['lat', 'lon'],
     if group:
       R = R.groupby(group)
     elif time:
-      R = R.groupby(pandas.Grouper(key=time, freq=freq))
+      R[time] = R[time].dt.to_period(freq)
+      R = R.groupby(time)
     else:
       R = [(None, R)]
 
@@ -261,7 +262,8 @@ def map(X:pandas.DataFrame, coords=['lat', 'lon'],
   if group:
     T = X.groupby(group)
   elif time:
-    T = X.groupby(pandas.Grouper(key=time, freq=freq))
+    X[time] = X[time].dt.to_period(freq)
+    T = X.groupby(time)
   else:
     T = [(None, X)]
 
