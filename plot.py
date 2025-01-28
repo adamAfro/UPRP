@@ -78,39 +78,6 @@ def squarealike(n):
   while a*b < n: b += 1
   return a, b
 
-
-def monthly(X:pandas.DataFrame, by:str, 
-            title='W danym miesiącu', x='miesiąc',
-            year='year', month='month'):
-
-  d = X[year].str.zfill(2)+'-'+X[month].str.zfill(2)
-
-  M = X.groupby([d, by]).size().unstack(fill_value=0).sort_index()
-
-  f, A = plt.subplots(len(M.columns), constrained_layout=True,
-                      sharex=True, sharey=True, figsize=(8, 1+len(M.columns)))
-
-  for i, k in enumerate(M.columns):
-    M[k].plot.bar(xlabel='miesiąc', ax=A[i], ylabel=k, rot=0)
-    A[i].xaxis.set_major_locator(MaxNLocator(integer=True, prune='both'))
-
-  A[0].set_title(title)
-
-  return f
-
-def NA(X: pandas.DataFrame):
-
-  Y = pandas.DataFrame({'Dane': X.notna().sum(), 'Braki': X.isna().sum()})
-
-  f, A = plt.subplots(1, figsize=(8, 4), tight_layout=True)
-
-  Y.plot(kind='bar', stacked=True, color=[Colr.good, Colr.warning], ax=A)
-  A.set_ylabel('Liczba wartości')
-  A.set_title('Braki danych w kolumnach')
-  A.legend()
-
-  return f
-
 def intbins(v: pandas.Series, n: int, start=None):
 
   M = v.max()
