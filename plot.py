@@ -384,7 +384,6 @@ roles.trigger(lambda X: count(X[['role', 'loceval']].reset_index(drop=True), gro
      .map('subject/NA-geo-role.png')
 
 roles.trigger(lambda X: map(X, point=3, kde=16)).map('subject/map.png')
-roles.trigger(lambda X: map(X, point=1, kde=8, time='firstdate')).map('subject/map-periods-first.png')
 roles.trigger(lambda X: map(X, point=1, kde=8, time='application')).map('subject/map-periods.png')
 
 IPC = roles.trigger(lambda *X: X[0].explode('IPC')[['loceval', 'lat', 'lon', 'IPC', 'application']]\
