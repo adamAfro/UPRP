@@ -80,7 +80,8 @@ def statunit(geo:pandas.DataFrame, dist:pandas.DataFrame, coords:list[str], rads
   N = X.value_counts(subset=coords).sort_index()
   X = X.set_index(coords)
 
-  for r in rads+[int(numpy.ceil(D.max().max()))]:
+  M = int(numpy.ceil(D.max().max()))
+  for r in rads+[M]:
 
     R = D.copy()
 
@@ -94,6 +95,7 @@ def statunit(geo:pandas.DataFrame, dist:pandas.DataFrame, coords:list[str], rads
 
    #średnia dla danej liczności
     R = R.sum(axis=1) / L.sum(axis=1)
+    if r == M: r = ''
     X = X.join(R.rename(f'meandist{r}').astype(float))
 
   X = X.reset_index().set_index(i0)
