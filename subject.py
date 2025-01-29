@@ -1,4 +1,4 @@
-import pandas, lib
+import pandas, lib, geopandas as gpd
 from lib.flow import Flow
 import altair as Plot
 import geoloc
@@ -250,7 +250,7 @@ f['subj-plot'][f'F-geoloc-eval'] = Flow(args=[geostatunit], callback=lambda X:
 
 f['subj-plot'][f'map'] = Flow(args=[geostatunit, geoloc.Woj], callback=lambda X, G:
 
-  Plot.Chart(G).mark_geoshape(fill='black', stroke='white') + \
+  Plot.Chart(G).mark_geoshape(stroke='black', fill=None) + \
 
   Plot.Chart(X.value_counts(['lat', 'lon'])\
               .reset_index())\
@@ -259,34 +259,53 @@ f['subj-plot'][f'map'] = Flow(args=[geostatunit, geoloc.Woj], callback=lambda X,
                             color=Plot.Color(f'count:Q').scale(scheme='goldgreen'),
                             size=Plot.Size('count').title('Ilość pkt.')).project('mercator'))
 
-f['subj-plot'][f'map-13-22'] = Flow(args=[geostatunit, geoloc.Woj], callback=lambda X, G:
+f['subj-plot'][f'map-13-22'] = Flow(args=[geostatunit, geoloc.Woj], callback=lambda X, G:(
 
-  Plot.hconcat(
+  lambda X, G=G:
 
-      Plot.vconcat(*[
+    Plot.hconcat(
 
-          Plot.Chart(G).mark_geoshape(fill='black', stroke='white') + \
-          Plot.Chart(X.assign(year=X['application'].dt.year).query('year == @y')\
-                      .value_counts(['lat', 'lon'])\
-                      .reset_index(), title=str(y))\
-              .mark_circle()\
-              .encode(longitude='lon:Q', latitude='lat:Q', size='count',
-                      color=Plot.Color(f'count:Q').scale(scheme='goldgreen').title('Ilość pkt.')) 
+        Plot.vconcat(
 
-        for y in range(2013, 2017+1)]),
+            Plot.Chart(G).mark_geoshape(stroke='black', fill=None) + \
 
-      Plot.vconcat(*[
+            X   .query('year == 2013')\
+                .pipe(Plot.Chart, title=str(2013))\
+                .mark_circle(color='black')\
+                .encode(longitude='lon:Q', latitude='lat:Q', 
+                        size=Plot.Size('count').title('Ilość')), *[
 
-          Plot.Chart(G).mark_geoshape(fill='black', stroke='white') + \
-          Plot.Chart(X.assign(year=X['application'].dt.year).query('year == @y')\
-                      .value_counts(['lat', 'lon'])\
-                      .reset_index(), title=str(y))\
-              .mark_circle()\
-              .encode(longitude='lon:Q', latitude='lat:Q', size='count',
-                      color=Plot.Color(f'count:Q').scale(scheme='goldgreen').title('Ilość pkt.')) 
+            Plot.Chart(G).mark_geoshape(stroke='black', fill=None) + \
 
-        for y in range(2018, 2022+1)]),
-  ))
+            X   .assign(diff=X.sort_values('year').groupby(['lat', 'lon'])['count'].diff().fillna(0))\
+                .query('year == @y')\
+                .pipe(Plot.Chart, title=str(y)).mark_circle()\
+                .encode(longitude='lon:Q', latitude='lat:Q', 
+                        size=Plot.Size('count').title('Ilość'),
+                        color=Plot.Color(f'diff:Q')\
+                                  .scale(scheme='redyellowgreen')\
+                                  .title('Zmiana r.r.'))
+
+          for y in range(2014, 2017+1)]),
+
+        Plot.vconcat(*[
+
+            Plot.Chart(G).mark_geoshape(stroke='black', fill=None) + \
+
+            X   .assign(diff=X.sort_values('year').groupby(['lat', 'lon'])['count'].diff().fillna(0))\
+                .query('year == @y')\
+                .pipe(Plot.Chart, title=str(y)).mark_circle()\
+                .encode(longitude='lon:Q', latitude='lat:Q', 
+                        size=Plot.Size('count').title('Ilość'),
+                        color=Plot.Color(f'diff:Q')\
+                                  .scale(scheme='redyellowgreen')\
+                                  .title('Zmiana r.r.'))
+
+          for y in range(2018, 2022+1)]),
+      )
+    )( X.assign(year=X['application'].dt.year)\
+        .value_counts(['lat', 'lon', 'year'])\
+        .unstack(fill_value=0).stack().rename('count').reset_index()) )
 
 f['subj-plot'][f'T-meandist'] = Flow(args=[geostatunit], callback=lambda X: (
 
@@ -312,16 +331,19 @@ for r in ['', '50', '100']:
         .encode(Plot.X(f'meandist{r}:Q').bin().title('Średni dystans'),
                 Plot.Y('count()').title(None)))
 
-  f['subj-plot'][f'map-meandist{r}'] = Flow(args=[geostatunit, geoloc.Woj], callback=lambda X, G, r=r:
+  f['subj-plot'][f'map-meandist{r}'] = Flow(args=[geostatunit, geoloc.Pow], callback=lambda X, G, r=r: (
+    lambda X, G=G, r=r:
 
-    Plot.Chart(G).mark_geoshape(fill='black', stroke='white') + \
+    gpd .sjoin(gpd.GeoDataFrame(X, geometry=gpd.points_from_xy(X.lon, X.lat, crs=G.crs)), G, 
+                how='right', predicate="within")\
+        .groupby('geometry')[f'meandist{r}'].mean().reset_index()\
+        .pipe(gpd.GeoDataFrame, geometry='geometry', crs=G.crs)\
+        .pipe(Plot.Chart).mark_geoshape(stroke='black')\
+        .encode(color=Plot.Color(f'meandist{r}:Q')\
+                          .scale(scheme='blueorange')\
+                          .title('Śr. d. w pow.')).project('mercator')
 
-    Plot.Chart(X.value_counts(['lat', 'lon', f'meandist{r}'])\
-                .reset_index())\
-        .mark_circle()\
-        .encode(longitude='lon:Q', latitude='lat:Q', 
-                color=Plot.Color(f'meandist{r}:Q').scale(scheme='orangered').title('Śr. dyst.'),
-                size=Plot.Size('count').title('Ilość pkt.')).project('mercator'))
+  )(X.value_counts(['lat', 'lon', f'meandist{r}']).reset_index()))
 
 for k, F in f['subj-plot'].items():
   F.name = k
