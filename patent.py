@@ -1,4 +1,4 @@
-import pandas, yaml
+import pandas, yaml, altair as Plot
 
 from lib.storage import Storage
 from lib.geo import closest
@@ -195,3 +195,25 @@ for h in flow.keys():
 
 for h in flow.keys():
   flow[h]['patentify'] = Flow(callback=lambda *x: x, args=[flow[h][k] for k in flow[h].keys()])
+
+
+f = { f'{k}-plot': dict() for k in flow.keys() }
+for h in flow.keys():
+
+  f[f'{h}-plot']['event'] = Flow(args=[flow[h]['event']], callback=lambda X:
+
+    Plot.Chart(X.assign(year=X['date'].dt.year)\
+                .value_counts(['event', 'year'])\
+                .reset_index())\
+
+        .mark_bar().encode( Plot.X('year:T').title('Rok rejestru'), 
+                            Plot.Y('count').title(None), 
+                            Plot.Color('event')\
+                                .title('Rodzaj rejestru')\
+                                .legend(orient='bottom', columns=4) ))
+
+  for k, F in f[f'{h}-plot'].items():
+    F.name = k
+    F.map(f'fig/{k}.{h}.png')
+
+flow = {**flow, **f}

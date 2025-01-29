@@ -1,4 +1,4 @@
-import pandas, re, yaml, numpy
+import pandas, re, yaml, numpy, geopandas as gpd
 import xml.etree.ElementTree as ET
 from pyproj import Transformer
 from lib.storage import Storage
@@ -110,3 +110,7 @@ flow['Geoportal']['parse'] = GMLParse(path='geoportal.gov.pl/wfs/name.gml').map(
 flow['Misc'] = dict()
 flow['Misc']['geodata'] = GeoXLSXload(path='prom/df_adresses_with_coordinates.xlsx').map('prom/df_adresses_with_coordinates.pkl')
 flow['Misc']['dist'] = distcalc(flow['Misc']['geodata'], coords=['lat', 'lon']).map('prom/dists.pkl')
+
+Pow = Flow(callback=lambda *a: gpd.read_file('map/powiaty.shp').to_crs(epsg=4326)).map('map/powiaty.pkl')
+Woj = Flow(callback=lambda *a: gpd.read_file('map/wojewodztwa.shp').to_crs(epsg=4326)).map('map/wojewodztwa.pkl')
+Pol = Flow(callback=lambda *a: gpd.read_file('map/polska.shp').to_crs(epsg=4326)).map('map/polska.pkl')

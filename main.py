@@ -1,6 +1,9 @@
 import sys, pandas, re, os, asyncio, aiohttp
 from lib.flow import Flow
 
+import altair
+altair.data_transformers.enable('vegafusion')
+
 @Flow.From()
 def Fetch(queries:pandas.Series, URL:str, outdir:str):
 
@@ -30,12 +33,11 @@ from patent import flow as fP
 from registry import flow as fA
 from geoloc import flow as fG
 from subject import flow as fS
-from plot import flow as fp
 
 from raport import flow as fR
 
 flow = dict()
-for f in [f0, fP, fR, fA, fG, fS, fp]:
+for f in [f0, fP, fR, fA, fG, fS]:
   for k in f.keys():
 
     if isinstance(f[k], dict):

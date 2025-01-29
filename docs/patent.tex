@@ -53,59 +53,77 @@ spadkiem ich przyrostu rocznego.
 
 
 
-\begin{figure}[H]\centering
-\includegraphics[width=\textwidth]{../registry/NA-loc-geo.png}
-\caption{Stan~uzupełnienia~informacji
-         o~geolokalizacjach,
-         w~Polsce,
-         osób~i~organizacji 
-         pełniących~role~patentowe 
-         w~aplikacjach~patentowych}
-\srcuprp
-\end{figure}
+\halffigdraft{../fig.png}
+{ Stan uzupełnienia informacji
+  o geolokalizacjach,
+  w Polsce,
+  osób i organizacji 
+  pełniących role patentowe 
+  w aplikacjach patentowych}
+{opracowanie własne} {\ac{UPRP}}
 
 
+\newpage
+\begin{multicols}{2}
 
-\Needspace{15\baselineskip}
 Opis tego jak uzupełnione są braki danych znajduje się w kolejnej sekcji.
-Poniżej znajduje się wykres ilustrujący ilość patentów z geolokalizacjiami,
-zgodnie z tym jak zostały określone. Zawiera też informacje o tym, kogo
-dotyczyczą te lokalizacje, zawartą na osi poziomej.
+Obok znajduje się wykres ilustrujący ilość patentów z geolokalizacjiami,
+zgodnie z tym jak zostały określone.
 
-\begin{figure}[H]\centering
-\includegraphics[width=\textwidth]{../subject/NA-geo-role.png}
-\caption{Stan~uzupełnienia~informacji
-         o~geolokalizacjach,
-         w~Polsce,
-         osób~i~organizacji 
-         pełniących~role~patentowe 
-         w~aplikacjach~patentowych}
-\srcuprp
-\end{figure}
+\halffig{../fig/F-geoloc-eval.subj.png}
+{ Stan uzupełnienia informacji o geolokalizacjach, w Polsce, 
+  osób i organizacji  pełniących role patentowe
+  w aplikacjach patentowych} {opracowanie własne} {\ac{UPRP}}
 
-\Needspace{20\baselineskip}
-Poniżej jest mapa tych lokalizacji z liniami 
-estymacji gęstości jądrowej. Rozmiar jest zaznaczony kolorystyką 
-oraz rozmiarem punktów, gdzie wielkość jest proporcjonalna 
-do ilości patentów w danej geolokalizacji.
+\end{multicols}
 
-\begin{figure}[H]\centering
-\includegraphics[width=\textwidth]{../subject/map.png}
-\caption{Mapa~rozrzutu~geolokalizacji~osób
-         pełniących~role~patentowe
-         z liniami estymacji gęstości jądrowej}
-\srcuprp
-\end{figure}
+\newpage
+\begin{multicols}{2}
 
-Z wykresu możemy odczytać, że w Polsce istnieją dwa skupiska źródeł
-aplikacji patentowych. Jedno w Warszawie, drugie w aglomeracji Katowic oraz
-jej okolicach. Większe miasta Polski również charakteryzyją się większą ilością
-aplikacji patentowych od reszty kraju. Przykładowo Lublin jest największym miastem
-w swoim otoczeniu. Podobnie Kraków, czy Poznań i inne duże miasta.
+\halffig{../fig/map.subj.png}
+{Mapa rozrzutu geolokalizacji osób pełniących role patentowe}
+{opracowanie własne} {\ac{UPRP}}
 
+\halffig{../fig/map-meandist100.subj.png}
+{Mapa średniej odległości do innych osób pełniących role patentowe do 100 km}
+{opracowanie własne} {\ac{UPRP}}
 
+\columnbreak
 
+\halffig{../fig/map-meandist.subj.png}
+{Mapa średniej odległości do innych osób pełniących role patentowe}
+{opracowanie własne} {\ac{UPRP}}
 
+\halffig{../fig/map-meandist50.subj.png}
+{Mapa średniej odległości do innych osób pełniących role patentowe do 50 km}
+{opracowanie własne} {\ac{UPRP}}
+
+\end{multicols}
+
+\begin{uwaga}
+Średnia odległość po między geolokalizacjami patentowymi jest ważona ---
+ilość patentów pochodzących z danej geolokalizacji jest wagą tego punktu.
+\end{uwaga}
+
+Obszary peryferyjne to miejsca odległe od centrów, w tym przypadku
+głównych źródeł aplikacji patentowych. Wyznaczamy je poprzez obliczenie
+średniego dystansu do innych osób pełniących role patentowe.
+Oprócz dystansu do każdego innego punktu, warto jest ograniczyć
+tę statystykę do pewnego obszaru. Jak wcześniej zaznaczono, Polska
+nie jest jednorodna przestrzennie pod tym względem, stąd peryferyjność
+nie może być rozumiana tylko na krajowym poziomie, ale również lokalnym.
+
+Rysunek \ref{../fig/map-meandist.subj.png} przedstawia średni dystans
+do innych osób pełniących role patentowe w Polsce. Widać, że Warszawa
+jest najbardziej centralnym punktem, co jest zgodne z wcześniejszymi
+obserwacjami. To samo dotyczy okręgu Katowic. Na podstawie tej statystyki 
+należy przypuszczać, że są to regiony o względnej bliskości 
+do innych źródeł patentowych na poziomie krajowym.
+
+Na rysunkach \ref{../fig/map-meandist100.subj.png} oraz
+\ref{../fig/map-meandist50.subj.png} przedstawiono ten sam
+wskaźnik, ale ograniczony do obszaru o promieniu odpowiednio 100 i 50 kilometrów.
+\todonote{potrz. wyjaśn.}
 
 
 
@@ -115,6 +133,8 @@ Poszczególne czynności związane z ochroną patentów są rejestrowane.
 Każde wydarzenie jest powiązane z konkretną datą kalendarzową.
 Można wyróżnić kilka typów wydarzeń związanych z patentami:
 
+\begin{multicols}{2}
+
 \begin{itemize}
 \item publiczne ujawnienie \foreign{ang}{exhibition}
 \item roszczenia z pierwszeństwa \foreign{ang}{priority claim} --- 
@@ -122,21 +142,21 @@ Można wyróżnić kilka typów wydarzeń związanych z patentami:
 \item regionalna deklaracja \foreign{ang}{regional filing}\todonote{potrz. wyjaśniene}
 \item deklaracja \foreign{ang}{filing}\todonote{potrz. wyjaśniene}
 \item aplikacja \foreign{ang}{application} --- data złożenia aplikacji
-\item publikacja przed przyznaniem ochrony \foreign{ang}{unexamined-printed-without-grant}
 \item przyznanie ochrony \foreign{ang}{grant}
 \item decyzja urzędowa
 \item publikacja
 \end{itemize}
 \todonote{potrz. źródło}
 
-\begin{figure}[H]\centering
-\includegraphics[width=\textwidth]{../api.uprp.gov.pl/event/series.png}
-\caption{Wydarzenia związane z patentami w kolejnych latach}
-\srcuprp
-\label{fig:NA-loc-geo.png}
-\end{figure}
+\columnbreak
+\halffig{../fig/event.UPRP.png}
+{Wydarzenia związane z patentami w kolejnych latach}
+{opracowanie własne}
+{\ac{UPRP}}
 
-Powyższy wykres (\ref{fig:NA-loc-geo.png}) obrazuje kolejne lata i to jakie
+\end{multicols}
+
+Powyższy wykres (\ref{../fig/event.UPRP.png}) obrazuje kolejne lata i to jakie
 działania podejmował urząd w stosunku do składanych patentów. Urząd funkcjonuje
 ponad 100 lat\todonote{od którego roku lepiej nap.} i widać to także na wykresie.
 Widać na nim historyczne zdarzenia takie jak 2 Wojna Światowa (spadek w latach 39-45) 
@@ -147,73 +167,29 @@ Przed latami 90 rejestrowane były wyłącznie daty aplikacji i grantów.
 Następnie zaczęto rejestrować także inne, wcześniej wymienione, 
 wydarzenia związane z patentami.
 
+\newpage
+\begin{multicols}{2}
 
-Zmienność danych geolokalizacyjnych oraz datowych jest niewidoczna, co obrazuje
-poniższy wykres. W ciągu lat 2013-2022 nie widać znaczących zmian w kolejnych latach.
-Można wyróżnić liczności z roku 2015 roku jako względnie wysokie dla Warszawy oraz 
-okręgu Katowic. Jak wcześniej zauważono są to główne ośrodki patentowe w Polsce.
+Zmienność danych geolokalizacyjnych jest niewidoczna w ciągu badanego okresu, co obrazuje
+wykres obok. W latach 2013-2022 nie widać znaczących zmian w rozrzucie źródeł
+aplikacji patentowych.
 
-\fig{../subject/map-periods.png}{
-  Mapa~rozrzutu~geolokalizacji~osób
-  pełniących~role~patentowe
-  z~liniami~estymacji~gęstości~jądrowej
-  w~różnych~okresach~czasu\newline\srcuprp
-}
+\columnbreak
+\halffig{../fig/map-13-22.subj.png}{
+  Mapa rozrzutu geolokalizacji osób
+  pełniących role patentowe
+  w różnych okresach czasu
+}{opracowanie własne}{\ac{UPRP}}
 
-\subsection{Klasyfikacje patentów}
-
-Klasyfikacje patentowe to systemy, które pozwalają na przypisanie
-patentów do odpowiednich dziedzin.
+\end{multicols}
 
 
 
 \newpage
-\subsubsection{Średni dystans do innych osób}
+\subsection{Klasyfikacje patentów}
 
-Obszary peryferyjne to miejsca odległe od centrów, w tym przypadku
-głównych źródeł aplikacji patentowych. Wyznaczamy je poprzez obliczenie
-średniego dystansu do innych osób pełniących role patentowe.
-Oprócz dystansu do każdego innego punktu, warto jest ograniczyć
-tę statystykę do pewnego obszaru. Jak wcześniej zaznaczono, Polska
-nie jest jednorodna przestrzennie pod tym względem, stąd peryferyjność
-nie może być rozumiana tylko na krajowym poziomie, ale również lokalnym.
-
-\begin{uwaga}
-Średnia odległość po między geolokalizacjami patentowymi jest ważona, gdzie
-ilość patentów pochodzących z danej lokalizacji jest wagą.
-\end{uwaga}
-
-\fig{../subject/map-geostats-761.png}{
-  Średni~dystans~do~innych~osób~pełniących~role~patentowe w~Polsce\newline\srcuprp
-\newline Rozmiar --- ilość patentów; kolor --- średni dystans.
-}
-
-Rysunek \ref{fig:../subject/map-geostats-761.png} przedstawia średni dystans
-do innych osób pełniących role patentowe w Polsce. Widać, że Warszawa
-jest najbardziej centralnym punktem, co jest zgodne z wcześniejszymi
-obserwacjami. To samo dotyczy okręgu Katowic. Widać jednak, że oprócz
-tych aglomeracji istnieją też 2 obszary wyróżniające się od reszty kraju.
-Są to obszar łączony Wielkopolski i Dolnego Śląska.\todonote{potrzeb. mapa
-z granic. woj.} oraz miasto Łódź. Na podstawie tej statystyki należy przypuszczać,
-że są to regiony o względnej bliskości do innych źródeł patentowych na poziomie krajowym.
-
-\fig{../subject/map-geostats-100.png}{
-  Średni~dystans~do~innych~osób~pełniących~role~patentowe
-  w~Polsce~w~okręgu~o~promieniu~100~kilometrów\newline\srcuprp
-\newline Rozmiar --- ilość patentów; kolor --- średni dystans.
-}
-
-Na rysunku \ref{fig:../subject/map-geostats-100.png} przedstawiono ten sam
-wskaźnik, ale ograniczony do obszaru o promieniu 100 kilometrów.
-Widać na nim dużo wyraźniej, że obszary Wielkopolski i Dolnego Śląska
-oraz obszar Katowic mają względnie wysoką bliskość. Linie estymacji gęstości
-jądrowej pokazują, że inaczej może być dla Warszawy. Mimo liczności patentów
-pochodzących z miasta i okolic nie jest ono tak centralne jak mogłoby się
-wydawać. 
-
-
-
-
+Klasyfikacje patentowe to systemy, które pozwalają na przypisanie
+patentów do odpowiednich dziedzin.
 
 \subsubsection{Międzynarodowa Klasyfikacja Patentów}
 
@@ -315,75 +291,27 @@ jako wspólny wysiłek w kierunku standaryzacji klasyfikacji.
 \ac{IPCR} powstał przez rewizję systemu \ac{IPC}. Zawiera dodatkowe
 symbole dodające prezycji do klasyfikacji.
 
-\begin{figure}[H]\centering
-\includegraphics[draft, width=\textwidth]{api.uprp.gov.pl/classify/dist.png}
-\caption{Ilość patentów w danych klasyfikacjach}
-\end{figure}
-
-
-\begin{uwaga}
-Rejestr kategorii nie jest równoznaczny z patentem. Patenty
-mogą mieć wiele kategorii, a co za tym idzie, ich rejestrów.
-\end{uwaga}
-
-
-W niniejszej analizie pod uwagę brana jest wyłacznie klasyfikacja \ac{IPC}.
-
-\fig{../subject/NA-IPC-geo.png}{}
-
-To jak są uzupełniane braki geolokalizacji jest w innej sekcji.
-Poniżej pokazane są tego efekty oraz rozkład lokalizacji z ich przyporządkowaniem
-geolokalizacyjnym. Na następnej stronie jest również przekrój roczny dla badanych
-lat. Szczególnie doktliwe braki pozostają w sekcjach E oraz F.
-To jak uzupełnione zostały dane ma relatywnie równomierny rozkład po między
-sekcjami.
-
-\newpage
-\begin{multicols}{2}
-
-  \halffig{../subject/NA-IPC-loc-A.png}{A}
-
-  \halffig{../subject/NA-IPC-loc-B.png}{B}
-
-  \halffig{../subject/NA-IPC-loc-C.png}{C}
-
-  \halffig{../subject/NA-IPC-loc-D.png}{D}
-
-  \halffig{../subject/NA-IPC-loc-E.png}{E}
-
-  \halffig{../subject/NA-IPC-loc-F.png}{F}
-
-  \halffig{../subject/NA-IPC-loc-G.png}{G}
-
-  \halffig{../subject/NA-IPC-loc-H.png}{H}
-
-\end{multicols}
-\newpage
-
-\fig{../subject/map-IPC-reg.png}{}
-
-Mapa rozkładu geograficznego sekcji klasyfikacji powyżej obrazuje
-duże skupienie patentów z sekcji D --- włókiennictwo; papiernictwo.
-Fakt ten może wynikać z samej liczności patentów o tej klasyfikacji
-(patrz: \cref{fig:../subject/NA-IPC-loc-D.png}).
-Zauważalna jest również duża ilość patentów w regionach, które zawierają
-duże miasta. Wśród nich wyróżnia się Warszawa. W oczy rzuca się też
-Wrocław jako mocny ośrodek patentów chemicznych (sekcja C klasyfikacji).
 
 
 
-\fig{../subject/map-IPC-A-periods.png}{A w kolejnych latach}
-
-\fig{../subject/map-IPC-B-periods.png}{B w kolejnych latach}
-
-\fig{../subject/map-IPC-C-periods.png}{C w kolejnych latach}
-
-\fig{../subject/map-IPC-D-periods.png}{D w kolejnych latach}
-
-\fig{../subject/map-IPC-E-periods.png}{E w kolejnych latach}
-
-\fig{../subject/map-IPC-F-periods.png}{F w kolejnych latach}
-
-\fig{../subject/map-IPC-G-periods.png}{G w kolejnych latach}
-
-\fig{../subject/map-IPC-H-periods.png}{H w kolejnych latach}
+\begin{acronym}
+  \acro{UPRP}{Urząd Patentowy Rzeczypospolitej Polskiej}
+  \acro{WUP}{Wiadomości Urzędu Patentowego}
+  \acro{BUP}{Biuletyn Urzędu Patentowego}
+  \acro{EPO}{European Patent Office}
+  \acro{WIPO}{World Intellectual Property Organization}
+  \acro{MKP}{Międzynarodowa Klasyfikacja Patentów}
+  \acro{IPC}{International Patent Classification}
+  \acro{IPCR}{International Patent Classification Revision}
+  \acro{API}{Application Programming Interface}
+  \acro{URI}{Uniform Resource Identifier}
+  \acro{URL}{Uniform Resource Locator}
+  \acro{OCR}{Optical Character Recognition}
+  \acro{XML}{Extensible Markup Language}
+  \acro{CPC}{Cooperative Patent Classification}
+  \acro{USPTO}{United States Patent and Trademark Office}
+  \acro{USPG}{United States Patent (and Trademark Office) Grants}
+  \acro{USPA}{United States Patent (and Trademark Office) Applications}
+  \acro{PGC}{Patents.Google.com}
+  \acro{PLO}{Patenty Lens.org}
+\end{acronym}

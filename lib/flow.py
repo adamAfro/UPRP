@@ -72,11 +72,13 @@ class Flow():
     if isinstance(self.mapping, dict):
       self.output = {}
       for k, f0 in self.mapping.items():
+        if f0 is None: continue
         self.output[k] = self.fload(f0)
 
     if isinstance(self.mapping, tuple):
       self.output = []
       for f0 in self.mapping:
+        if f0 is None: continue
         self.output.append(self.fload(f0))
 
     if isinstance(self.mapping, str):
@@ -101,10 +103,12 @@ class Flow():
 
     if isinstance(self.mapping, dict):
       for k, f0 in self.mapping.items():
+        if f0 is None: continue
         self.fdump(f0, self.output[k])
 
     if isinstance(self.mapping, tuple):
       for i, f0 in enumerate(self.mapping):
+        if f0 is None: continue
         self.fdump(f0, self.output[i])
 
     if isinstance(self.mapping, str):
@@ -112,7 +116,7 @@ class Flow():
 
   def fdump(self, f0, x):
 
-    import pickle as pkl, matplotlib.pyplot as plt, os
+    import pickle as pkl, os, altair as alt
 
     os.makedirs(os.path.dirname(f0), exist_ok=True)
 
@@ -123,10 +127,15 @@ class Flow():
         return
 
     if f0.endswith('.png'):
-      assert isinstance(x, plt.Figure)
-      x.savefig(f0)
-      self.info(f'saved {f0}')
-      return
+
+      if any(isinstance(x, y) for y in [alt.Chart, 
+                                        alt.LayerChart, 
+                                        alt.ConcatChart,
+                                        alt.VConcatChart,
+                                        alt.HConcatChart]):
+        x.save(f0)
+        self.info(f'saved {f0}')
+        return
 
     raise NotImplementedError()
 
