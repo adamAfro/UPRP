@@ -12,6 +12,7 @@
 \input glyphtounicode.tex              % Zaznaczanie tekstu w programach
 \pdfgentounicode = 1                   % j.w.
 
+\usepackage[font=footnotesize,labelfont=bf,justification=raggedright,singlelinecheck=false]{caption}
 
 \usepackage{lmodern}
 
@@ -89,35 +90,31 @@
 % #2 - opis
 % #3 - źródło
 % #4 - źródło danych
-\newcommand{\fig}[4]{
+\newcommand{\fig}[2]{
 \begin{figure}[H]
 \includegraphics[width=\textwidth]{#1}
 \caption{#2}
-{\footnotesize Źródło: #3, źródło danych: #4}
 \label{#1}
 \end{figure}}
 
-\newcommand{\halffig}[4]{
+\newcommand{\halffig}[2]{
 \begin{figure}[H]
 \includegraphics[width=0.5\textwidth]{#1}
 \caption{#2}
-{\footnotesize Źródło: #3, źródło danych: #4}
 \label{#1}
 \end{figure}}
 
-\newcommand{\figdraft}[4]{
+\newcommand{\figdraft}[2]{
 \begin{figure}[H]
 \includegraphics[width=\textwidth, draft]{#1}
 \caption{#2}
-{\footnotesize Źródło: #3, źródło danych: #4}
 \label{#1}
 \end{figure}}
 
-\newcommand{\halffigdraft}[4]{
+\newcommand{\halffigdraft}[2]{
 \begin{figure}[H]
 \includegraphics[width=0.5\textwidth, draft]{#1}
 \caption{#2}
-{\footnotesize Źródło: #3, źródło danych: #4}
 \label{#1}
 \end{figure}}
 
