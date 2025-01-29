@@ -108,7 +108,7 @@ def intbins(v: pandas.Series, n: int, start=None):
 def count(X:pandas.DataFrame, 
           stacked=True,
           group=None,
-         time=None, freq='12M',
+         time=None, freq='Y',
          categories=12, xtick=None, 
          xbin=None, xbinstart=None,
          NA='b.d.',
@@ -123,9 +123,8 @@ def count(X:pandas.DataFrame,
   K = [k for k in X.columns if k != g0]
   K0 = [k for k in K if X[k].nunique() <= categories]
 
-  KL = [k for k in K if (k not in K0) and (X[k].dtype in ['O', 'str', 'object', 'o'])]
-
-  for k in KL: X[k] = X[k].str.len()
+  if any((k not in K0) and (X[k].dtype in ['O', 'str', 'object', 'o']) for k in K):
+    raise ValueError('dtype == object and nunique > categories')
 
   KZ = [k for k in K if k not in K0]
 
@@ -137,10 +136,11 @@ def count(X:pandas.DataFrame,
   o = {}
 
   for k in KZ:
-    if X[k].quantile(0.5) < 1:
-      X[k] = pandas.cut(X[k], bins=categories, include_lowest=True, right=False)
-    else:
+
+    if (X[k] == X[k].astype(int)).all():
       X[k] = intbins(X[k], categories)
+    else:
+      X[k] = pandas.cut(X[k], bins=categories, include_lowest=True, right=False)
 
     X[k].cat.add_categories(NA)
     o[k] = X[k].dtype.categories.tolist()
@@ -153,7 +153,9 @@ def count(X:pandas.DataFrame,
     X = X.groupby(g0)
     oX = [g for g in X.groups if g != NA]+[NA]
 
-  if time: X = X.groupby(pandas.Grouper(key=g0, freq=freq))
+  if time:
+    X[time] = X[time].dt.to_period(freq)
+    X = X.groupby(time)
 
   T = pandas.concat([X[k].value_counts().reset_index()\
             .rename(columns={k: '__legend__'})\
@@ -173,8 +175,6 @@ def count(X:pandas.DataFrame,
 
   for i, (v, V) in enumerate(T):
 
-    if v in KL: v = f'{v} (ilość znaków)'
-
     if V.empty: continue
 
     V = V.reset_index()
@@ -188,8 +188,6 @@ def count(X:pandas.DataFrame,
       V = V[[k for k in o[v] if k in V.columns] + [k for k in V.columns if k not in o[v]]]
     elif (NA in V.columns) and V.columns[-1] != NA:
       V = V[[k for k in V.columns if k != NA]+[NA]]
-
-    if time: V.index = V.index.date
 
     V.plot.bar(stacked=stacked, ax=A[i], xlabel='', rot=0, legend=True, 
                cmap=Cmap.NA(Cmap.distinct, V.shape[1]))
