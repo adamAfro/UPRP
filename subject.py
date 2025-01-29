@@ -288,6 +288,22 @@ f['subj-plot'][f'map-13-22'] = Flow(args=[geostatunit, geoloc.Woj], callback=lam
         for y in range(2018, 2022+1)]),
   ))
 
+f['subj-plot'][f'T-meandist'] = Flow(args=[geostatunit], callback=lambda X: (
+
+  lambda P:
+
+    P.mark_rect(width=50).encode(Plot.Color('value:Q').title('Wartość').scale(scheme='orangered')) + \
+    P.mark_text(baseline='middle').encode(Plot.Text('value:Q', format=".2f"))
+
+)(pandas.concat([ X[f'meandist{r}'].describe().drop('count').reset_index() for r in ['', '50', '100'] ])\
+        .melt(id_vars='index').dropna()\
+        .replace({ 'meandist': 'śr. odl.', 'meandist50': 'śr. odl. do 50km', 'meandist100': 'śr. odl. do 100km',  })\
+        .replace({ 'mean': 'średnia', 'std': 'odch. std.', 'min': '0%', 'max': '100%' })\
+        .pipe(Plot.Chart)\
+        .encode(Plot.Y('variable:O').title(None),
+                Plot.X('index:O').title(None).scale(padding=20))
+))
+
 for r in ['', '50', '100']:
 
   f['subj-plot'][f'F-meandist{r}'] = Flow(args=[geostatunit], callback=lambda X, r=r:
