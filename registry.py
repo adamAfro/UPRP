@@ -1,4 +1,4 @@
-import pandas, yaml, numpy
+import pandas, yaml, numpy, altair as Plot
 from lib.storage import Storage
 from lib.name import mapnames
 from lib.flow import Flow
@@ -235,3 +235,28 @@ sel2013 = lambda X: ((X['application'] >= '2013-01-01') & (X['application'] <= '
 flow = { 'registry': {'2013': Flow(callback=lambda *X: X[0][sel2013(X[0])], args=[FGT]),
                       'pull': F0, 
                       'spacetime':FGT } }
+
+f = flow
+f['regs-plot'] = dict()
+
+
+f['regs-plot'][f'F-geoloc-eval'] = Flow(args=[FGT], callback=lambda X:
+
+  Plot.Chart(X.assign(year=X['application'].dt.year)\
+              .assign(loceval=X['loceval'].fillna(~X['city'].isna())\
+                                          .replace({ True: 'nie znaleziono',
+                                                    False: 'nie podano' }))\
+
+              .replace({'unique': 'jednoznaczna',
+                        'proximity': 'najlbiższa innym' })\
+              .value_counts(['year', 'loceval']).reset_index())
+
+      .mark_bar().encode( Plot.X('year:T').title('Rok'),
+                          Plot.Y(f'count:Q').title(None),
+                          Plot.Color('loceval:N')\
+                              .title('Metoda geolokalizacji / rodzaj braku')\
+                              .legend(orient='bottom', columns=2)))
+
+for k, F in f['regs-plot'].items():
+  F.name = k
+  F.map(f'fig/{k}.regs.png')
