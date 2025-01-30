@@ -209,6 +209,7 @@ for h in flow.keys():
         .mark_bar().encode( Plot.X('year:T').title('Rok rejestru'), 
                             Plot.Y('count').title(None), 
                             Plot.Color('event')\
+                                .scale(scheme='category10')\
                                 .title('Rodzaj rejestru')\
                                 .legend(orient='bottom', columns=4) ))
 
