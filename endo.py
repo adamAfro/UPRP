@@ -76,6 +76,8 @@ data = subject.mapped
 data = statunit(data, geoloc.dist, coords=['lat', 'lon'], rads=[20, 50, 100])
 data = cluster(data, 'kmeans', coords=['lat', 'lon'], keys=['id'], k=5)
 
+data = data.map('endo/final.pkl')
+
 plots = dict()
 
 plots[f'F-geoloc-eval-clsf'] = Flow(args=[data], callback=lambda X:
@@ -118,6 +120,17 @@ plots[f'map'] = Flow(args=[data, geoloc.region[1]], callback=lambda X, G:
 
       .mark_circle().encode(longitude='lon:Q', latitude='lat:Q', 
                             color=Plot.Color(f'count:Q').scale(scheme='goldgreen'),
+                            size=Plot.Size('count').title('Ilość pkt.')).project('mercator'))
+
+plots[f'map-cluster'] = Flow(args=[data, geoloc.region[0]], callback=lambda X, G:
+
+  Plot.Chart(G).mark_geoshape(stroke='black', fill=None) + \
+
+  Plot.Chart(X.value_counts(['lat', 'lon'])\
+              .reset_index())\
+
+      .mark_circle().encode(longitude='lon:Q', latitude='lat:Q', 
+                            color=Plot.Color(f'cluster:N').scale(scheme='goldgreen'),
                             size=Plot.Size('count').title('Ilość pkt.')).project('mercator'))
 
 plots[f'map-13-22'] = Flow(args=[data, geoloc.region[1]], callback=lambda X, G:(
