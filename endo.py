@@ -10,7 +10,7 @@ def cluster(geo:pandas.DataFrame, method:str, coords:list[str], keys=[], k:int=2
 
   X = geo
 
-  N = X.groupby(coords)[keys].count().reset_index()
+  N = X.groupby(coords)[keys].sum().reset_index()
 
   if innerperc:
     N[keys] = N[keys].apply(lambda x: x/x.sum(), axis=1)
@@ -69,7 +69,7 @@ def statunit(geo:pandas.DataFrame, dist:pandas.DataFrame, coords:list[str], rads
 
 data = subject.mapped
 data = statunit(data, geoloc.dist, coords=['lat', 'lon'], rads=[20, 50, 100])
-data = cluster(data, 'kmeans', coords=['lat', 'lon'], k=5, 
+data = cluster(data, 'kmeans', coords=['lat', 'lon'], k=5, innerperc=True,
                keys=[f'clsf-{k}' for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']])
 
 data = data.map('endo/final.pkl')
@@ -126,6 +126,22 @@ plots[f'M-cluster'] = Flow(args=[data, geoloc.region[1]], callback=lambda X, G:
       .encode(longitude='lon:Q', latitude='lat:Q',
               color=Plot.Color('kmeans:N').title('Nr. kl. k-średnich').scale(scheme='category10'),
               size=Plot.Size('count:Q').title('Ilość pkt.')).project('mercator'))
+
+plots[f'T-cluster'] = Flow(args=[data], callback=lambda X: (
+
+  lambda P:
+
+    P.mark_rect(width=50).encode(Plot.Color('value:Q').title('Udział').scale(scheme='orangered')) + \
+    P.mark_text(baseline='middle').encode(Plot.Text('value:Q', format=".2f"))
+
+)( X[[f'clsf-{k}' for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] ]]\
+    .apply(lambda x: x/x.sum(), axis=1).assign(kmeans=X['kmeans'])\
+    .groupby('kmeans').mean().reset_index()\
+    .melt(id_vars='kmeans')\
+    .pipe(Plot.Chart)\
+    .encode(Plot.Y('variable:N').title(None),
+            Plot.X('kmeans:N').title(None).scale(padding=20))
+))
 
 plots[f'M-13-22'] = Flow(args=[data, geoloc.region[1]], callback=lambda X, G:(
 
