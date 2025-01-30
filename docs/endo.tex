@@ -1,3 +1,22 @@
+\section{Dynamika czasowa}
+
+\begin{multicols}{2}
+
+Zmienność danych geolokalizacyjnych jest niewidoczna w ciągu badanego okresu, co obrazuje
+wykres obok. W latach 2013-2022 nie widać znaczących zmian w rozrzucie źródeł
+aplikacji patentowych.
+
+\columnbreak
+\halffig{../fig/M-13-22.subj.png}{
+  Mapa rozrzutu geolokalizacji osób
+  pełniących role patentowe
+  w różnych okresach czasu
+}
+
+\end{multicols}
+
+
+
 \section{Klastry przestrzenne z uwzględnieniem klasyfikacji \ac{IPC}}
 
 Metodą $k$-średnich dla $k=$ wyznaczamy klastry przestrzenne. 
@@ -21,3 +40,56 @@ takim dokumencie z innymi osobami.
 {Średnie odległości między punktami w klastrach}
 
 \end{multicols}
+
+
+
+\section{Obszary peryferyjne}
+
+\begin{multicols}{2}
+
+\halffig{../fig/map.subj.png}
+{Mapa rozrzutu geolokalizacji osób pełniących role patentowe}
+
+\halffig{../fig/M-meandist100.subj.png}
+{Mapa średniej odległości do innych osób pełniących role patentowe do 100 km}
+
+\columnbreak
+
+\halffig{../fig/M-meandist.subj.png}
+{Mapa średniej odległości do innych osób pełniących role patentowe}
+
+\halffig{../fig/M-meandist50.subj.png}
+{Mapa średniej odległości do innych osób pełniących role patentowe do 50 km}
+
+\end{multicols}
+
+\begin{multicols}{2}
+
+\halftable{../fig/T-meandist.subj.png}{Statystyki dotyczące średnich odległości}
+
+\begin{uwaga}
+Średnia odległość po między geolokalizacjami patentowymi jest ważona ---
+ilość patentów pochodzących z danej geolokalizacji jest wagą tego punktu.
+\end{uwaga}
+
+\end{multicols}
+
+Obszary peryferyjne to miejsca odległe od centrów, w tym przypadku
+głównych źródeł aplikacji patentowych. Wyznaczamy je poprzez obliczenie
+średniego dystansu do innych osób pełniących role patentowe.
+Oprócz dystansu do każdego innego punktu, warto jest ograniczyć
+tę statystykę do pewnego obszaru. Jak wcześniej zaznaczono, Polska
+nie jest jednorodna przestrzennie pod tym względem, stąd peryferyjność
+nie może być rozumiana tylko na krajowym poziomie, ale również lokalnym.
+
+Rysunek \ref{../fig/M-meandist.subj.png} przedstawia średni dystans
+do innych osób pełniących role patentowe w Polsce. Widać, że Warszawa
+jest najbardziej centralnym punktem, co jest zgodne z wcześniejszymi
+obserwacjami. To samo dotyczy okręgu Katowic. Na podstawie tej statystyki 
+należy przypuszczać, że są to regiony o względnej bliskości 
+do innych źródeł patentowych na poziomie krajowym.
+
+Na rysunkach \ref{../fig/M-meandist100.subj.png} oraz
+\ref{../fig/M-meandist50.subj.png} przedstawiono ten sam
+wskaźnik, ale ograniczony do obszaru o promieniu odpowiednio 100 i 50 kilometrów.
+\todonote{potrz. wyjaśn.}
