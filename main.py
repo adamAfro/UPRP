@@ -31,13 +31,13 @@ from util import data as D
 from profiling import flow as f0
 from patent import flow as fP
 from registry import flow as fA
-from geoloc import flow as fG
 from subject import flow as fS
+from endo import plots
 
 from raport import flow as fR
 
 flow = dict()
-for f in [f0, fP, fR, fA, fG, fS]:
+for f in [f0, fP, fR, fA, fS, { 'plot': plots }]:
   for k in f.keys():
 
     if isinstance(f[k], dict):

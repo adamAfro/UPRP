@@ -66,15 +66,6 @@ def plot(G:gpd.GeoDataFrame, var:str):
 
   return p
 
-inn = load(path='GUS/BDL/inn-06-22.xlsx', varname='Wskaźniki', geo=geoloc.Woj)
-
-innplot = Flow('inn-GUS-plot', lambda: [
-  plot(inn, 'udział nakładów na działalność innowacyjną w przedsiębiorstwach w nakładach krajowych').map('GUS/BDL/inn-exp-ent-country.png')(),
-  plot(inn, 'średni udział przedsiębiorstw innowacyjnych w ogólnej liczbie przedsiębiorstw').map('GUS/BDL/inn-exp-ent.png')(),
-  plot(inn, 'nakłady na działalność innowacyjną w przedsiębiorstwach w relacji do PKB').map('GUS/BDL/inn-exp-pkb.png')(),
-])
-
-
 @Flow.From()
 def align(X:gpd.GeoDataFrame, G:gpd.GeoDataFrame, begin=2013):
 
@@ -125,13 +116,18 @@ def delaycorr(aligned:pandas.DataFrame, endo:str, method='pearson'):
 
   return Y
 
+inn = load(path='GUS/BDL/inn-06-22.xlsx', varname='Wskaźniki', geo=geoloc.region[1])
+
+innplot = Flow('inn-GUS-plot', lambda: [
+  plot(inn, 'udział nakładów na działalność innowacyjną w przedsiębiorstwach w nakładach krajowych').map('GUS/BDL/inn-exp-ent-country.png')(),
+  plot(inn, 'średni udział przedsiębiorstw innowacyjnych w ogólnej liczbie przedsiębiorstw').map('GUS/BDL/inn-exp-ent.png')(),
+  plot(inn, 'nakłady na działalność innowacyjną w przedsiębiorstwach w relacji do PKB').map('GUS/BDL/inn-exp-pkb.png')(),
+])
+
 inncorr = delaycorr( align(subject.Woj, inn), 'count', 'pearson' )
-
-class plot:
-
-  inncorr = Flow('plot inn corr', args=[inncorr], callback=lambda X:
-    Plot.Chart(X.assign(key=X['key'].apply(lambda x: [' '.join(x.split()[i:i+4]) for i in range(0, len(x.split()), 4)]))).mark_bar()\
-        .encode(Plot.X('delay:O').title('Opóźnienie roczne'), 
-                Plot.Column('key:O').title(''),
-                Plot.Y('corr:Q').title('Wsp. korelacji Pearsona'), 
-                Plot.Color('p:Q').title('P-wartość')))
+inncorrplot = Flow('plot inn corr', args=[inncorr], callback=lambda X:
+  Plot.Chart(X.assign(key=X['key'].apply(lambda x: [' '.join(x.split()[i:i+4]) for i in range(0, len(x.split()), 4)]))).mark_bar()\
+      .encode(Plot.X('delay:O').title('Opóźnienie roczne'), 
+              Plot.Column('key:O').title(''),
+              Plot.Y('corr:Q').title('Wsp. korelacji Pearsona'), 
+              Plot.Color('p:Q').title('P-wartość')))

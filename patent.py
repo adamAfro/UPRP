@@ -6,7 +6,7 @@ from lib.flow import Flow
 from util import strnorm
 from util import data as D
 from profiling import flow as f0
-from geoloc import flow as fg
+import geoloc as geoloc
 
 @Flow.From()
 def code(storage:Storage, assignpath:str):
@@ -130,11 +130,11 @@ def classify(storage:Storage, assignpath:str, codes:pandas.DataFrame, extended=F
   return Y
 
 @Flow.From()
-def geoloc(storage:Storage, 
-           assignpath:str, 
-           geodata:pandas.DataFrame, 
-           codes:pandas.DataFrame,
-           NAstr = ['bd', '~']):
+def geolocate(storage:Storage, 
+             assignpath:str, 
+             geodata:pandas.DataFrame, 
+             codes:pandas.DataFrame,
+             NAstr = ['bd', '~']):
 
   S = storage
   with open(assignpath, 'r') as f:
@@ -189,9 +189,9 @@ for h in flow.keys():
                                  assignpath=D[h]+'/assignement.yaml',
                                  codes=flow[h]['code']).map(D[h]+'/classify/data.pkl')
 
-  flow[h]['geoloc'] = geoloc(f0[h]['profiling'], 
-                             assignpath=D[h]+'/assignement.yaml', codes=flow[h]['code'], 
-                             geodata=fg['Misc']['geodata'],).map(D[h]+'/geoloc/data.pkl')
+  flow[h]['geoloc'] = geolocate(f0[h]['profiling'], 
+                                assignpath=D[h]+'/assignement.yaml', codes=flow[h]['code'], 
+                                geodata=geoloc.geodata,).map(D[h]+'/geoloc/data.pkl')
 
 for h in flow.keys():
   flow[h]['patentify'] = Flow(callback=lambda *x: x, args=[flow[h][k] for k in flow[h].keys()])

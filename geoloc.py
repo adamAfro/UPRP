@@ -1,8 +1,6 @@
-import pandas, re, yaml, numpy, geopandas as gpd
+import pandas, re, numpy, geopandas as gpd
 import xml.etree.ElementTree as ET
 from pyproj import Transformer
-from lib.storage import Storage
-from lib.geo import closest
 from lib.flow import Flow
 from lib.geo import distmx
 
@@ -103,15 +101,6 @@ def statunit(geo:pandas.DataFrame, dist:pandas.DataFrame, coords:list[str], rads
 
   return X
 
-flow = dict()
-
-flow['Geoportal'] = dict()
-flow['Geoportal']['parse'] = GMLParse(path='geoportal.gov.pl/wfs/name.gml').map('geoportal.gov.pl/wfs/name.pkl')
-
-flow['Misc'] = dict()
-flow['Misc']['geodata'] = GeoXLSXload(path='prom/df_adresses_with_coordinates.xlsx').map('prom/df_adresses_with_coordinates.pkl')
-flow['Misc']['dist'] = distcalc(flow['Misc']['geodata'], coords=['lat', 'lon']).map('prom/dists.pkl')
-
 #https://gis-support.pl/baza-wiedzy-2/dane-do-pobrania/granice-administracyjne/
 @Flow.From()
 def gisload(path:str):
@@ -128,15 +117,10 @@ def gisload(path:str):
 
   return X
 
-Pow = gisload(path='map/powiaty.shp').map('map/powiaty.pkl')
-Woj = gisload(path='map/wojewodztwa.shp').map('map/wojewodztwa.pkl')
-Pol = gisload(path='map/polska.shp').map('map/polska.pkl')
+geoportal = GMLParse(path='geoportal.gov.pl/wfs/name.gml').map('geoportal.gov.pl/wfs/name.pkl')
+geodata = GeoXLSXload(path='prom/df_adresses_with_coordinates.xlsx').map('prom/df_adresses_with_coordinates.pkl')
+dist = distcalc(geodata, coords=['lat', 'lon']).map('prom/dists.pkl')
 
-@Flow.From()
-def ptregion(X:gpd.GeoDataFrame, R:gpd.GeoDataFrame):
-
-  Y = gpd.sjoin(X, R, how='right', predicate='within')
-  Y = gpd.GeoDataFrame(Y, geometry='geometry')
-  Y = Y.drop(columns=['index_left'])
-
-  return Y
+region = [gisload(path='map/powiaty.shp').map('map/powiaty.pkl'),
+          gisload(path='map/wojewodztwa.shp').map('map/wojewodztwa.pkl'),
+          gisload(path='map/polska.shp').map('map/polska.pkl')]
