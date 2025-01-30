@@ -191,6 +191,13 @@ geofilled = fillgeo(entities=geofilled0, group='doc', loceval='document').map('s
 clusters = geofilled.trigger(lambda *X: lib.geo.cluster(X[0], 'kmeans', coords=['lat', 'lon'], innerperc=True,
                                                         keys=[f'clsf-{k}' for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']], k=4))
 
+geolocated = Flow('make gpd', lambda X: gpd.GeoDataFrame(X.assign(year=X['application'].dt.year), 
+                                                         geometry=gpd.points_from_xy(X.lon, X.lat, crs='EPSG:4326')), 
+                                                         args=[geofilled])
+
+Woj = geoloc.ptregion(geolocated, geoloc.Woj)
+Pow = geoloc.ptregion(geolocated, geoloc.Pow)
+
 def applyclust(clu:Flow):
 
   F = []

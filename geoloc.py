@@ -131,3 +131,12 @@ def gisload(path:str):
 Pow = gisload(path='map/powiaty.shp').map('map/powiaty.pkl')
 Woj = gisload(path='map/wojewodztwa.shp').map('map/wojewodztwa.pkl')
 Pol = gisload(path='map/polska.shp').map('map/polska.pkl')
+
+@Flow.From()
+def ptregion(X:gpd.GeoDataFrame, R:gpd.GeoDataFrame):
+
+  Y = gpd.sjoin(X, R, how='right', predicate='within')
+  Y = gpd.GeoDataFrame(Y, geometry='geometry')
+  Y = Y.drop(columns=['index_left'])
+
+  return Y
