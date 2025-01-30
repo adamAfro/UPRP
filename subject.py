@@ -191,7 +191,7 @@ geofilled = fillgeo(entities=geofilled0, group='doc', loceval='document').map('s
 clusters = geofilled.trigger(lambda *X: lib.geo.cluster(X[0], 'kmeans', coords=['lat', 'lon'], innerperc=True,
                                                         keys=[f'clsf-{k}' for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']], k=4))
 
-geolocated = Flow('make gpd', lambda X: gpd.GeoDataFrame(X.assign(year=X['application'].dt.year), 
+geolocated = Flow('make gpd', lambda X: gpd.GeoDataFrame(X.assign(year=X['grant'].dt.year), 
                                                          geometry=gpd.points_from_xy(X.lon, X.lat, crs='EPSG:4326')), 
                                                          args=[geofilled])
 
@@ -242,7 +242,7 @@ f['subj-plot'][f'F-geoloc-eval-clsf'] = Flow(args=[geostatunit], callback=lambda
 
 f['subj-plot'][f'F-geoloc-eval'] = Flow(args=[geostatunit], callback=lambda X:
 
-  Plot.Chart(X.assign(year=X['application'].dt.year)\
+  Plot.Chart(X.assign(year=X['grant'].dt.year)\
               .replace({'unique': 'jednoznaczna',
                         'proximity': 'najlbiższa innym',
                         'document': 'npdst. współautorów',
@@ -310,7 +310,7 @@ f['subj-plot'][f'map-13-22'] = Flow(args=[geostatunit, geoloc.Woj], callback=lam
 
           for y in range(2018, 2022+1)]),
       )
-    )( X.assign(year=X['application'].dt.year)\
+    )( X.assign(year=X['grant'].dt.year)\
         .value_counts(['lat', 'lon', 'year'])\
         .unstack(fill_value=0).stack().rename('count').reset_index()) )
 
