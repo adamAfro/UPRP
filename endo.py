@@ -127,7 +127,7 @@ plots[f'M-cluster'] = Flow(args=[data, geoloc.region[1]], callback=lambda X, G:
               color=Plot.Color('kmeans:N').title('Nr. kl. k-średnich').scale(scheme='category10'),
               size=Plot.Size('count:Q').title('Ilość pkt.')).project('mercator'))
 
-plots[f'T-cluster'] = Flow(args=[data], callback=lambda X: (
+plots[f'T-cluster-clsf'] = Flow(args=[data], callback=lambda X: (
 
   lambda P:
 
@@ -136,6 +136,21 @@ plots[f'T-cluster'] = Flow(args=[data], callback=lambda X: (
 
 )( X[[f'clsf-{k}' for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] ]]\
     .apply(lambda x: x/x.sum(), axis=1).assign(kmeans=X['kmeans'])\
+    .groupby('kmeans').mean().reset_index()\
+    .melt(id_vars='kmeans')\
+    .pipe(Plot.Chart)\
+    .encode(Plot.Y('variable:N').title(None),
+            Plot.X('kmeans:N').title(None).scale(padding=20))
+))
+
+plots[f'T-cluster-meandist'] = Flow(args=[data], callback=lambda X: (
+
+  lambda P:
+
+    P.mark_rect(width=50).encode(Plot.Color('value:Q').title('Wartość').scale(scheme='orangered')) + \
+    P.mark_text(baseline='middle').encode(Plot.Text('value:Q', format=".2f"))
+
+)( X[['kmeans']+[f'meandist{r}' for r in ['', '50', '100'] ]]\
     .groupby('kmeans').mean().reset_index()\
     .melt(id_vars='kmeans')\
     .pipe(Plot.Chart)\
