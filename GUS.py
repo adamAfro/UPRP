@@ -21,6 +21,8 @@ def load(path:str, varname:str, geo:pandas.DataFrame, names={
   X['gid'] = X['gid'].str.zfill(2)
   X = X.set_index('gid').join(geo.set_index('gid'), how='inner')
 
+  X = gpd.GeoDataFrame(X, geometry='geometry')
+
   return X
 
 @Flow.From()
@@ -64,10 +66,6 @@ def plot(G:gpd.GeoDataFrame, var:str):
   return p
 
 inn = load(path='GUS/BDL/wsk-dz-innow.xlsx', varname='Wskaźniki', geo=geoloc.Woj)
-X = inn()
-
-X['variable'].value_counts()
-
 
 innplot = Flow('inn-GUS-plot', lambda: [
   plot(inn, 'udział nakładów na działalność innowacyjną w przedsiębiorstwach w nakładach krajowych').map('GUS/BDL/inn-exp-ent-country.png')(),
