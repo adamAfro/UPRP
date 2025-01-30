@@ -185,10 +185,12 @@ def Spacetime(textual:pandas.DataFrame,
       .join(T.groupby('doc')['date'].min(), how='left').reset_index()
   X = X.rename(columns={'date': 'firstdate'})
 
-  A = T[ T['event'] == 'application' ].reset_index().drop_duplicates(['doc', 'date'])
-  X = X.set_index('doc')\
-       .join(A.set_index('doc')['date'], how='left').reset_index()
-  X = X.rename(columns={'date': 'application'})
+  for t in ['application', 'grant', 'nogrant', 'publication', 'decision', 'regional', 'exhibition']:
+
+    A = T[ T['event'] == t ].reset_index().drop_duplicates(['doc', 'date'])
+    X = X.set_index('doc')\
+        .join(A.set_index('doc')['date'], how='left').reset_index()
+    X = X.rename(columns={'date': t})
 
   G = geoloc.set_index('city', append=True)
   X = X.set_index(['doc', 'city']).join(G, how='left').reset_index()
