@@ -1,9 +1,80 @@
-import pandas, geopandas as gpd, altair as Plot
+import pandas, numpy, geopandas as gpd, altair as Plot
 from lib.flow import Flow
 import geoloc, subject
 
+@Flow.From()
+def cluster(geo:pandas.DataFrame, method:str, coords:list[str], keys=[], k:int=2, innerperc=False):
+
+  from sklearn.cluster import KMeans
+  from sklearn.preprocessing import StandardScaler
+
+  X = geo
+
+  N = X.groupby(coords)[keys].count().reset_index()
+
+  if innerperc:
+    N[keys] = N[keys].apply(lambda x: x/x.sum(), axis=1)
+
+  K0 = ['__xrad__', '__yrad__']
+  K = K0 + keys
+  N[K0] = numpy.radians(N[coords])
+  N[K] = StandardScaler().fit_transform(N[K])
+
+  if method == 'kmeans':
+    Y = KMeans(n_clusters=k, random_state=0).fit(N[K])
+  else:
+    raise NotImplementedError()
+
+  N['cluster'] = Y.labels_
+
+  N = N.set_index(coords)['cluster']
+  X = X.reset_index().set_index(coords).join(N)
+  X['cluster'] = X['cluster'].astype(str)
+
+  return X
+
+@Flow.From()
+def statunit(geo:pandas.DataFrame, dist:pandas.DataFrame, coords:list[str], rads=[]):
+
+  X = geo
+  D = dist
+
+  X = X.dropna(subset=coords)
+
+  i0 = X.index
+  X = X.reset_index()
+
+  I = [g for g in D.columns if g in X[coords].values]
+  D = D.loc[I, I].sort_index()
+
+  N = X.value_counts(subset=coords).sort_index()
+  X = X.set_index(coords)
+
+  M = int(numpy.ceil(D.max().max()))
+  for r in rads+[M]:
+
+    R = D.copy()
+
+   #poprawka na liczności
+    L = (R <= r).astype(int)
+    L = L.apply(lambda v: v.rename(None)*N, axis=1)
+    L = L.sort_index()
+
+   #ważenie przez liczność
+    R = R * L
+
+   #średnia dla danej liczności
+    R = R.sum(axis=1) / L.sum(axis=1)
+    if r == M: r = ''
+    X = X.join(R.rename(f'meandist{r}').astype(float))
+
+  X = X.reset_index().set_index(i0)
+
+  return X
+
 data = subject.mapped
-data = geoloc.statunit(data, geoloc.dist, coords=['lat', 'lon'], rads=[20, 50, 100]).map('subject/geostats.pkl')
+data = statunit(data, geoloc.dist, coords=['lat', 'lon'], rads=[20, 50, 100])
+data = cluster(data, 'kmeans', coords=['lat', 'lon'], keys=['id'], k=5)
 
 plots = dict()
 

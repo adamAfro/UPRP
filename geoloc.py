@@ -62,45 +62,6 @@ def distcalc(cities:pandas.DataFrame, coords:list[str]):
 
   return Y
 
-@Flow.From()
-def statunit(geo:pandas.DataFrame, dist:pandas.DataFrame, coords:list[str], rads=[]):
-
-  X = geo
-  D = dist
-
-  X = X.dropna(subset=coords)
-
-  i0 = X.index
-  X = X.reset_index()
-
-  I = [g for g in D.columns if g in X[coords].values]
-  D = D.loc[I, I].sort_index()
-
-  N = X.value_counts(subset=coords).sort_index()
-  X = X.set_index(coords)
-
-  M = int(numpy.ceil(D.max().max()))
-  for r in rads+[M]:
-
-    R = D.copy()
-
-   #poprawka na liczności
-    L = (R <= r).astype(int)
-    L = L.apply(lambda v: v.rename(None)*N, axis=1)
-    L = L.sort_index()
-
-   #ważenie przez liczność
-    R = R * L
-
-   #średnia dla danej liczności
-    R = R.sum(axis=1) / L.sum(axis=1)
-    if r == M: r = ''
-    X = X.join(R.rename(f'meandist{r}').astype(float))
-
-  X = X.reset_index().set_index(i0)
-
-  return X
-
 #https://gis-support.pl/baza-wiedzy-2/dane-do-pobrania/granice-administracyjne/
 @Flow.From()
 def gisload(path:str):
