@@ -74,5 +74,3 @@ innplot = Flow('inn-GUS-plot', lambda: [
   plot(inn, 'średni udział przedsiębiorstw innowacyjnych w ogólnej liczbie przedsiębiorstw').map('GUS/BDL/inn-exp-ent.png')(),
   plot(inn, 'nakłady na działalność innowacyjną w przedsiębiorstwach w relacji do PKB').map('GUS/BDL/inn-exp-pkb.png')(),
 ])
-
-innplot()
