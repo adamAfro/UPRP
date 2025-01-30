@@ -25,11 +25,11 @@ def cluster(geo:pandas.DataFrame, method:str, coords:list[str], keys=[], k:int=2
   else:
     raise NotImplementedError()
 
-  N['cluster'] = Y.labels_
+  N[method] = Y.labels_
 
-  N = N.set_index(coords)['cluster']
+  N = N.set_index(coords)[method]
   X = X.reset_index().set_index(coords).join(N)
-  X['cluster'] = X['cluster'].astype(str)
+  X[method] = X[method].astype(str)
 
   return X
 
@@ -40,9 +40,6 @@ def statunit(geo:pandas.DataFrame, dist:pandas.DataFrame, coords:list[str], rads
   D = dist
 
   X = X.dropna(subset=coords)
-
-  i0 = X.index
-  X = X.reset_index()
 
   I = [g for g in D.columns if g in X[coords].values]
   D = D.loc[I, I].sort_index()
@@ -68,13 +65,12 @@ def statunit(geo:pandas.DataFrame, dist:pandas.DataFrame, coords:list[str], rads
     if r == M: r = ''
     X = X.join(R.rename(f'meandist{r}').astype(float))
 
-  X = X.reset_index().set_index(i0)
-
   return X
 
 data = subject.mapped
 data = statunit(data, geoloc.dist, coords=['lat', 'lon'], rads=[20, 50, 100])
-data = cluster(data, 'kmeans', coords=['lat', 'lon'], keys=['id'], k=5)
+data = cluster(data, 'kmeans', coords=['lat', 'lon'], k=5, 
+               keys=[f'clsf-{k}' for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']])
 
 data = data.map('endo/final.pkl')
 
@@ -111,7 +107,7 @@ plots[f'F-geoloc-eval'] = Flow(args=[data], callback=lambda X:
                               .title('Metoda geolokalizacji')\
                               .legend(orient='bottom', columns=2)))
 
-plots[f'map'] = Flow(args=[data, geoloc.region[1]], callback=lambda X, G:
+plots[f'M'] = Flow(args=[data, geoloc.region[1]], callback=lambda X, G:
 
   Plot.Chart(G).mark_geoshape(stroke='black', fill=None) + \
 
@@ -122,18 +118,16 @@ plots[f'map'] = Flow(args=[data, geoloc.region[1]], callback=lambda X, G:
                             color=Plot.Color(f'count:Q').scale(scheme='goldgreen'),
                             size=Plot.Size('count').title('Ilość pkt.')).project('mercator'))
 
-plots[f'map-cluster'] = Flow(args=[data, geoloc.region[0]], callback=lambda X, G:
+plots[f'M-cluster'] = Flow(args=[data, geoloc.region[1]], callback=lambda X, G:
 
   Plot.Chart(G).mark_geoshape(stroke='black', fill=None) + \
 
-  Plot.Chart(X.value_counts(['lat', 'lon'])\
-              .reset_index())\
+  Plot.Chart(X.value_counts(['lat', 'lon', 'kmeans']).reset_index()).mark_circle()\
+      .encode(longitude='lon:Q', latitude='lat:Q',
+              color=Plot.Color('kmeans:N').title('Nr. kl. k-średnich').scale(scheme='category10'),
+              size=Plot.Size('count:Q').title('Ilość pkt.')).project('mercator'))
 
-      .mark_circle().encode(longitude='lon:Q', latitude='lat:Q', 
-                            color=Plot.Color(f'cluster:N').scale(scheme='goldgreen'),
-                            size=Plot.Size('count').title('Ilość pkt.')).project('mercator'))
-
-plots[f'map-13-22'] = Flow(args=[data, geoloc.region[1]], callback=lambda X, G:(
+plots[f'M-13-22'] = Flow(args=[data, geoloc.region[1]], callback=lambda X, G:(
 
   lambda X, G=G:
 
@@ -205,7 +199,7 @@ for r in ['', '50', '100']:
         .encode(Plot.X(f'meandist{r}:Q').bin().title('Średni dystans'),
                 Plot.Y('count()').title(None)))
 
-  plots[f'map-meandist{r}'] = Flow(args=[data, geoloc.region[2]], callback=lambda X, G, r=r: (
+  plots[f'M-meandist{r}'] = Flow(args=[data, geoloc.region[2]], callback=lambda X, G, r=r: (
     lambda X, G=G, r=r:
 
     gpd .sjoin(gpd.GeoDataFrame(X, geometry=gpd.points_from_xy(X.lon, X.lat, crs=G.crs)), G, 
