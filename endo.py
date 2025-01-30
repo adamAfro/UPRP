@@ -246,4 +246,4 @@ for r in ['', '50', '100']:
 
 for k, F in plots.items():
   F.name = k
-  F.map(f'fig/{k}.subj.png')
+  F.map(f'fig/{k}.endo.png')
