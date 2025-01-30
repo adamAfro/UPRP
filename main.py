@@ -34,10 +34,10 @@ from registry import flow as fA
 from subject import flow as fS
 from endo import plots
 
-from raport import flow as fR
+import raport
 
 flow = dict()
-for f in [f0, fP, fR, fA, fS, { 'plot': plots }]:
+for f in [f0, fP, fA, fS, { 'plot': plots }, { 'rap-plot': raport.plots }]:
   for k in f.keys():
 
     if isinstance(f[k], dict):
@@ -48,7 +48,7 @@ for f in [f0, fP, fR, fA, fS, { 'plot': plots }]:
     else:
       flow[k] = f[k]
 
-flow['Google']['fetch'] = Fetch(flow['drop'], 'https://patents.google.com/patent', outdir=D['Google']+'/web')
+flow['Google']['fetch'] = Fetch(raport.drop, 'https://patents.google.com/patent', outdir=D['Google']+'/web')
 
 for a in sys.argv[1:]:
 

@@ -1,4 +1,4 @@
-import pandas, yaml, tqdm
+import pandas, yaml, tqdm, altair as Plot
 from lib.storage import Storage
 from lib.query import Query
 from lib.flow import Flow
@@ -375,39 +375,54 @@ def Preview(path:str,
 
     with open(path, 'w') as f: f.write(Y)
 
+
+@Flow.From()
+def result(R: dict[str, pandas.DataFrame]):
+
+  for k in R.keys():
+    R[k] = R[k][[('', '', '', 'level'), ('', '', '', 'score')]]
+    R[k].columns = ['level', 'score']
+    R[k]['source'] = k
+
+  Y = pandas.concat(R.values(), axis=0)
+
+  return Y
+
+
 from profiling import flow as f0
 from util import data as D
 
 flow = { k: dict() for k in D.keys() }
 
-flow['UPRP']['identify'] = Qdentify(qpath='raport.uprp.gov.pl.csv', storage=f0['UPRP']['profiling'], 
-                                    docsframe='raw').map(D['UPRP']+'/identify.pkl')
+linkback = Qdentify(qpath='raport.uprp.gov.pl.csv', 
+                    storage=f0['UPRP']['profiling'], 
+                    docsframe='raw').map(D['UPRP']+'/identify.pkl')
 
-flow['query'] = Parsing(flow['UPRP']['identify'], outpath='queries.pkl')
+queries = Parsing(linkback).map('queries.pkl')
 
 for k, p in D.items():
 
   flow[k]['index'] = Indexing(f0[k]['profiling'], assignpath=p+'/assignement.yaml').map(p+'/indexes.pkl')
 
-  flow[k]['narrow'] = Narrow(flow['query'], flow[k]['index'], pbatch=2**14).map(p+'/narrow.pkl')
+  flow[k]['narrow'] = Narrow(queries, flow[k]['index'], pbatch=2**14).map(p+'/narrow.pkl')
 
-flow['UPRP']['narrow'] = Narrow(flow['query'], flow['UPRP']['index'], pbatch=2**13).map(D['UPRP']+'/narrow.pkl')
+flow['UPRP']['narrow'] = Narrow(queries, flow['UPRP']['index'], pbatch=2**13).map(D['UPRP']+'/narrow.pkl')
 
-flow['USPG']['narrow'] = Narrow(flow['query'], flow['USPG']['index'], pbatch=2**14).map(D['USPG']+'/narrow.pkl')
+flow['USPG']['narrow'] = Narrow(queries, flow['USPG']['index'], pbatch=2**14).map(D['USPG']+'/narrow.pkl')
 
-flow['USPA']['narrow'] = Narrow(flow['query'], flow['USPA']['index'], pbatch=2**14).map(D['USPA']+'/narrow.pkl')
+flow['USPA']['narrow'] = Narrow(queries, flow['USPA']['index'], pbatch=2**14).map(D['USPA']+'/narrow.pkl')
 
-flow['Lens']['narrow'] = Narrow(flow['query'], flow['Lens']['index'], pbatch=2**12).map(D["Lens"]+'/narrow.pkl')
+flow['Lens']['narrow'] = Narrow(queries, flow['Lens']['index'], pbatch=2**12).map(D["Lens"]+'/narrow.pkl')
 
-flow['drop'] = Drop(flow['query'], [flow['UPRP']['narrow'], flow['Lens']['narrow']]).map('alien.base.pkl')
+drop0 = Drop(queries, [flow['UPRP']['narrow'], flow['Lens']['narrow']]).map('alien.base.pkl')
 
 for k, p in D.items():
 
-  flow[k]['drop'] = Drop(flow['query'], [flow[k]['narrow']]).map(p+'/alien.pkl')
+  flow[k]['drop'] = Drop(queries, [flow[k]['narrow']]).map(p+'/alien.pkl')
 
-  flow[k]['preview'] = Preview(f"{p}/profile.txt", f0[k]['profiling'], flow[k]['narrow'], flow['query'])
+  flow[k]['preview'] = Preview(f"{p}/profile.txt", f0[k]['profiling'], flow[k]['narrow'], queries)
 
-flow['Google']['narrow'] = Narrow(flow['drop'], flow['Google']['index'], pbatch=2**10).map(D["Google"]+'/narrow.pkl')
+flow['Google']['narrow'] = Narrow(drop0, flow['Google']['index'], pbatch=2**10).map(D["Google"]+'/narrow.pkl')
 
 for k0 in ['Lens', 'Google']:
 
@@ -418,8 +433,30 @@ for k0 in ['Lens', 'Google']:
 
   flow[k] = dict()
 
-  flow[k]['query'] = Family(queries=flow['query'], matches=flow[k0]['narrow'], storage=f0[k0]['profiling'], assignpath=D[k0]+'/assignement.yaml').map(p+'/family.pkl')
+  flow[k]['query'] = Family(queries=queries, matches=flow[k0]['narrow'], storage=f0[k0]['profiling'], assignpath=D[k0]+'/assignement.yaml').map(p+'/family.pkl')
 
   flow[k]['narrow'] = Narrow(queries=flow[k]['query'], indexes=flow['UPRP']['index'], pbatch=None, ngram=False).map(D[k]+'/narrow.pkl')
 
-flow['drop'] = Drop(flow['query'], [flow[k]['narrow'] for k in D.keys()]).map('alien.pkl')
+drop = Drop(queries, [flow[k]['narrow'] for k in D.keys()]).map('alien.pkl')
+
+
+results = result({ h: F for h, S in flow.items() for k, F in S.items() if k == 'narrow' })
+
+valid = flow['UPRP']['narrow']
+
+plots = dict()
+
+plots['F-results'] = Flow(args=[linkback, results], callback=lambda Q, Y:
+
+  pandas.concat([pandas.DataFrame({'count': [Q.shape[0]], 'source': 'UPRP', 'kind': 'Cytowania' }),
+                 Y.value_counts('source').reset_index().assign(kind='Wyniki')])\
+
+    .pipe(Plot.Chart)\
+    .mark_bar()\
+    .encode(Plot.Y('kind:N').title(None),
+            Plot.X('sum(count)').title('Ilość wyników w poszczególnych źródłach'), 
+            Plot.Color('source:N').title('Źródło')))
+
+for k, F in plots.items():
+  F.name = k
+  F.map(f'fig/{k}.rap.png')
