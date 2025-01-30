@@ -46,8 +46,9 @@ def GeoXLSXload(path:str):
 
     L = pandas.read_excel(path, engine='openpyxl')
     L.columns = [re.sub(r'\s+', ' ', c).lower() for c in L.columns]
-    L = L[[ 'rodzaj', 'nazwa miejscowości', 'powiat (miasto na prawach powiatu)', 'gmina', 'województwo', 'latitude', 'longitude' ]]
-    L.columns = ['type', 'city', 'gmina', 'powiat', 'województwo', 'lat', 'lon']
+    L['gid'] = L['identyfikator miejscowości z krajowego rejestru urzędowego podziału terytorialnego kraju teryt']
+    L = L[[ 'gid', 'rodzaj', 'nazwa miejscowości', 'powiat (miasto na prawach powiatu)', 'gmina', 'województwo', 'latitude', 'longitude' ]]
+    L.columns = ['gid', 'type', 'city', 'gmina', 'powiat', 'województwo', 'lat', 'lon']
 
     return L
 
@@ -111,6 +112,22 @@ flow['Misc'] = dict()
 flow['Misc']['geodata'] = GeoXLSXload(path='prom/df_adresses_with_coordinates.xlsx').map('prom/df_adresses_with_coordinates.pkl')
 flow['Misc']['dist'] = distcalc(flow['Misc']['geodata'], coords=['lat', 'lon']).map('prom/dists.pkl')
 
-Pow = Flow(callback=lambda *a: gpd.read_file('map/powiaty.shp').to_crs(epsg=4326)).map('map/powiaty.pkl')
-Woj = Flow(callback=lambda *a: gpd.read_file('map/wojewodztwa.shp').to_crs(epsg=4326)).map('map/wojewodztwa.pkl')
-Pol = Flow(callback=lambda *a: gpd.read_file('map/polska.shp').to_crs(epsg=4326)).map('map/polska.pkl')
+#https://gis-support.pl/baza-wiedzy-2/dane-do-pobrania/granice-administracyjne/
+@Flow.From()
+def gisload(path:str):
+
+  names = {
+    'geometry': 'geometry',
+    'JPT_KOD_JE': 'gid',
+    'JPT_NAZWA_': 'name',
+    'RODZAJ': 'type'
+  }
+
+  X = gpd.read_file(path).to_crs(epsg=4326).rename(columns=names)
+  X = X[[k for k in names.values()]]
+
+  return X
+
+Pow = gisload(path='map/powiaty.shp').map('map/powiaty.pkl')
+Woj = gisload(path='map/wojewodztwa.shp').map('map/wojewodztwa.pkl')
+Pol = gisload(path='map/polska.shp').map('map/polska.pkl')
