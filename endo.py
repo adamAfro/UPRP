@@ -1,6 +1,6 @@
 import pandas, numpy, geopandas as gpd, altair as Plot
 from lib.flow import Flow
-import geoloc, subject
+import geoloc, subject, raport
 
 @Flow.From()
 def cluster(geo:pandas.DataFrame, method:str, coords:list[str], keys=[], k:int=2, innerperc=False):
@@ -67,12 +67,41 @@ def statunit(geo:pandas.DataFrame, dist:pandas.DataFrame, coords:list[str], rads
 
   return X
 
+@Flow.From()
+def graph(edgdocs:pandas.DataFrame, 
+          edgaffil:pandas.DataFrame,
+          dist:pandas.DataFrame):
+
+  A = edgaffil.reset_index()
+
+  D = edgdocs
+  D['edge'] = range(len(D))
+
+  X = A.set_index('doc').join(D.set_index('from'), how='inner')
+  Y = A.set_index('doc').join(D.set_index('to'), how='inner')
+  E = X.set_index('edge').join(Y.set_index('edge'), rsuffix='Y', how='inner').reset_index()
+
+  E = E.set_index(['lat', 'lon', 'latY', 'lonY'])
+
+  d = dist.reset_index().melt(id_vars=[('lat', ''), ('lon', '')], value_name='distance')
+  d.columns = ['lat', 'lon', 'latY', 'lonY', 'distance']
+  d = d.set_index(['lat', 'lon', 'latY', 'lonY'])
+  E = E.join(d)
+
+  E['closeness'] = 1 / (E['distance']+1)
+
+  return E
+
 data = subject.mapped
 data = statunit(data, geoloc.dist, coords=['lat', 'lon'], rads=[20, 50, 100])
 data = cluster(data, 'kmeans', coords=['lat', 'lon'], k=5, innerperc=True,
                keys=[f'clsf-{k}' for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']])
 
+rptgraph = graph(raport.valid, data, geoloc.dist)
+
 data = data.map('endo/final.pkl')
+
+debug = { 'rptgraph': rptgraph }
 
 plots = dict()
 
@@ -243,6 +272,36 @@ for r in ['', '50', '100']:
                           .title('Śr. d. w pow.')).project('mercator')
 
   )(X.value_counts(['lat', 'lon', f'meandist{r}']).reset_index()))
+
+plots[f'M-rptdist'] = Flow(args=[rptgraph], callback=lambda X: (
+
+  lambda X: Plot.vconcat(
+
+      X .query(f'distance == 0')\
+        .pipe(Plot.Chart)\
+        .mark_circle(fill='green')\
+        .encode(Plot.Latitude('lat'), 
+                Plot.Longitude('lon'),
+                Plot.Size('count()')\
+                    .legend(orient='top')\
+                    .title('Ilość połączeń w tej samej geolokalizacji')), *[
+
+      X .query(f'{start} < distance <= {end}')\
+        .pipe(Plot.Chart, title=f'{start} - {end} km')\
+        .mark_rule(opacity=0.1)\
+        .encode(Plot.Color('distance:Q')\
+                    .title('Dystans [km]')\
+                    .scale(scheme='greens', reverse=True)\
+                    .legend(orient='bottom'),
+                Plot.Latitude('lat'),
+                Plot.Longitude('lon'),
+                Plot.Latitude2('latY'),
+                Plot.Longitude2('lonY')).project('mercator')
+
+        for start, end in [(0, 100), (100, 200), (200, 300), (300, 1000)]
+
+  ]))(X.reset_index()[['lat', 'lon', 'latY', 'lonY', 'distance', 'closeness']]))
+
 
 for k, F in plots.items():
   F.name = k

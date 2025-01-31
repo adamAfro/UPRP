@@ -32,12 +32,12 @@ from profiling import flow as f0
 from patent import flow as fP
 from registry import flow as fA
 from subject import flow as fS
-from endo import plots
+from endo import debug, plots
 
 import raport
 
 flow = dict()
-for f in [f0, fP, fA, fS, { 'plot': plots }, { 'rap-plot': raport.plots }]:
+for f in [f0, fP, fA, fS, { 'plot': plots }, { 'rap-plot': raport.plots }, { 'debug': debug }]:
   for k in f.keys():
 
     if isinstance(f[k], dict):

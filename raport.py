@@ -388,6 +388,12 @@ def result(R: dict[str, pandas.DataFrame]):
 
   return Y
 
+@Flow.From()
+def edges(X:pandas.DataFrame):
+
+  Y = pandas.DataFrame({'to': X.index.get_level_values('entrydoc'),
+                        'from': X.index.get_level_values('doc')})
+  return Y
 
 from profiling import flow as f0
 from util import data as D
@@ -442,7 +448,7 @@ drop = Drop(queries, [flow[k]['narrow'] for k in D.keys()]).map('alien.pkl')
 
 results = result({ h: F for h, S in flow.items() for k, F in S.items() if k == 'narrow' })
 
-valid = flow['UPRP']['narrow']
+valid = edges(flow['UPRP']['narrow'])
 
 plots = dict()
 
