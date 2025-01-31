@@ -155,6 +155,14 @@ class Flow():
     self.mapping = mapping
     return self
 
+  def copy(self, args=None, kwargs=None, mapping=None):
+
+    if args is None: args = self.args
+    if kwargs is None: kwargs = self.kwargs
+    if mapping is None: mapping = self.mapping
+
+    return Flow(self.name, self.callback, args, kwargs, mapping)
+
   def From(name=str(None), cls=None):
 
     import inspect
