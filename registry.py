@@ -234,7 +234,8 @@ FGT = Spacetime(FN, fP['UPRP']['geoloc'], fP['UPRP']['event'],
                   fP['UPRP']['classify']).map('registry/spacetime.pkl')
 
 sel2013 = lambda X: ((X['grant'] >= '2013-01-01') & (X['grant'] <= '2022-12-31'))
-flow = { 'registry': {'2013': Flow(callback=lambda *X: X[0][sel2013(X[0])], args=[FGT]),
+F2013 = Flow(callback=lambda *X: X[0][sel2013(X[0])], args=[FGT])
+flow = { 'registry': {'2013': F2013,
                       'pull': F0, 
                       'spacetime':FGT } }
 
@@ -258,6 +259,26 @@ f['regs-plot'][f'F-geoloc-eval'] = Flow(args=[FGT], callback=lambda X:
                           Plot.Color('loceval:N')\
                               .title('Metoda geolokalizacji / rodzaj braku')\
                               .legend(orient='bottom', columns=2)))
+
+f['regs-plot']['F-grant-delay'] = Flow(args=[FGT], callback=lambda X:(
+
+  lambda X:
+
+    Plot.Chart(X).mark_bar(color='black')\
+        .encode(Plot.Y('count()').title(None),
+                Plot.X('days').title('Ilość dni').bin(step=365)) + \
+
+    X['days'].describe().loc[['25%', '50%', '75%', 'mean', 'min', 'max']]\
+        .rename({ 'mean': 'średnia', 'max': 'maks.', 'min': 'min.' }).reset_index()\
+        .pipe(Plot.Chart).mark_rule()\
+        .encode(Plot.X('days:Q'),
+                Plot.Color('index:N').title('Statystyka')\
+                    .scale(scheme='category10'))
+
+)((X['grant'] - X['application']).dt.days.rename('days').reset_index()))
+
+f['regs-plot']['F-grant-delay-13-22'] = f['regs-plot']['F-grant-delay']\
+  .copy(args=[F2013])
 
 for k, F in f['regs-plot'].items():
   F.name = k
