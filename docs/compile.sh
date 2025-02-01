@@ -21,7 +21,7 @@ NAME=$1
 
 cat <<EOT > workdir/temp.tex
 \documentclass[12pt, withmarginpar]{mwbk}
-\include{defs}
+\include{_defs}
 \begin{document}
 \include{$NAME}
 \end{document}
