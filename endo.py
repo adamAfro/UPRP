@@ -175,53 +175,72 @@ plots[f'T-cluster-meandist'] = Flow(args=[data], callback=lambda X: (
             Plot.X('kmeans:N').title(None).scale(padding=20))
 ))
 
-plots[f'M-13-22'] = Flow(args=[data, geoloc.region[1]], callback=lambda X, G:(
+dtplots = dict()
+for r, R in { 'woj': geoloc.region[1], 'pow': geoloc.region[2] }.items():
 
-  lambda X, G=G:
+  G = Flow(args=[data, R], callback=lambda X, G: 
+    X .assign(year=X['grant'].dt.year)\
+      [['year', 'wgid']].set_index('wgid').join(G.set_index('gid'))\
+      .groupby(['wgid', 'year']).agg({ 'geometry':'first', 'year':'count' })\
+      .unstack(fill_value=0).stack().rename(columns={'year': 'count'}).reset_index())
 
-    Plot.hconcat(
+  dtplots[f'M-{r}-13'] = Flow(args=[data, G], callback=lambda X, G:
 
-        Plot.vconcat(
+    G .query(f'year == 2013')\
+      .pipe(gpd.GeoDataFrame, geometry='geometry')\
+      .pipe(Plot.Chart).mark_geoshape(stroke=None)\
+      .encode(Plot.Color('count:Q')\
+                  .legend(orient='left')\
+                  .scale(scheme='goldgreen')\
+                  .title('Ilość patentów w regionie')) + \
 
-            Plot.Chart(G).mark_geoshape(stroke='black', fill=None) + \
+    X .assign(year=X['grant'].dt.year).query('year == 2013')\
+      .value_counts(['lat', 'lon']).reset_index()\
+      .pipe(Plot.Chart)\
+      .mark_circle(color='black')\
+      .encode(Plot.Longitude('lon:Q'),
+              Plot.Latitude('lat:Q'),
+              Plot.Size('count:Q')\
+                  .title('Ilość patentów w punkcie')\
+                  .legend(orient='right')))
 
-            X   .query('year == 2013')\
-                .pipe(Plot.Chart, title=str(2013))\
-                .mark_circle(color='black')\
-                .encode(longitude='lon:Q', latitude='lat:Q', 
-                        size=Plot.Size('count').title('Ilość')), *[
+  P = Flow(args=[data], callback=lambda X:
+    X .assign(year=X['grant'].dt.year)\
+      .value_counts(['lat', 'lon', 'year'])\
+      .reset_index())
 
-            Plot.Chart(G).mark_geoshape(stroke='black', fill=None) + \
+  for y in range(2014, 2022+1):
 
-            X   .assign(diff=X.sort_values('year').groupby(['lat', 'lon'])['count'].diff().fillna(0))\
-                .query('year == @y')\
-                .pipe(Plot.Chart, title=str(y)).mark_circle()\
-                .encode(longitude='lon:Q', latitude='lat:Q', 
-                        size=Plot.Size('count').title('Ilość'),
-                        color=Plot.Color(f'diff:Q')\
-                                  .scale(scheme='redyellowgreen')\
-                                  .title('Zmiana r.r.'))
+    dtplots[f'M-{r}-dt-{str(y)[2:]}'] = Flow(args=[P, G], callback=lambda X, G, y=y:(
 
-          for y in range(2014, 2017+1)]),
+      G .assign(diff=G.sort_values('year').groupby(['wgid'])['count'].diff().fillna(0))\
+        .query(f'year == {y}')\
+        .pipe(gpd.GeoDataFrame, geometry='geometry')\
+        .pipe(Plot.Chart).mark_geoshape(stroke=None)\
+        .encode(Plot.Color('diff:Q', legend=(dict(orient='left') if y == 2014 else None))\
+                    .scale(scheme='redyellowgreen', domain=[-1000, 1000])\
+                    .title('Zmiana r.r. w regionie')) + \
 
-        Plot.vconcat(*[
+      X .assign(diff=X.sort_values('year').groupby(['lat', 'lon'])['count'].diff().fillna(0))\
+        .query(f'year == {y}')\
+        .eval('shape=diff>0')\
+        .replace({ False: 'ujemna', True: 'dodatnia' })
+        .eval('diff=abs(diff)')\
+        .pipe(Plot.Chart)\
+        .mark_point(color='black', shape='triangle-down')\
+        .encode(Plot.Longitude('lon:Q'),
+                Plot.Latitude('lat:Q'),
+                Plot.Color('shape:N', legend=({} if y == 2014 else None))\
+                    .title('Kierunek zmiany')\
+                    .scale(range=['darkgreen', 'darkred']),
+                Plot.Shape('shape:N', legend=({} if y == 2014 else None))\
+                    .title('Kierunek zmiany')\
+                    .scale(range=['triangle-up', 'triangle-down']),
+                Plot.Size('diff:Q', legend=({} if y == 2014 else None))\
+                    .scale(domain=[0, 1000])\
+                    .title('Zmiana r.r. w punkcie')))\
 
-            Plot.Chart(G).mark_geoshape(stroke='black', fill=None) + \
-
-            X   .assign(diff=X.sort_values('year').groupby(['lat', 'lon'])['count'].diff().fillna(0))\
-                .query('year == @y')\
-                .pipe(Plot.Chart, title=str(y)).mark_circle()\
-                .encode(longitude='lon:Q', latitude='lat:Q', 
-                        size=Plot.Size('count').title('Ilość'),
-                        color=Plot.Color(f'diff:Q')\
-                                  .scale(scheme='redyellowgreen')\
-                                  .title('Zmiana r.r.'))
-
-          for y in range(2018, 2022+1)]),
-      )
-    )( X.assign(year=X['grant'].dt.year)\
-        .value_counts(['lat', 'lon', 'year'])\
-        .unstack(fill_value=0).stack().rename('count').reset_index()) )
+        .resolve_legend(color='independent') )
 
 plots[f'T-meandist'] = Flow(args=[data], callback=lambda X: (
 
@@ -319,3 +338,10 @@ plots[f'M-rprtdist'] = Flow(args=[rprtgraph, geoloc.region[1]], callback=lambda 
 for k, F in plots.items():
   F.name = k
   F.map(f'fig/endo/{k}.png')
+
+for k, F in dtplots.items():
+  F.name = k
+  F.map(f'fig/endo/{k}.png')
+
+plots['M-woj'] = Flow(args=[F for k, F in dtplots.items() if 'M-woj' in k], callback=lambda *X: None)
+plots['M-pow'] = Flow(args=[F for k, F in dtplots.items() if 'M-pow' in k], callback=lambda *X: None)

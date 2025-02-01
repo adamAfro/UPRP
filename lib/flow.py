@@ -132,6 +132,7 @@ class Flow():
                                         alt.LayerChart, 
                                         alt.ConcatChart,
                                         alt.VConcatChart,
+                                        alt.FacetChart,
                                         alt.HConcatChart]):
         x.save(f0)
         self.info(f'saved {f0}')
