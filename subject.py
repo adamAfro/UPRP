@@ -1,4 +1,4 @@
-import pandas, geopandas as gpd
+import pandas, geopandas as gpd, altair as Plot
 from lib.flow import Flow
 import geoloc
 
@@ -208,3 +208,41 @@ flow = { 'subject': { 'map': mapped,
                       'identify': identities,
                       'simcalc': sim,
                       'affilate': affilN } }
+
+plots = dict()
+
+plots[f'F-geoloc-eval-clsf'] = Flow(args=[mapped], callback=lambda X:
+
+  Plot.Chart(X[['IPC', 'loceval']]\
+              .explode('IPC')\
+              .replace({'unique': 'jednoznaczna',
+                        'proximity': 'najlbiższa innym',
+                        'document': 'npdst. współautorów',
+                        'identity': 'npdst. tożsamości' })\
+              .value_counts(['IPC', 'loceval']).reset_index())
+
+      .mark_bar().encode( Plot.Y(f'count:Q').title(None),
+                          Plot.Color('loceval:N')\
+                              .title('Metoda geolokalizacji')\
+                              .legend(orient='bottom', columns=1),
+                          Plot.X('IPC:N').title('Klasyfikacja')))
+
+plots[f'F-geoloc-eval'] = Flow(args=[mapped], callback=lambda X:
+
+  Plot.Chart(X.assign(year=X['grant'].dt.year.astype(int))\
+              .replace({'unique': 'jednoznaczna',
+                        'proximity': 'najlbiższa innym',
+                        'document': 'npdst. współautorów',
+                        'identity': 'npdst. tożsamości' })\
+             .value_counts(['year', 'loceval']).reset_index())
+
+      .mark_bar().encode( Plot.X('year:O').title('Rok'),
+                          Plot.Y('count:Q').title(None),
+                          Plot.Color('loceval:N')\
+                              .title('Metoda geolokalizacji')\
+                              .legend(orient='bottom', columns=2)))
+
+
+for k, F in plots.items():
+  F.name = k
+  F.map(f'fig/subj/{k}.png')

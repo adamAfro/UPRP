@@ -42,6 +42,7 @@ for f in [f0, fP, fA, fS, { 'plot': { 'all': Flow('plot all', lambda *X: X, args
   for d in [endo.plots, raport.plots, registry.plots, patent.plots] for F in d.values()]) } },
     { 'plot-endo': endo.plots }, 
     { 'plot-rprt': raport.plots }, 
+    { 'plot-subj': subject.plots }, 
     { 'plot-rgst': registry.plots }, 
     { 'plot-patt': patent.plots }]:
 

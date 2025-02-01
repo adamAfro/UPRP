@@ -105,37 +105,6 @@ debug = { 'rprtgraph': rprtgraph }
 
 plots = dict()
 
-plots[f'F-geoloc-eval-clsf'] = Flow(args=[data], callback=lambda X:
-
-  Plot.Chart(X[['IPC', 'loceval']]\
-              .explode('IPC')\
-              .replace({'unique': 'jednoznaczna',
-                        'proximity': 'najlbiższa innym',
-                        'document': 'npdst. współautorów',
-                        'identity': 'npdst. tożsamości' })\
-              .value_counts(['IPC', 'loceval']).reset_index())
-
-      .mark_bar().encode( Plot.Y(f'count:Q').title(None),
-                          Plot.Color('loceval:N')\
-                              .title('Metoda geolokalizacji')\
-                              .legend(orient='bottom', columns=1),
-                          Plot.X('IPC:N').title('Klasyfikacja')))
-
-plots[f'F-geoloc-eval'] = Flow(args=[data], callback=lambda X:
-
-  Plot.Chart(X.assign(year=X['grant'].dt.year.astype(int))\
-              .replace({'unique': 'jednoznaczna',
-                        'proximity': 'najlbiższa innym',
-                        'document': 'npdst. współautorów',
-                        'identity': 'npdst. tożsamości' })\
-             .value_counts(['year', 'loceval']).reset_index())
-
-      .mark_bar().encode( Plot.X('year:O').title('Rok'),
-                          Plot.Y('count:Q').title(None),
-                          Plot.Color('loceval:N')\
-                              .title('Metoda geolokalizacji')\
-                              .legend(orient='bottom', columns=2)))
-
 plots[f'M'] = Flow(args=[data, geoloc.region[1]], callback=lambda X, G:
 
   Plot.Chart(G).mark_geoshape(stroke='black', fill=None) + \
