@@ -197,24 +197,32 @@ for h in flow.keys():
   flow[h]['patentify'] = Flow(callback=lambda *x: x, args=[flow[h][k] for k in flow[h].keys()])
 
 
-f = { f'{k}-plot': dict() for k in flow.keys() }
-for h in flow.keys():
+plots = dict()
+for h in ['UPRP']:
 
-  f[f'{h}-plot']['event'] = Flow(args=[flow[h]['event']], callback=lambda X:
+  plots[f'F-{h}-event'] = Flow(args=[flow[h]['event']], callback=lambda X:
 
-    Plot.Chart(X.assign(year=X['date'].dt.year)\
-                .value_counts(['event', 'year'])\
-                .reset_index())\
+    X .assign(year=X['date'].dt.year.astype(int))\
+      .value_counts(['event', 'year']).reset_index()\
+      .query('year <= 1970')\
+      .pipe(Plot.Chart).mark_bar()\
+      .encode(Plot.Y('year:O').title('Rok rejestru'), 
+              Plot.X('count').title(None),
+              Plot.Color('event')\
+                  .scale(scheme='category10')\
+                  .title('Rodzaj rejestru')) | \
+    X .assign(year=X['date'].dt.year.astype(int))\
+      .value_counts(['event', 'year']).reset_index()\
+      .query('year > 1970')\
+      .pipe(Plot.Chart).mark_bar()\
+      .encode(Plot.Y('year:O').title(None), 
+              Plot.X('count').title(None),
+              Plot.Color('event')\
+                  .scale(scheme='category10')\
+                  .title('Rodzaj rejestru')\
+                  .legend(orient='bottom') )
+)
 
-        .mark_bar().encode( Plot.X('year:T').title('Rok rejestru'), 
-                            Plot.Y('count').title(None), 
-                            Plot.Color('event')\
-                                .scale(scheme='category10')\
-                                .title('Rodzaj rejestru')\
-                                .legend(orient='bottom', columns=4) ))
-
-  for k, F in f[f'{h}-plot'].items():
-    F.name = k
-    F.map(f'fig/{k}.{h}.png')
-
-flow = {**flow, **f}
+for k, F in plots.items():
+  F.name = k
+  F.map(f'fig/patt/{k}.png')

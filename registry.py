@@ -239,13 +239,11 @@ flow = { 'registry': {'2013': F2013,
                       'pull': F0, 
                       'spacetime':FGT } }
 
-f = flow
-f['regs-plot'] = dict()
+plots = dict()
 
+plots[f'F-geoloc-eval-appl'] = Flow(args=[FGT], callback=lambda X:
 
-f['regs-plot'][f'F-geoloc-eval'] = Flow(args=[FGT], callback=lambda X:
-
-  Plot.Chart(X.assign(year=X['grant'].dt.year)\
+  Plot.Chart(X.assign(year=X['application'].dropna().dt.year.astype(int))\
               .assign(loceval=X['loceval'].fillna(~X['city'].isna())\
                                           .replace({ True: 'nie znaleziono',
                                                     False: 'nie podano' }))\
@@ -254,13 +252,30 @@ f['regs-plot'][f'F-geoloc-eval'] = Flow(args=[FGT], callback=lambda X:
                         'proximity': 'najlbiższa innym' })\
               .value_counts(['year', 'loceval']).reset_index())
 
-      .mark_bar().encode( Plot.X('year:T').title('Rok'),
+      .mark_bar().encode( Plot.X('year:O').title('Rok'),
                           Plot.Y(f'count:Q').title(None),
                           Plot.Color('loceval:N')\
                               .title('Metoda geolokalizacji / rodzaj braku')\
-                              .legend(orient='bottom', columns=2)))
+                              .legend(orient='bottom', columns=4)))
 
-f['regs-plot']['F-grant-delay'] = Flow(args=[FGT], callback=lambda X:(
+plots[f'F-geoloc-eval-grant'] = Flow(args=[FGT], callback=lambda X:
+
+  Plot.Chart(X.assign(year=X['grant'].dropna().dt.year.astype(int))\
+              .assign(loceval=X['loceval'].fillna(~X['city'].isna())\
+                                          .replace({ True: 'nie znaleziono',
+                                                    False: 'nie podano' }))\
+
+              .replace({'unique': 'jednoznaczna',
+                        'proximity': 'najlbiższa innym' })\
+              .value_counts(['year', 'loceval']).reset_index())
+
+      .mark_bar().encode( Plot.X('year:O').title('Rok'),
+                          Plot.Y(f'count:Q').title(None),
+                          Plot.Color('loceval:N')\
+                              .title('Metoda geolokalizacji / rodzaj braku')\
+                              .legend(orient='bottom', columns=4)))
+
+plots['F-grant-delay'] = Flow(args=[FGT], callback=lambda X:(
 
   lambda X:
 
@@ -277,9 +292,8 @@ f['regs-plot']['F-grant-delay'] = Flow(args=[FGT], callback=lambda X:(
 
 )((X['grant'] - X['application']).dt.days.rename('days').reset_index()))
 
-f['regs-plot']['F-grant-delay-13-22'] = f['regs-plot']['F-grant-delay']\
-  .copy(args=[F2013])
+plots['F-grant-delay-13-22'] = plots['F-grant-delay'].copy(args=[F2013])
 
-for k, F in f['regs-plot'].items():
+for k, F in plots.items():
   F.name = k
-  F.map(f'fig/{k}.regs.png')
+  F.map(f'fig/rgst/{k}.png')

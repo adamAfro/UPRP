@@ -97,33 +97,25 @@
 \label{#1}
 \end{figure}}
 
-\newcommand{\halffig}[2]{
-\begin{figure}[H]
-\includegraphics[width=0.5\textwidth]{#1}
-\caption{#2}
-\label{#1}
+\newcommand{\figpage}[3]{
+\begin{figure}[H]\centering
+\includegraphics[height=#1\textheight]{#2}
+\caption{#3}
+\label{#2}
 \end{figure}}
 
-\newcommand{\figdraft}[2]{
-\begin{figure}[H]
-\includegraphics[width=\textwidth, draft]{#1}
-\caption{#2}
-\label{#1}
-\end{figure}}
+\newcommand{\figside}[3]{
+\begin{multicols}{2}
+  \begin{figure}[H]
+  \includegraphics[width=0.5\textwidth]{#1}
+  \caption{#2}
+  \label{#1}
+  \end{figure}
+  \columnbreak
+  #3
+\end{multicols}}
 
-\newcommand{\halffigdraft}[2]{
-\begin{figure}[H]
-\includegraphics[width=0.5\textwidth, draft]{#1}
-\caption{#2}
-\label{#1}
-\end{figure}}
 
-\newcommand{\halftable}[2]{
-\begin{table}[H]
-\includegraphics[width=0.5\textwidth]{#1}
-\caption{#2}
-\label{#1}
-\end{table}}
 
 %%%%% więcej możliwości w~dokumentacji amsthm
 

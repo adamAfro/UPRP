@@ -123,15 +123,15 @@ plots[f'F-geoloc-eval-clsf'] = Flow(args=[data], callback=lambda X:
 
 plots[f'F-geoloc-eval'] = Flow(args=[data], callback=lambda X:
 
-  Plot.Chart(X.assign(year=X['grant'].dt.year)\
+  Plot.Chart(X.assign(year=X['grant'].dt.year.astype(int))\
               .replace({'unique': 'jednoznaczna',
                         'proximity': 'najlbiższa innym',
                         'document': 'npdst. współautorów',
                         'identity': 'npdst. tożsamości' })\
              .value_counts(['year', 'loceval']).reset_index())
 
-      .mark_bar().encode( Plot.X('year:T').title('Rok'),
-                          Plot.Y(f'count:Q').title(None),
+      .mark_bar().encode( Plot.X('year:O').title('Rok'),
+                          Plot.Y('count:Q').title(None),
                           Plot.Color('loceval:N')\
                               .title('Metoda geolokalizacji')\
                               .legend(orient='bottom', columns=2)))
@@ -255,9 +255,10 @@ for r in ['', '50', '100']:
 
   plots[f'F-meandist{r}'] = Flow(args=[data], callback=lambda X, r=r:
 
-    Plot.Chart(X).mark_bar()\
-        .encode(Plot.X(f'meandist{r}:Q').bin().title('Średni dystans'),
-                Plot.Y('count()').title(None)))
+    X[f'meandist{r}'].to_frame()\
+      .pipe(Plot.Chart).mark_bar()\
+      .encode(Plot.X(f'meandist{r}').bin().title('Średni dystans [km]'),
+              Plot.Y('count()').title(None)))
 
   plots[f'M-meandist{r}'] = Flow(args=[data, geoloc.region[2]], callback=lambda X, G, r=r: (
     lambda X, G=G, r=r:
@@ -305,4 +306,4 @@ plots[f'M-rptdist'] = Flow(args=[rptgraph], callback=lambda X: (
 
 for k, F in plots.items():
   F.name = k
-  F.map(f'fig/{k}.endo.png')
+  F.map(f'fig/endo/{k}.png')

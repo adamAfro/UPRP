@@ -465,4 +465,4 @@ plots['F-results'] = Flow(args=[linkback, results], callback=lambda Q, Y:
 
 for k, F in plots.items():
   F.name = k
-  F.map(f'fig/{k}.rap.png')
+  F.map(f'fig/rprt/{k}.png')
