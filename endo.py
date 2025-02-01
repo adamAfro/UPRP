@@ -97,11 +97,11 @@ data = statunit(data, geoloc.dist, coords=['lat', 'lon'], rads=[20, 50, 100])
 data = cluster(data, 'kmeans', coords=['lat', 'lon'], k=5, innerperc=True,
                keys=[f'clsf-{k}' for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']])
 
-rptgraph = graph(raport.valid, data, geoloc.dist)
+rprtgraph = graph(raport.valid, data, geoloc.dist)
 
 data = data.map('endo/final.pkl')
 
-debug = { 'rptgraph': rptgraph }
+debug = { 'rprtgraph': rprtgraph }
 
 plots = dict()
 
@@ -274,9 +274,13 @@ for r in ['', '50', '100']:
 
   )(X.value_counts(['lat', 'lon', f'meandist{r}']).reset_index()))
 
-plots[f'M-rptdist'] = Flow(args=[rptgraph], callback=lambda X: (
+plots[f'M-rprtdist'] = Flow(args=[rprtgraph, geoloc.region[1]], callback=lambda X, G: (
 
-  lambda X: Plot.vconcat(
+  lambda X, G=G:
+
+    Plot.vconcat(
+
+      Plot.Chart(G).mark_geoshape(stroke='black', fill=None) + \
 
       X .query(f'distance == 0')\
         .pipe(Plot.Chart)\
@@ -286,6 +290,8 @@ plots[f'M-rptdist'] = Flow(args=[rptgraph], callback=lambda X: (
                 Plot.Size('count()')\
                     .legend(orient='top')\
                     .title('Ilość połączeń w tej samej geolokalizacji')), *[
+
+      Plot.Chart(G).mark_geoshape(stroke='black', fill=None) + \
 
       X .query(f'{start} < distance <= {end}')\
         .pipe(Plot.Chart, title=f'{start} - {end} km')\
@@ -299,9 +305,27 @@ plots[f'M-rptdist'] = Flow(args=[rptgraph], callback=lambda X: (
                 Plot.Latitude2('latY'),
                 Plot.Longitude2('lonY')).project('mercator')
 
-        for start, end in [(0, 100), (100, 200), (200, 300), (300, 1000)]
+        for start, end in [(0, 100), (100, 200)]]) | \
 
-  ]))(X.reset_index()[['lat', 'lon', 'latY', 'lonY', 'distance', 'closeness']]))
+    Plot.vconcat(*[
+
+      Plot.Chart(G).mark_geoshape(stroke='black', fill=None) + \
+
+      X .query(f'{start} < distance <= {end}')\
+        .pipe(Plot.Chart, title=f'{start} - {end} km')\
+        .mark_rule(opacity=0.1)\
+        .encode(Plot.Color('distance:Q')\
+                    .title('Dystans [km]')\
+                    .scale(scheme='greens', reverse=True)\
+                    .legend(orient='bottom'),
+                Plot.Latitude('lat'),
+                Plot.Longitude('lon'),
+                Plot.Latitude2('latY'),
+                Plot.Longitude2('lonY')).project('mercator')
+
+        for start, end in [(200, 300), (300, 450), (450, 800)]])
+
+  )(X.reset_index()[['lat', 'lon', 'latY', 'lonY', 'distance', 'closeness']]))
 
 
 for k, F in plots.items():

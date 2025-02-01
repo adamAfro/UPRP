@@ -82,6 +82,6 @@ geoportal = GMLParse(path='geoportal.gov.pl/wfs/name.gml').map('geoportal.gov.pl
 geodata = GeoXLSXload(path='prom/df_adresses_with_coordinates.xlsx').map('prom/df_adresses_with_coordinates.pkl')
 dist = distcalc(geodata, coords=['lat', 'lon']).map('prom/dists.pkl')
 
-region = [gisload(path='map/powiaty.shp').map('map/powiaty.pkl'),
+region = [gisload(path='map/powiaty.shp').map('map/polska.pkl'),
           gisload(path='map/wojewodztwa.shp').map('map/wojewodztwa.pkl'),
-          gisload(path='map/polska.shp').map('map/polska.pkl')]
+          gisload(path='map/polska.shp').map('map/powiaty.pkl')]

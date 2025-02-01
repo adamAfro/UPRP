@@ -115,6 +115,71 @@
   #3
 \end{multicols}}
 
+\newcommand{\figsides}[4]{
+\begin{multicols}{2}
+  \begin{figure}[H]
+  \includegraphics[width=0.5\textwidth]{#1}
+  \caption{#2}
+  \label{#1}
+  \end{figure}
+  \columnbreak
+  \begin{figure}[H]
+  \includegraphics[width=0.5\textwidth]{#3}
+  \caption{#4}
+  \label{#3}
+  \end{figure}
+\end{multicols}}
+
+\newcommand{\figsidesTri}[6]{
+\begin{multicols}{3}
+  \begin{figure}[H]
+  \includegraphics[width=0.33\textwidth]{#1}
+  \caption{#2}
+  \label{#1}
+  \end{figure}
+  \columnbreak
+
+  \begin{figure}[H]
+  \includegraphics[width=0.33\textwidth]{#3}
+  \caption{#4}
+  \label{#3}
+  \end{figure}
+  \columnbreak
+
+  \begin{figure}[H]
+  \includegraphics[width=0.33\textwidth]{#5}
+  \caption{#6}
+  \label{#5}
+  \end{figure}
+
+\end{multicols}}
+
+\newcommand{\tblside}[3]{
+\begin{multicols}{2}
+  \begin{table}[H]
+  \includegraphics[width=0.5\textwidth]{#1}
+  \caption{#2}
+  \label{#1}
+  \end{table}
+  \columnbreak
+  #3
+\end{multicols}}
+
+\newcommand{\tblsides}[4]{
+\begin{multicols}{2}
+  \begin{table}[H]
+  \includegraphics[width=0.5\textwidth]{#1}
+  \caption{#2}
+  \label{#1}
+  \end{table}
+  \columnbreak
+  \begin{table}[H]
+  \includegraphics[width=0.5\textwidth]{#3}
+  \caption{#4}
+  \label{#3}
+  \end{table}
+\end{multicols}}
+
 
 
 %%%%% więcej możliwości w~dokumentacji amsthm
