@@ -105,6 +105,25 @@ debug = { 'rprtgraph': rprtgraph }
 
 plots = dict()
 
+plots[f'F-pat-n-woj'] = Flow(args=[data], callback=lambda X:
+
+  X[['grant', 'wgid']]
+    .pipe(Plot.Chart).mark_bar().properties(width=400, height=200)\
+    .encode(Plot.X('year(grant)').title('Rok przyznania ochrony'),
+            Plot.Y('count()').title(None),
+            Plot.Facet('wgid:N', columns=2).title(None)))
+
+plots[f'F-pat-n-clsf'] = Flow(args=[data], callback=lambda X:
+
+  Plot.vconcat(*[
+
+    X[X[f'clsf-{k}'] > 0][['grant']]
+      .pipe(Plot.Chart).mark_bar().properties(width=400, height=100)\
+      .encode(Plot.X('year(grant)').title(None),
+              Plot.Y('count()').title(f'Ilość pat. w kl. {k}'))
+
+    for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']]))
+
 plots[f'M'] = Flow(args=[data, geoloc.region[1]], callback=lambda X, G:
 
   Plot.Chart(G).mark_geoshape(stroke='black', fill=None) + \
