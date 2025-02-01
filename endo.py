@@ -109,8 +109,26 @@ plots[f'F-pat-n-woj'] = Flow(args=[data, geoloc.region[1]], callback=lambda X, G
 
   X[['grant', 'wgid']]\
     .set_index('wgid').join(G.set_index('gid'))
-    .pipe(Plot.Chart).mark_bar()\
-    .encode(Plot.X('year(grant)').title('Rok przyznania ochrony'),
+    .pipe(Plot.Chart).mark_bar().properties(width=100, height=100)\
+    .encode(Plot.X('year(grant)').title('Rok'),
+            Plot.Y('count()').title(None),
+            Plot.Facet('name:N', columns=4).title(None)))
+
+plots[f'F-pat-n-woj-Q'] = Flow(args=[data, geoloc.region[1]], callback=lambda X, G:
+
+  X[['grant', 'wgid']]\
+    .set_index('wgid').join(G.set_index('gid'))
+    .pipe(Plot.Chart).mark_bar().properties(width=100, height=100)\
+    .encode(Plot.X('quarter(grant)').title('Kwartał'),
+            Plot.Y('count()').title(None),
+            Plot.Facet('name:N', columns=4).title(None)))
+
+plots[f'F-pat-n-woj-mo'] = Flow(args=[data, geoloc.region[1]], callback=lambda X, G:
+
+  X[['grant', 'wgid']]\
+    .set_index('wgid').join(G.set_index('gid'))
+    .pipe(Plot.Chart).mark_bar().properties(width=100, height=100)\
+    .encode(Plot.X('month(grant)').title('Miesiąc').axis(format='%m'),
             Plot.Y('count()').title(None),
             Plot.Facet('name:N', columns=4).title(None)))
 
