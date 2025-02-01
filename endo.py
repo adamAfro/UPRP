@@ -105,13 +105,14 @@ debug = { 'rprtgraph': rprtgraph }
 
 plots = dict()
 
-plots[f'F-pat-n-woj'] = Flow(args=[data], callback=lambda X:
+plots[f'F-pat-n-woj'] = Flow(args=[data, geoloc.region[1]], callback=lambda X, G:
 
-  X[['grant', 'wgid']]
-    .pipe(Plot.Chart).mark_bar().properties(width=400, height=200)\
+  X[['grant', 'wgid']]\
+    .set_index('wgid').join(G.set_index('gid'))
+    .pipe(Plot.Chart).mark_bar()\
     .encode(Plot.X('year(grant)').title('Rok przyznania ochrony'),
             Plot.Y('count()').title(None),
-            Plot.Facet('wgid:N', columns=2).title(None)))
+            Plot.Facet('name:N', columns=4).title(None)))
 
 plots[f'F-pat-n-clsf'] = Flow(args=[data], callback=lambda X:
 
