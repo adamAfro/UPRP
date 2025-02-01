@@ -292,6 +292,18 @@ plots['F-grant-delay'] = Flow(args=[FGT], callback=lambda X:(
 
 )((X['grant'] - X['application']).dt.days.rename('days').reset_index()))
 
+plots['F-application-grant'] = Flow(args=[F2013], callback=lambda X:
+
+    X .assign(grant=X['grant'].dropna().dt.year.astype(int))\
+      .assign(application=X['application'].dt.year.astype(int))\
+      .value_counts(['grant', 'application']).reset_index()\
+      .pipe(Plot.Chart).mark_bar()\
+      .encode(Plot.Y('count:Q').title(None),
+              Plot.X('application:N').title('Rok złożenia aplikacji'), 
+              Plot.Color('grant:N')\
+                  .title('Rok przyznania ochrony')\
+                  .legend(orient='bottom')))
+
 plots['F-grant-delay-13-22'] = plots['F-grant-delay'].copy(args=[F2013])
 
 for k, F in plots.items():
