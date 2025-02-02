@@ -29,8 +29,6 @@ def graph(edgdocs:pandas.DataFrame,
 
 rprtgraph = graph(rprt.valid, endo.data, geoloc.dist)
 
-debug = { 'rprtgraph': rprtgraph }
-
 plots = dict()
 
 plots[f'M-rprt-dist'] = Flow(args=[rprtgraph, geoloc.region[1]], callback=lambda X, G: (
