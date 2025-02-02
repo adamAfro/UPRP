@@ -204,7 +204,7 @@ def histogram(X:pandas.DataFrame, k:str): return (\
   X[k].describe().loc[['25%', '50%', '75%', 'mean', 'min', 'max']]\
     .rename({ 'mean': 'średnia', 'max': 'maks.', 'min': 'min.' }).reset_index()\
     .pipe(Plot.Chart).mark_rule()\
-    .encode(Plot.Y(f'{k}:Q').axis(None),
+    .encode(Plot.Y(f'{k}:Q'),
             Plot.Color('index:N')\
                 .legend(orient='right')\
                 .title('Statystyka')\
