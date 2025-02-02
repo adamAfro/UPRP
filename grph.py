@@ -173,9 +173,6 @@ plots[f'M-rprt-dist'] = Flow(args=[edges, gloc.region[1]], callback=lambda X, G:
 
   )(X.reset_index()[['lat', 'lon', 'latY', 'lonY', 'distance', 'closeness']]))
 
-
-plots['F-rprt-meandist'] = endo.histogram(edges, 'distance', step=10)
-
 for k, F in plots.items():
   F.name = k
   F.map(f'fig/grph/{k}.png')
