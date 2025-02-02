@@ -33,7 +33,7 @@ from patent import flow as fP
 from registry import flow as fA
 from subject import flow as fS
 
-import endo, patent, registry, subject
+import endo, patent, registry, subject, clst
 
 import raport
 
@@ -44,7 +44,8 @@ for f in [f0, fP, fA, fS, { 'plot': { 'all': Flow('plot all', lambda *X: X, args
     { 'plot-rprt': raport.plots }, 
     { 'plot-subj': subject.plots }, 
     { 'plot-rgst': registry.plots }, 
-    { 'plot-patt': patent.plots }]:
+    { 'plot-patt': patent.plots }, 
+    { 'plot-clst': clst.plots }]:
 
   for k in f.keys():
 
