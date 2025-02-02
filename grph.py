@@ -27,6 +27,24 @@ def graph(edgdocs:pandas.DataFrame,
 
   return E
 
+@Flow.From()
+def stat(nodes:pandas.DataFrame, edges:pandas.DataFrame):
+
+  N = nodes
+  E = edges
+
+  import networkx as nx
+
+  G = nx.Graph()
+  G.add_nodes_from(N['id'])
+  G.add_weighted_edges_from(E[['id', 'idY', 'distance']].values)
+
+  N = N.set_index('id')
+  N['degree'] = pandas.DataFrame(nx.degree(G)).set_index(0)[1]
+  N['closeness'] = pandas.Series(nx.closeness_centrality(G, distance='weight'))
+
+  return N
+
 rprtgraph = graph(rprt.valid, endo.data, geoloc.dist)
 
 plots = dict()
