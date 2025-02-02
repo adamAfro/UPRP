@@ -8,6 +8,10 @@ def graph(edgdocs:pandas.DataFrame,
           edgaffil:pandas.DataFrame,
           dist:pandas.DataFrame):
 
+  edgdocs = rprt.valid()
+  edgaffil = endo.data()
+  dist = gloc.dist()
+
   A = edgaffil.reset_index()
 
   D = edgdocs
@@ -25,6 +29,8 @@ def graph(edgdocs:pandas.DataFrame,
   E = E.join(d)
 
   E['closeness'] = 1 / (E['distance']+1)
+  E['Gdelay'] = (E['grantY'] - E['grant']).dt.days.astype(int)
+  E['Adelay'] = (E['applicationY'] - E['application']).dt.days.astype(int)
 
   return E
 
@@ -62,6 +68,8 @@ def statcomp(nodes:pandas.DataFrame, edges:pandas.DataFrame):
   C['meandegree'] = N.groupby('comp')['degree'].mean()
   C['meancloseness'] = N.groupby('comp')['closeness'].mean()
   C['meandist'] = E.set_index('id').join(N['comp']).groupby('comp')['distance'].mean()
+  C['Gdelay'] = E.set_index('id').join(N['comp']).groupby('comp')['Gdelay'].mean()
+  C['Adelay'] = E.set_index('id').join(N['comp']).groupby('comp')['Adelay'].mean()
 
   return C
 
@@ -113,6 +121,18 @@ plots[f'F-rprt-comp'] = Flow.Forward([comps], lambda X:
     .properties(width=0.4*A4.W, height=0.1*A4.H)\
     .encode(Pt.X('meandegree:Q').title('Średni stopień węzła (n >1)').bin(step=3),
             Pt.Y('count(meandegree)').title(None)) &\
+
+  X .query('nodes > 1')\
+    .pipe(Pt.Chart).mark_bar()\
+    .properties(width=0.4*A4.W, height=0.1*A4.H)\
+    .encode(Pt.X('Adelay:Q').title('Dni między składaniem aplikacji').bin(),
+            Pt.Y('count(Adelay)').title(None)) &\
+
+  X .query('nodes > 1')\
+    .pipe(Pt.Chart).mark_bar()\
+    .properties(width=0.4*A4.W, height=0.1*A4.H)\
+    .encode(Pt.X('Gdelay:Q').title('Dni między ochroną patentową').bin(),
+            Pt.Y('count(Gdelay)').title(None)) &\
 
   X .query('meandist > 0')\
     .pipe(Pt.Chart).mark_bar()\
