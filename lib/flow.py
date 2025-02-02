@@ -182,3 +182,6 @@ class Flow():
 
       return wrapper
     return decorator
+
+  def Forward(args=[], callback=lambda x: x):
+    return Flow(callback=callback, args=args)
