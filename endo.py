@@ -3,19 +3,19 @@ from lib.flow import Flow
 import geoloc, subject, raport, lib.timeseries
 
 @Flow.From()
-def statunit(geo:pandas.DataFrame, dist:pandas.DataFrame, coords:list[str], rads=[]):
+def meandist(geo:pandas.DataFrame, dist:pandas.DataFrame, coords:list[str], rads=[], filtr=None, symbol=''):
 
   X = geo
-  D = dist
-
   X = X.dropna(subset=coords)
 
-  I = [g for g in D.columns if g in X[coords].values]
-  D = D.loc[I, I].sort_index()
+  D = dist
+  Q = X if filtr is None else X.loc[filtr]
+  I0 = [g for g in D.columns if g in X[coords].values]
+  I = [g for g in D.columns if g in Q[coords].values]
+  D = D.loc[I0, I].sort_index()
+  N = Q.value_counts(subset=coords).sort_index()
 
-  N = X.value_counts(subset=coords).sort_index()
   X = X.set_index(coords)
-
   M = int(numpy.ceil(D.max().max()))
   for r in rads+[M]:
 
@@ -28,11 +28,17 @@ def statunit(geo:pandas.DataFrame, dist:pandas.DataFrame, coords:list[str], rads
 
    #ważenie przez liczność
     R = R * L
+    R = R.sum(axis=1)
+    L = L.sum(axis=1)
+    R = R[R > 0]
+    L = L[L > 0]
 
    #średnia dla danej liczności
-    R = R.sum(axis=1) / L.sum(axis=1)
+    R = R/L
     if r == M: r = ''
-    X = X.join(R.rename(f'meandist{r}').astype(float))
+    X = X.join(R.rename(f'meandist{symbol}{r}').astype(float))
+
+  X = X.reset_index()
 
   return X
 
@@ -62,7 +68,11 @@ def graph(edgdocs:pandas.DataFrame,
   return E
 
 data = subject.mapped
-data = statunit(data, geoloc.dist, coords=['lat', 'lon'], rads=[20, 50, 100])
+data = meandist(data, geoloc.dist, coords=['lat', 'lon'], rads=[50, 100])
+for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']:
+  data = meandist(data, geoloc.dist, coords=['lat', 'lon'], rads=[50, 100], 
+                  filtr=lambda X, k=k: X[f'clsf-{k}'] > 0, symbol=k)
+
 data = data.map('endo/final.pkl')
 
 rprtgraph = graph(raport.valid, data, geoloc.dist)
@@ -121,11 +131,11 @@ plots[f'M'] = Flow(args=[data, geoloc.region[1]], callback=lambda X, G:
                             size=Plot.Size('count').title('Ilość pkt.')).project('mercator'))
 
 @Flow.From()
-def histogram(X:pandas.DataFrame, k:str, step=None): return (\
+def histogram(X:pandas.DataFrame, k:str, step=None, title=None): return (\
 
   X[[k]].pipe(Plot.Chart).mark_bar()\
     .encode(Plot.Y(f'{k}:Q').bin(**(dict(step=step) if step else {})).title(None),
-            Plot.X('count()').title(None)) + \
+            Plot.X('count()').title(title)) + \
 
   X[k].astype(float).describe().loc[['25%', '50%', '75%', 'mean', 'min', 'max']]\
     .rename({ 'mean': 'średnia', 'max': 'maks.', 'min': 'min.' }).reset_index()\
@@ -279,9 +289,8 @@ for r, R in { 'woj': geoloc.region[1], 'pow': geoloc.region[2] }.items():
 
 for r in ['', '50', '100']:
 
-  plots[f'F-meandist{r}'] = histogram(data, f'meandist{r}')
-
   plots[f'M-meandist{r}'] = Flow(args=[data, geoloc.region[2]], callback=lambda X, G, r=r: (
+
     lambda X, G=G, r=r:
 
     gpd .sjoin(gpd.GeoDataFrame(X, geometry=gpd.points_from_xy(X.lon, X.lat, crs=G.crs)), G, 
@@ -293,7 +302,9 @@ for r in ['', '50', '100']:
                           .scale(scheme='blueorange')\
                           .title('Śr. d. w pow.')).project('mercator')
 
-  )(X.value_counts(['lat', 'lon', f'meandist{r}']).reset_index()))
+  )(X.value_counts(['lat', 'lon', f'meandist{r}']).reset_index()) | Plot.hconcat(*([
+    histogram(data, f'meandist{k}{r}', title=k)() for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+  ]+[histogram(data, f'meandist{r}')()])))
 
 plots[f'M-rprtdist'] = Flow(args=[rprtgraph, geoloc.region[1]], callback=lambda X, G: (
 
