@@ -86,6 +86,25 @@
 \newtheorem{uwaga}{Uwaga}[chapter]
 \newtheorem{wniosek}{Wniosek}[chapter]
 
+
+\newcommand{\chart}[2]{
+\begin{figure}[H]
+\includegraphics[scale=.5]{#1}
+\caption{#2}
+\label{#1}
+\end{figure}}
+
+\newcommand{\chartside}[3]{
+\begin{multicols}{2}
+\begin{figure}[H]
+\includegraphics[scale=.5]{#1}
+\caption{#2}
+\label{#1}
+\end{figure}
+\columnbreak
+#3
+\end{multicols}}
+
 % #1 - nazwa pliku
 % #2 - opis
 % #3 - źródło
