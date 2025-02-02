@@ -194,6 +194,74 @@ plots[f'T-cluster-meandist'] = Flow(args=[data], callback=lambda X: (
             Plot.X('kmeans:N').title(None).scale(padding=20))
 ))
 
+def histogram(X:pandas.DataFrame, k:str): return (\
+
+  X[[k]].pipe(Plot.Chart).mark_bar()\
+    .encode(Plot.Y(f'{k}:Q').bin().title(None),
+            Plot.X('count()').title(None)) + \
+
+  X[k].describe().loc[['25%', '50%', '75%', 'mean', 'min', 'max']]\
+    .rename({ 'mean': 'średnia', 'max': 'maks.', 'min': 'min.' }).reset_index()\
+    .pipe(Plot.Chart).mark_rule()\
+    .encode(Plot.Y(f'{k}:Q').axis(None),
+            Plot.Color('index:N')\
+                .legend(orient='right')\
+                .title('Statystyka')\
+                .scale(scheme='category10')) + \
+
+  pandas.DataFrame({ 'mean': [X[k].mean()], 'std': [X[k].std()], 
+                     'index': 'odchylenie' })\
+    .eval('y1 = mean - (std / 2)').eval('y2 = mean + (std / 2)')
+    .pipe(Plot.Chart).mark_rule()\
+    .encode(Plot.Y('y1:Q'), Plot.Y2('y2:Q'),
+            Plot.Color('index:N'))
+
+).properties(width=100)
+
+@Flow.From()
+def qseasonplot(X:pandas.DataFrame, k:str): return (
+
+  lambda X:
+
+    X .assign(season=X[k].dt.quarter%4+1)#grouper#fix
+      .groupby('season')['quarter'].sum().reset_index()\
+      .pipe(Plot.Chart, height=100).mark_circle()\
+      .encode(Plot.Y('season:O').title('Sumarycznie'),
+              Plot.Size('quarter:Q')\
+                  .title('Ilość patentów')\
+                  .legend(None)) | \
+
+    (X.pipe(Plot.Chart, height=100).mark_bar()\
+      .encode(Plot.X('grant:T').title('Kolejno').axis(format='%Y'),
+              Plot.Y('quarter:Q').title(None)) | histogram(X, 'quarter')).resolve_scale(y='shared')
+
+)(X[[k]].groupby(pandas.Grouper(key=k, freq='QE', label='left'))\
+   .size().rename('quarter').reset_index())
+
+@Flow.From()
+def mseasonplot(X:pandas.DataFrame, k:str): return (
+
+  lambda X:
+
+    X .assign(season=X[k].dt.month%12+1)#grouper#fix
+      .groupby('season')['month'].sum().reset_index()\
+      .pipe(Plot.Chart, height=200).mark_circle()\
+      .encode(Plot.Y('season:O').title('Sumarycznie'),
+              Plot.Size('month:Q')\
+                  .title('Ilość patentów')\
+                  .legend(None)) | \
+
+    (X.pipe(Plot.Chart, height=200).mark_rule()\
+      .encode(Plot.X('grant:T').title('Kolejno').axis(format='%Y'),
+              Plot.Y('month:Q').title(None)) | histogram(X, 'month')).resolve_scale(y='shared')
+
+)(X[[k]].groupby(pandas.Grouper(key=k, freq='M', label='left'))\
+   .size().rename('month').reset_index())
+
+plots['F-Q'] = qseasonplot(data, 'grant')
+plots['F-mo'] = mseasonplot(data, 'grant')
+
+
 plots['T-statio-woj'] = Flow(args=[data, geoloc.region[1]], callback=lambda X, G: (
 
   lambda S:
