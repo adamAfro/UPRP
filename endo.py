@@ -351,30 +351,9 @@ for r, R in { 'woj': geoloc.region[1], 'pow': geoloc.region[2] }.items():
 
         .resolve_legend(color='independent') )
 
-plots[f'T-meandist'] = Flow(args=[data], callback=lambda X: (
-
-  lambda P:
-
-    P.mark_rect(width=50).encode(Plot.Color('value:Q').title('Wartość').scale(scheme='orangered')) + \
-    P.mark_text(baseline='middle').encode(Plot.Text('value:Q', format=".2f"))
-
-)(pandas.concat([ X[f'meandist{r}'].describe().drop('count').reset_index() for r in ['', '50', '100'] ])\
-        .melt(id_vars='index').dropna()\
-        .replace({ 'meandist': 'śr. odl.', 'meandist50': 'śr. odl. do 50km', 'meandist100': 'śr. odl. do 100km',  })\
-        .replace({ 'mean': 'średnia', 'std': 'odch. std.', 'min': '0%', 'max': '100%' })\
-        .pipe(Plot.Chart)\
-        .encode(Plot.Y('variable:O').title(None),
-                Plot.X('index:O').title(None).scale(padding=20))
-))
-
 for r in ['', '50', '100']:
 
-  plots[f'F-meandist{r}'] = Flow(args=[data], callback=lambda X, r=r:
-
-    X[f'meandist{r}'].to_frame()\
-      .pipe(Plot.Chart).mark_bar()\
-      .encode(Plot.X(f'meandist{r}').bin().title('Średni dystans [km]'),
-              Plot.Y('count()').title(None)))
+  plots[f'F-meandist{r}'] = histogram(data, f'meandist{r}')
 
   plots[f'M-meandist{r}'] = Flow(args=[data, geoloc.region[2]], callback=lambda X, G, r=r: (
     lambda X, G=G, r=r:
