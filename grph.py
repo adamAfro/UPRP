@@ -28,25 +28,45 @@ def graph(edgdocs:pandas.DataFrame,
   return E
 
 @Flow.From()
-def stat(nodes:pandas.DataFrame, edges:pandas.DataFrame):
+def findcomp(nodes:pandas.DataFrame, edges:pandas.DataFrame):
+
+  import networkx as nx
 
   N = nodes
   E = edges
 
-  import networkx as nx
+  N = N.set_index('id')
 
   G = nx.Graph()
-  G.add_nodes_from(N['id'])
+  G.add_nodes_from(N.index)
   G.add_weighted_edges_from(E[['id', 'idY', 'distance']].values)
 
-  N = N.set_index('id')
+ #komponenty
+  C = pandas.Series(nx.connected_components(G)).explode()
+  C = C.reset_index().set_index(0)['index'].rename('comp')
+  N = N.join(C)
+
   N['degree'] = pandas.DataFrame(nx.degree(G)).set_index(0)[1]
   N['closeness'] = pandas.Series(nx.closeness_centrality(G, distance='weight'))
 
   return N
 
+@Flow.From()
+def statcomp(nodes:pandas.DataFrame, edges:pandas.DataFrame):
+
+  N = nodes
+  E = edges
+
+  C = N.value_counts('comp').to_frame()
+  C['meandegree'] = N.groupby('comp')['degree'].mean()
+  C['meancloseness'] = N.groupby('comp')['closeness'].mean()
+  C['meandist'] = E.set_index('id').join(N['comp']).groupby('comp')['distance'].mean()
+
+  return C
+
 edges = graph(rprt.valid, endo.data, geoloc.dist)
-nodes = stat(endo.data, edges)
+nodes = findcomp(endo.data, edges)
+comps = statcomp(nodes, edges)
 
 plots = dict()
 
