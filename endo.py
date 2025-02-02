@@ -194,6 +194,7 @@ plots[f'T-cluster-meandist'] = Flow(args=[data], callback=lambda X: (
             Plot.X('kmeans:N').title(None).scale(padding=20))
 ))
 
+@Flow.From()
 def histogram(X:pandas.DataFrame, k:str): return (\
 
   X[[k]].pipe(Plot.Chart).mark_bar()\
@@ -233,7 +234,7 @@ def qseasonplot(X:pandas.DataFrame, k:str): return (
 
     (X.pipe(Plot.Chart, height=100).mark_bar()\
       .encode(Plot.X('grant:T').title('Kolejno').axis(format='%Y'),
-              Plot.Y('quarter:Q').title(None)) | histogram(X, 'quarter')).resolve_scale(y='shared')
+              Plot.Y('quarter:Q').title(None)) | histogram(X, 'quarter')()).resolve_scale(y='shared')
 
 )(X[[k]].groupby(pandas.Grouper(key=k, freq='QE', label='left'))\
    .size().rename('quarter').reset_index())
@@ -253,7 +254,7 @@ def mseasonplot(X:pandas.DataFrame, k:str): return (
 
     (X.pipe(Plot.Chart, height=200).mark_rule()\
       .encode(Plot.X('grant:T').title('Kolejno').axis(format='%Y'),
-              Plot.Y('month:Q').title(None)) | histogram(X, 'month')).resolve_scale(y='shared')
+              Plot.Y('month:Q').title(None)) | histogram(X, 'month')()).resolve_scale(y='shared')
 
 )(X[[k]].groupby(pandas.Grouper(key=k, freq='M', label='left'))\
    .size().rename('month').reset_index())
