@@ -129,8 +129,8 @@ plots[f'M-rprt-dist'] = Flow(args=[edges, gloc.region[1]], callback=lambda X, G:
       Plot.Chart(G).mark_geoshape(stroke='black', fill=None) + \
 
       X .query(f'distance == 0')\
-        .pipe(Plot.Chart)\
-        .mark_circle(fill='green')\
+        .pipe(Plot.Chart).mark_circle(fill='green')\
+        .properties(width=0.5*A4.W, height=0.3*A4.H)\
         .encode(Plot.Latitude('lat'), 
                 Plot.Longitude('lon'),
                 Plot.Size('count()')\
@@ -140,8 +140,8 @@ plots[f'M-rprt-dist'] = Flow(args=[edges, gloc.region[1]], callback=lambda X, G:
       Plot.Chart(G).mark_geoshape(stroke='black', fill=None) + \
 
       X .query(f'{start} < distance <= {end}')\
-        .pipe(Plot.Chart, title=f'{start} - {end} km')\
-        .mark_rule(opacity=0.1)\
+        .pipe(Plot.Chart, title=f'{start} - {end} km').mark_rule(opacity=0.1)\
+        .properties(width=0.5*A4.W, height=0.3*A4.H)\
         .encode(Plot.Color('distance:Q')\
                     .title('Dystans [km]')\
                     .scale(scheme='greens', reverse=True)\
@@ -158,8 +158,8 @@ plots[f'M-rprt-dist'] = Flow(args=[edges, gloc.region[1]], callback=lambda X, G:
       Plot.Chart(G).mark_geoshape(stroke='black', fill=None) + \
 
       X .query(f'{start} < distance <= {end}')\
-        .pipe(Plot.Chart, title=f'{start} - {end} km')\
-        .mark_rule(opacity=0.1)\
+        .pipe(Plot.Chart, title=f'{start} - {end} km').mark_rule(opacity=0.1)\
+        .properties(width=0.5*A4.W, height=0.3*A4.H)\
         .encode(Plot.Color('distance:Q')\
                     .title('Dystans [km]')\
                     .scale(scheme='greens', reverse=True)\
