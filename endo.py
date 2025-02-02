@@ -1,6 +1,6 @@
 import pandas, numpy, geopandas as gpd, altair as Plot
 from lib.flow import Flow
-import geoloc, subject, lib.timeseries
+import gloc, subject, lib.timeseries
 
 @Flow.From()
 def meandist(geo:pandas.DataFrame, dist:pandas.DataFrame, coords:list[str], rads=[], filtr=None, symbol=''):
@@ -43,16 +43,16 @@ def meandist(geo:pandas.DataFrame, dist:pandas.DataFrame, coords:list[str], rads
   return X
 
 data = subject.mapped
-data = meandist(data, geoloc.dist, coords=['lat', 'lon'], rads=[50, 100])
+data = meandist(data, gloc.dist, coords=['lat', 'lon'], rads=[50, 100])
 for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']:
-  data = meandist(data, geoloc.dist, coords=['lat', 'lon'], rads=[50, 100], 
+  data = meandist(data, gloc.dist, coords=['lat', 'lon'], rads=[50, 100], 
                   filtr=lambda X, k=k: X[f'clsf-{k}'] > 0, symbol=k)
 
 data = data.map('endo/final.pkl')
 
 plots = dict()
 
-plots[f'F-pat-n-woj'] = Flow(args=[data, geoloc.region[1]], callback=lambda X, G:
+plots[f'F-pat-n-woj'] = Flow(args=[data, gloc.region[1]], callback=lambda X, G:
 
   X[['grant', 'wgid']]\
     .set_index('wgid').join(G.set_index('gid'))
@@ -61,7 +61,7 @@ plots[f'F-pat-n-woj'] = Flow(args=[data, geoloc.region[1]], callback=lambda X, G
             Plot.Y('count()').title(None),
             Plot.Facet('name:N', columns=4).title(None)))
 
-plots[f'F-pat-n-woj-Q'] = Flow(args=[data, geoloc.region[1]], callback=lambda X, G:
+plots[f'F-pat-n-woj-Q'] = Flow(args=[data, gloc.region[1]], callback=lambda X, G:
 
   X[['grant', 'wgid']]\
     .set_index('wgid').join(G.set_index('gid'))
@@ -70,7 +70,7 @@ plots[f'F-pat-n-woj-Q'] = Flow(args=[data, geoloc.region[1]], callback=lambda X,
             Plot.Y('count()').title(None),
             Plot.Facet('name:N', columns=4).title(None)))
 
-plots[f'F-pat-n-woj-mo'] = Flow(args=[data, geoloc.region[1]], callback=lambda X, G:
+plots[f'F-pat-n-woj-mo'] = Flow(args=[data, gloc.region[1]], callback=lambda X, G:
 
   X[['grant', 'wgid']]\
     .set_index('wgid').join(G.set_index('gid'))
@@ -90,7 +90,7 @@ plots[f'F-pat-n-clsf'] = Flow(args=[data], callback=lambda X:
 
     for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']]))
 
-plots[f'M'] = Flow(args=[data, geoloc.region[1]], callback=lambda X, G:
+plots[f'M'] = Flow(args=[data, gloc.region[1]], callback=lambda X, G:
 
   Plot.Chart(G).mark_geoshape(stroke='black', fill=None) + \
 
@@ -170,7 +170,7 @@ plots['F-Q'] = qseasonplot(data, 'grant')
 plots['F-mo'] = mseasonplot(data, 'grant')
 
 
-plots['T-statio-woj'] = Flow(args=[data, geoloc.region[1]], callback=lambda X, G: (
+plots['T-statio-woj'] = Flow(args=[data, gloc.region[1]], callback=lambda X, G: (
 
   lambda S:
 
@@ -192,7 +192,7 @@ plots['T-statio-woj'] = Flow(args=[data, geoloc.region[1]], callback=lambda X, G
       .eval('z=p<0.05').replace({ True: 'p < 0.05', False: 'p ≥ 0.05' })))
 
 dtplots = dict()
-for r, R in { 'woj': geoloc.region[1], 'pow': geoloc.region[2] }.items():
+for r, R in { 'woj': gloc.region[1], 'pow': gloc.region[2] }.items():
 
   G = Flow(args=[data, R], callback=lambda X, G: 
     X .assign(year=X['grant'].dt.year)\
@@ -260,7 +260,7 @@ for r, R in { 'woj': geoloc.region[1], 'pow': geoloc.region[2] }.items():
 
 for r in ['', '50', '100']:
 
-  plots[f'M-meandist{r}'] = Flow(args=[data, geoloc.region[2]], callback=lambda X, G, r=r: (
+  plots[f'M-meandist{r}'] = Flow(args=[data, gloc.region[2]], callback=lambda X, G, r=r: (
 
     lambda X, G=G, r=r:
 

@@ -1,5 +1,5 @@
 import pandas, numpy, geopandas as gpd, altair as Plot
-import lib.flow, endo, geoloc as gloc
+import lib.flow, endo, gloc as gloc
 
 @lib.flow.Flow.From()
 def cluster(geo:pandas.DataFrame, method:str, coords:list[str], keys=[], k:int=2, innerperc=False):

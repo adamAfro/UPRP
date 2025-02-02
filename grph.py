@@ -1,6 +1,6 @@
 import pandas, numpy, geopandas as gpd, altair as Plot
 from lib.flow import Flow
-import geoloc, endo, raport as rprt
+import gloc, endo, raport as rprt
 
 @Flow.From()
 def graph(edgdocs:pandas.DataFrame, 
@@ -64,13 +64,13 @@ def statcomp(nodes:pandas.DataFrame, edges:pandas.DataFrame):
 
   return C
 
-edges = graph(rprt.valid, endo.data, geoloc.dist)
+edges = graph(rprt.valid, endo.data, gloc.dist)
 nodes = findcomp(endo.data, edges)
 comps = statcomp(nodes, edges)
 
 plots = dict()
 
-plots[f'M-rprt-dist'] = Flow(args=[edges, geoloc.region[1]], callback=lambda X, G: (
+plots[f'M-rprt-dist'] = Flow(args=[edges, gloc.region[1]], callback=lambda X, G: (
 
   lambda X, G=G:
 

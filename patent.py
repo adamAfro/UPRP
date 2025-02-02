@@ -6,7 +6,7 @@ from lib.flow import Flow
 from util import strnorm
 from util import data as D
 from profiling import flow as f0
-import geoloc as geoloc
+import gloc as gloc
 
 @Flow.From()
 def code(storage:Storage, assignpath:str):
@@ -191,7 +191,7 @@ for h in flow.keys():
 
   flow[h]['geoloc'] = geolocate(f0[h]['profiling'], 
                                 assignpath=D[h]+'/assignement.yaml', codes=flow[h]['code'], 
-                                geodata=geoloc.geodata,).map(D[h]+'/geoloc/data.pkl')
+                                geodata=gloc.geodata,).map(D[h]+'/geoloc/data.pkl')
 
 for h in flow.keys():
   flow[h]['patentify'] = Flow(callback=lambda *x: x, args=[flow[h][k] for k in flow[h].keys()])

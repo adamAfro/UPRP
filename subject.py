@@ -1,6 +1,6 @@
 import pandas, geopandas as gpd, altair as Plot
 from lib.flow import Flow
-import geoloc
+import gloc
 
 @Flow.From()
 def affilgeo(registry:pandas.DataFrame):
@@ -199,8 +199,8 @@ geofilled = fillgeo(entities=geofilled0, group='doc', loceval='document').map('s
 mapped0 = Flow('make gpd', lambda X: gpd.GeoDataFrame(X.reset_index().assign(year=X['grant'].dt.year), 
                                                       geometry=gpd.points_from_xy(X.lon, X.lat, crs='EPSG:4326')), 
                                                       args=[geofilled])
-mappedw = ptregion(mapped0, geoloc.region[1], 'wgid')
-mappedp = ptregion(mappedw, geoloc.region[2], 'pgid').map('subject/mapped.pkl')
+mappedw = ptregion(mapped0, gloc.region[1], 'wgid')
+mappedp = ptregion(mappedw, gloc.region[2], 'pgid').map('subject/mapped.pkl')
 mapped = mappedp
 
 flow = { 'subject': { 'map': mapped,

@@ -1,6 +1,6 @@
 import pandas, numpy, altair as Plot, geopandas as gpd
 from lib.flow import Flow
-import geoloc, subject
+import gloc, subject
 
 @Flow.From()
 def load(path:str, varname:str, geo:pandas.DataFrame, names={
@@ -116,7 +116,7 @@ def delaycorr(aligned:pandas.DataFrame, endo:str, method='pearson'):
 
   return Y
 
-inn = load(path='GUS/BDL/inn-06-22.xlsx', varname='Wskaźniki', geo=geoloc.region[1])
+inn = load(path='GUS/BDL/inn-06-22.xlsx', varname='Wskaźniki', geo=gloc.region[1])
 
 innplot = Flow('inn-GUS-plot', lambda: [
   plot(inn, 'udział nakładów na działalność innowacyjną w przedsiębiorstwach w nakładach krajowych').map('GUS/BDL/inn-exp-ent-country.png')(),
