@@ -1,6 +1,7 @@
-import pandas, numpy, geopandas as gpd, altair as Plot
+import pandas, numpy, geopandas as gpd, altair as Plot, altair as Pt
 from lib.flow import Flow
 import gloc, endo, raport as rprt
+from util import A4
 
 @Flow.From()
 def graph(edgdocs:pandas.DataFrame, 
@@ -57,7 +58,7 @@ def statcomp(nodes:pandas.DataFrame, edges:pandas.DataFrame):
   N = nodes
   E = edges
 
-  C = N.value_counts('comp').to_frame()
+  C = N.value_counts('comp').rename('nodes').to_frame()
   C['meandegree'] = N.groupby('comp')['degree'].mean()
   C['meancloseness'] = N.groupby('comp')['closeness'].mean()
   C['meandist'] = E.set_index('id').join(N['comp']).groupby('comp')['distance'].mean()
@@ -66,9 +67,58 @@ def statcomp(nodes:pandas.DataFrame, edges:pandas.DataFrame):
 
 edges = graph(rprt.valid, endo.data, gloc.dist)
 nodes = findcomp(endo.data, edges)
-comps = statcomp(nodes, edges)
+comps = statcomp(nodes, edges).map('cache/compstat.pkl')
 
 plots = dict()
+
+plots[f'F-rprt-comp'] = Flow.Forward([comps], lambda X:
+(
+  ( lambda S:
+    Pt.Chart(S).mark_circle()\
+      .properties(width=0.05*A4.W, height=0.05*A4.H)\
+      .encode(Pt.Y('multi:N').title(None),
+              Pt.Size('count(multi)').legend(None)) |\
+    Pt.Chart(S).mark_text()\
+      .properties(width=0.05*A4.W, height=0.05*A4.H)\
+      .encode(Pt.Y('multi:N').axis(None),
+              Pt.Text('count(multi)'))\
+
+  )(X .eval('multi = nodes > 1')\
+      .replace({'multi': {True: 'n-węzłów',
+                          False: '1 węzeł'}})) |\
+
+  ( lambda S:
+    Pt.Chart(S).mark_circle()\
+      .properties(width=0.05*A4.W, height=0.05*A4.H)\
+      .encode(Pt.Y('idgeo:N').title(None),
+              Pt.Size('count(idgeo)').legend(None)) |\
+    Pt.Chart(S).mark_text()\
+      .properties(width=0.05*A4.W, height=0.05*A4.H)\
+      .encode(Pt.Y('idgeo:N').axis(None),
+              Pt.Text('count(idgeo)'))\
+
+  )(X .eval('idgeo = meandist > 0')\
+      .replace({'idgeo': {True: 'd > 0', 
+                          False: '0-wy dystans'}}))
+) &\
+
+  X .query('nodes > 1')\
+    .pipe(Pt.Chart).mark_bar()\
+    .properties(width=0.4*A4.W, height=0.1*A4.H)\
+    .encode(Pt.X('nodes:Q').title('Liczba węzłów (n >1)').bin(step=5),
+            Pt.Y('count(nodes)').title(None)) &\
+
+  X .query('nodes > 1')\
+    .pipe(Pt.Chart).mark_bar()\
+    .properties(width=0.4*A4.W, height=0.1*A4.H)\
+    .encode(Pt.X('meandegree:Q').title('Średni stopień węzła (n >1)').bin(step=3),
+            Pt.Y('count(meandegree)').title(None)) &\
+
+  X .query('meandist > 0')\
+    .pipe(Pt.Chart).mark_bar()\
+    .properties(width=0.4*A4.W, height=0.1*A4.H)\
+    .encode(Pt.X('meandist:Q').title('Średni dystans krawędzi (d >1)').bin(step=10),
+            Pt.Y('count(meandist)').title(None)) )
 
 plots[f'M-rprt-dist'] = Flow(args=[edges, gloc.region[1]], callback=lambda X, G: (
 
