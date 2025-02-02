@@ -195,10 +195,10 @@ plots[f'T-cluster-meandist'] = Flow(args=[data], callback=lambda X: (
 ))
 
 @Flow.From()
-def histogram(X:pandas.DataFrame, k:str): return (\
+def histogram(X:pandas.DataFrame, k:str, step=None): return (\
 
   X[[k]].pipe(Plot.Chart).mark_bar()\
-    .encode(Plot.Y(f'{k}:Q').bin().title(None),
+    .encode(Plot.Y(f'{k}:Q').bin(**(dict(step=step) if step else {})).title(None),
             Plot.X('count()').title(None)) + \
 
   X[k].astype(float).describe().loc[['25%', '50%', '75%', 'mean', 'min', 'max']]\
@@ -421,6 +421,9 @@ plots[f'M-rprtdist'] = Flow(args=[rprtgraph, geoloc.region[1]], callback=lambda 
         for start, end in [(200, 300), (300, 450), (450, 800)]])
 
   )(X.reset_index()[['lat', 'lon', 'latY', 'lonY', 'distance', 'closeness']]))
+
+
+plots['F-rprt-meandist'] = histogram(rprtgraph, 'distance', step=10)
 
 
 for k, F in plots.items():
