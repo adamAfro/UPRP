@@ -1,4 +1,45 @@
-\section{Klastry przestrzenne z uwzględnieniem klasyfikacji \ac{IPC}}
+    \newpage\section
+  {Obszary peryferyjne}
+
+Obszary peryferyjne to miejsca odległe od centrów, w tym przypadku
+głównych źródeł aplikacji patentowych. Wyznaczamy je poprzez obliczenie
+średniego dystansu do innych osób pełniących role patentowe.
+Oprócz dystansu do każdego innego punktu, warto jest ograniczyć
+tę statystykę do pewnego obszaru. Polska nie jest jednorodna przestrzennie 
+pod tym względem, stąd peryferyjność nie może być rozumiana tylko 
+na krajowym poziomie, ale również lokalnym.
+
+  \figsides
+{../fig/endo/M.png}
+{ Mapa rozrzutu geolokalizacji osób pełniących role patentowe }
+{../fig/endo/M-meandist100.png}
+{ Mapa średniej odległości do innych osób pełniących role patentowe do 100 km }
+
+\figsides
+{../fig/endo/M-meandist.png}
+{ Mapa średniej odległości do innych osób pełniących role patentowe }
+{../fig/endo/M-meandist50.png}
+{ Mapa średniej odległości do innych osób pełniących role patentowe do 50 km }
+
+  \newpage
+\tblside{../fig/endo/T-meandist.png}{Statystyki dotyczące średnich odległości}{
+\begin{uwaga}
+Średnia odległość po między geolokalizacjami patentowymi jest ważona ---
+ilość patentów pochodzących z danej geolokalizacji jest wagą tego punktu.
+\end{uwaga}}
+
+\figsidesTri
+{../fig/endo/F-meandist.png}
+{ Histogram średnich odległości do innych osób pełniących role patentowe }
+{../fig/endo/F-meandist50.png}
+{ Histogram średnich odległości do innych osób pełniących role patentowe }
+{../fig/endo/F-meandist100.png}
+{ Histogram średnich odległości do innych osób pełniących role patentowe }
+
+
+
+    \newpage\section
+  {Klastry przestrzenne z uwzględnieniem klasyfikacji \ac{IPC}}
 
 \figside
   {../fig/endo/M-cluster.png}
@@ -22,51 +63,8 @@
 
 
 
-\newpage
-\section{Obszary peryferyjne}
 
-Obszary peryferyjne to miejsca odległe od centrów, w tym przypadku
-głównych źródeł aplikacji patentowych. Wyznaczamy je poprzez obliczenie
-średniego dystansu do innych osób pełniących role patentowe.
-Oprócz dystansu do każdego innego punktu, warto jest ograniczyć
-tę statystykę do pewnego obszaru. Polska nie jest jednorodna przestrzennie 
-pod tym względem, stąd peryferyjność nie może być rozumiana tylko 
-na krajowym poziomie, ale również lokalnym.
-
-\figsides
-  {../fig/endo/M.png}
-    {Mapa rozrzutu geolokalizacji osób pełniących role patentowe}
-  {../fig/endo/M-meandist100.png}
-    {Mapa średniej odległości do innych osób pełniących role patentowe do 100 km}
-
-\figsides
-  {../fig/endo/M-meandist.png}
-    {Mapa średniej odległości do innych osób pełniących role patentowe}
-  {../fig/endo/M-meandist50.png}
-    {Mapa średniej odległości do innych osób pełniących role patentowe do 50 km}
-
-\newpage
-\tblside{../fig/endo/T-meandist.png}{Statystyki dotyczące średnich odległości}
-{
-  \begin{uwaga}
-  Średnia odległość po między geolokalizacjami patentowymi jest ważona ---
-  ilość patentów pochodzących z danej geolokalizacji jest wagą tego punktu.
-  \end{uwaga}
-}
-
-\figsidesTri
-  {../fig/endo/F-meandist.png}
-    {Histogram średnich odległości do innych osób pełniących role patentowe}
-  {../fig/endo/F-meandist50.png}
-    {Histogram średnich odległości do innych osób pełniących role patentowe}
-  {../fig/endo/F-meandist100.png}
-    {Histogram średnich odległości do innych osób pełniących role patentowe}
-
-
-
-\newpage
-
-\section{Połączenia opracowane npdst. raportów o stanie techniki}
+\newpage\section{Połączenia opracowane npdst. raportów o stanie techniki}
 
 \figpage{0.8}
   {../fig/endo/M-rprtdist.png}
@@ -76,10 +74,9 @@ na krajowym poziomie, ale również lokalnym.
 
 
 
+    \newpage\section{Dynamika czasowa}
 
-    \section{Dynamika czasowa}
-
-  \newpage\figsides
+  \figsides
 {../fig/endo/M-woj-13.png}
 { Mapa rozrzutu geolokalizacji osób pełniących role patentowe 
   przy patentach, które otrzymały ochronę w 2013 roku}
