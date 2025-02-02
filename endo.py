@@ -1,6 +1,6 @@
 import pandas, numpy, geopandas as gpd, altair as Plot
 from lib.flow import Flow
-import geoloc, subject, raport
+import geoloc, subject, raport, lib.timeseries
 
 @Flow.From()
 def cluster(geo:pandas.DataFrame, method:str, coords:list[str], keys=[], k:int=2, innerperc=False):
@@ -193,6 +193,27 @@ plots[f'T-cluster-meandist'] = Flow(args=[data], callback=lambda X: (
     .encode(Plot.Y('variable:N').title(None),
             Plot.X('kmeans:N').title(None).scale(padding=20))
 ))
+
+plots['T-statio-woj'] = Flow(args=[data, geoloc.region[1]], callback=lambda X, G: (
+
+  lambda S:
+
+    S .pipe(Plot.Chart).mark_point()\
+      .encode(Plot.X('name:N').title(None),
+              Plot.Y('test:N').title(None),
+              Plot.Color('z:N').title('p-wartość'),
+              Plot.Size('p:Q')) + \
+
+    S .query('p < 0.01')\
+      .pipe(Plot.Chart).mark_point(shape='stroke')\
+      .encode(Plot.X('name:N').title(None),
+              Plot.Y('test:N').title(None),
+              Plot.Color('z:N').title('p-wartość'))
+
+)(lib .timeseries.stationary(X, 'wgid', 'grant').set_index('wgid')\
+      .join(G[['name', 'gid']].set_index('gid'))\
+      .eval('name = name.fillna("Polska")')\
+      .eval('z=p<0.05').replace({ True: 'p < 0.05', False: 'p ≥ 0.05' })))
 
 dtplots = dict()
 for r, R in { 'woj': geoloc.region[1], 'pow': geoloc.region[2] }.items():
