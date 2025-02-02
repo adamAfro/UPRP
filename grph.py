@@ -45,11 +45,12 @@ def stat(nodes:pandas.DataFrame, edges:pandas.DataFrame):
 
   return N
 
-rprtgraph = graph(rprt.valid, endo.data, geoloc.dist)
+edges = graph(rprt.valid, endo.data, geoloc.dist)
+nodes = stat(endo.data, edges)
 
 plots = dict()
 
-plots[f'M-rprt-dist'] = Flow(args=[rprtgraph, geoloc.region[1]], callback=lambda X, G: (
+plots[f'M-rprt-dist'] = Flow(args=[edges, geoloc.region[1]], callback=lambda X, G: (
 
   lambda X, G=G:
 
@@ -103,7 +104,7 @@ plots[f'M-rprt-dist'] = Flow(args=[rprtgraph, geoloc.region[1]], callback=lambda
   )(X.reset_index()[['lat', 'lon', 'latY', 'lonY', 'distance', 'closeness']]))
 
 
-plots['F-rprt-meandist'] = endo.histogram(rprtgraph, 'distance', step=10)
+plots['F-rprt-meandist'] = endo.histogram(edges, 'distance', step=10)
 
 for k, F in plots.items():
   F.name = k
