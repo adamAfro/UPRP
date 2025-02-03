@@ -83,7 +83,38 @@ bądź współpracowało przy takim dokumencie z innymi osobami.
 
 
     \newpage\section
-  {[TODO Autokorelacja przestrzenna]}
+  {Globalna autokorelacja przestrzenna}
+
+Statystyka Morana (\cref{Moran-I}) dla globalnej autokorelacji przestrzennej
+jest obliczana zarówno dla ilości wszystkich patentów z danego powiatu, 
+jak i poszczególnych klasyfikacji \ac{IPC}(\cref{IPC}).
+P-wartości określamy permutacyjnie losując przyporządkowanie wartości
+do obiektów przestrzennych\cite{pysal-07}.
+
+\chartside{../fig/corr/T-Moran.png}
+{ Statystyka Morana dla globalnej 
+  autokorelacji przestrzennej }
+{
+  Zakładamy hipotezę zerową, że nie ma autokorelacji przestrzennej, oraz
+alternatywnie, że taka autokorelacja istnieje:
+\begin{itemize}
+\item[$H_0$] Nie ma autokorelacji przestrzennej.
+\item[$H_1$] Jest autokorelacja przestrzenna.
+\end{itemize}}
+
+Zgodnie z wynikami testu, nie ma podstaw do odrzucenia hipotezy zerowej
+o losowości w położeniu punktów patentowych w Polsce dla ogólnej ilości patentów.
+Podobnie należy stwierdzić w przypadku wyszczególnienia patentów z sekcji \ac{IPC},
+z wyjątkiem \textbf{D} oraz \textbf{E}: z przyjętym poziomem istotności $\alpha=0.05$,
+dla tych dwóch sekcji odrzucamy hipotezę zerową o losowości w położeniu punktów.
+
+Należy więc stwierdzić, że nie ma podstaw do twierdzenia, że w Polsce istnieją
+jakieś globalne klastry przestrzenne innowacyjności związanej z patentowaniem.
+Mimo to, w przypadku włókiennictwa i papiernictwa (D) oraz 
+budownictwa i górnictwa (E) można mówić o skupieniu patentów w przestrzeni
+na poziomie krajowym.
+
+\TODO{jeśli coś się zmieni w danych to trzeba to sprawdzić jeszcze raz}
 
 
 
