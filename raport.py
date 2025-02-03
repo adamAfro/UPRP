@@ -391,6 +391,7 @@ def result(R: dict[str, pandas.DataFrame]):
 @Flow.From()
 def edges(X:pandas.DataFrame):
 
+  X = X[X[('', '', '', 'level')] >= "partial-dated-supported"]
   Y = pandas.DataFrame({'to': X.index.get_level_values('entrydoc'),
                         'from': X.index.get_level_values('doc')})
   return Y

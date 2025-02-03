@@ -125,19 +125,19 @@ plots[f'F-rprt-comp'] = Flow.Forward([comps], lambda X:
   X .query('nodes > 1')\
     .pipe(Pt.Chart).mark_bar()\
     .properties(width=0.4*A4.W, height=0.1*A4.H)\
-    .encode(Pt.X('Adelay:Q').title('Dni między składaniem aplikacji').bin(),
+    .encode(Pt.X('Adelay:Q').title('Dni między składaniem aplikacji').bin(step=100),
             Pt.Y('count(Adelay)').title(None)) &\
 
   X .query('nodes > 1')\
     .pipe(Pt.Chart).mark_bar()\
     .properties(width=0.4*A4.W, height=0.1*A4.H)\
-    .encode(Pt.X('Gdelay:Q').title('Dni między ochroną patentową').bin(),
+    .encode(Pt.X('Gdelay:Q').title('Dni między ochroną patentową').bin(step=100),
             Pt.Y('count(Gdelay)').title(None)) &\
 
   X .query('meandist > 0')\
     .pipe(Pt.Chart).mark_bar()\
     .properties(width=0.4*A4.W, height=0.1*A4.H)\
-    .encode(Pt.X('meandist:Q').title('Średni dystans krawędzi (d >1)').bin(step=10),
+    .encode(Pt.X('meandist:Q').title('Średni dystans krawędzi (d > 0)').bin(step=10),
             Pt.Y('count(meandist)').title(None)) )
 
 plots[f'M-rprt-dist'] = Flow(args=[edges, gloc.region[1]], callback=lambda X, G: (
