@@ -185,3 +185,6 @@ class Flow():
 
   def Forward(args=[], callback=lambda x: x):
     return Flow(callback=callback, args=args)
+
+def forward(arg, func):
+  return Flow(callback=func, args=[arg])
