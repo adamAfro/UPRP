@@ -17,6 +17,7 @@
 \usepackage{lmodern}
 
 
+\usepackage{xcolor}
 \usepackage{tabularx}
 \usepackage{float}
 \usepackage{needspace}
@@ -397,3 +398,17 @@
                 %%     stron do jednakowej wysokości
 
 \linespread{1.3}
+
+
+
+
+
+\newcommand{\D}[3]{
+  \begin{defi}
+    \textbf{#2} --- #3
+    \label{#1}
+    \end{defi}
+}
+
+
+\newcommand{\TODO}[1]{\footnotesize\textcolor{white}{\colorbox{red}{TODO: \texttt{#1}}}}
