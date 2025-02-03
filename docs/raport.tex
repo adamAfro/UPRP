@@ -108,7 +108,7 @@ wierzchołkach $V = { p_1, p_2, p_3 }$.
 Zakładając, że wpisy ekspertów zawierają wyłącznie kody publikacji 
 patentów, graf mógłby być stworzony przez bezpośrednie powiązanie
 ich z danymi. Istotnym problemem w takiej sytuacji jest jakość \ac{OCR},
-która jest dobra, ale nie pewna.\todonote{jakaś miara jakości}
+która jest dobra, ale nie pewna.
 Wpisy ekspertów nie są jednak jednorodne w taki sposób. Problem
 rozpoznania znaków nie jest jedyny, bo pojawiają się kolejne:
 
@@ -116,7 +116,7 @@ rozpoznania znaków nie jest jedyny, bo pojawiają się kolejne:
 \item wątpliwa jakość \ac{OCR}
 \item wpisy to nie tylko kody patentowe
 \item wspominane kody patentowe nie zawsze są publikacjami,
-      mogą to być np. kody złożenia aplikacji\todonote{przykład}
+      mogą to być np. kody złożenia aplikacji
 \end{itemize}
 
 \begin{figure}[H]\centering
@@ -146,13 +146,9 @@ częściowe, które dopasowuje n-gramy poszczególnych słów. Od pewnego
 minimalnego dopasowania zostają one uwzględnione. Całość wymaga
 pewnych kroków optymalizacyjnych. Głównym jest zasada, że słowa
 są dopasowywane tylko pod warunkiem, że zaszło dopasowanie numeru
-patentu. \todonote{umieścić przykład}
+patentu.
 
 W trakcie wyszukiwania tworzona jest jego punktacja, aby odróżnić
 wartościowe wyniki. Oprócz punktacji jest też ustalanie poziomu
 wyszukiwania na podstawie tego jakie rzeczywiste dane są łącznikami.
-Wybierane są wyłącznie pojedyncze, najlepsze wyniki.\todonote{szczgł. opis}
-
-
-
-\fig{../fig/F-results.rap.png}{Wyniki wyszukiwania cytowań z raportów o stanie techniki}
+Wybierane są wyłącznie pojedyncze, najlepsze wyniki.

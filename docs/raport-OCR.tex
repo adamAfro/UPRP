@@ -6,8 +6,6 @@ Rozwiązaniem jest proces \ac{OCR}, który obrazy zawierające tekst
 przekształca na kod binarny, które można przetwarzać na komputerze
 jako ciągi znaków odpowiadające prawdziwemu tekstowi. Pierwszą
 czynnością w tym procesie jest zastosowanie pakietu \textit{paddle}.
-\todonote{Dodać link do \textit{paddle}}
-\todonote{Opisać strukturę pat.}
 Zastosowanie modułu pozwala na pozyskanie linijek tekstu z przypisaniem
 do ich pozycji. Wynika z tego problem taki, że nie brak jest informacji
 o tym gdzie zaczyna i kończy się tekst dotyczący wskazanej obserwacji.
@@ -17,37 +15,6 @@ skanowania samych dokumentów - zniekształcenia, zaciemnienia, czy
 rotacje kartek sprawiają, że proces \ac{OCR} nie jest idealny.
 Dodatkowo samo formatowanie nierzadko jest wadliwe co wynika
 z wprowadzania danych jeszcze na etapie tworzenia dokumentów.
-
-
-
-\subsubsection{Problemy standardowego \ac{OCR}}
-
-\begin{enumerate}
-\item data obs. 1. jest niżej niż linia tekstowa - 
-nie wiadomo czy przypisać do obs. 1. czy do obs. 2.;
-\item znak obs. 2. jest niżej niż powinien - nie wiadomo
-czy przypisać do obs. 2. czy do obs. 3., a z tego wynika,
-że nie wiadomo, czy obs. 2 w ogóle istnieje, czy jest też
-rozwinięciem obs. 1;
-\item zastrzeżenie obs. 3. jest bardzo blisko daty, a ta
-z kolei to sam rok - nie wiadomo, czy zastrzeżenie jest częścią
-daty.
-\end{enumerate}
-
-\begin{verbatim}
-<NAGŁÓWEK ZNAKU>      <NAGŁÓWEK TEKSTU>                      <NAGŁ. ZAS.>
-<ZNAK OBS=1>      <KOD PAT. OBS=1> <TEKST PAT. OBS=1><DATA OBS=1> <ZAS. OBS=1>
-<ZNAK OBS=2>      <TEKST LITERATURY OBS=2>
-                  <TEKST LITERATURY OBS=3>           <DATA OBS=3> <ZAS. OBS=3>
-\end{verbatim}
-\sidenote{Czy potrzeb. są przykł.?}
-\todonote{Zrobić to jako obraz}
-
-Problemy te są rozwiązywalne, ale zastosowanie zasad geometrii,
-wykrywania linii oraz wyszukiwania słów kluczowych są niewystarczające
-do osiągnięcia zadowalających wyników. Także sieci neuronowe oparte
-o wskazane informacje nie radziły sobie z zadaniem.
-\sidenote{Tzn. ja nie potrafi. zrobić takiej sieci}
 
 
 
@@ -65,6 +32,3 @@ Mimo, że model \textit{paddle} nie dawał wyników pozwalających na
 poprawną dalszą analizę to pozwolił na ograniczenie kosztów. Znalezienie
 słów kluczowych nagłówków i stopek tabeli z informacjami było wystarczające
 aby przyciąć zdjęcia do obszarów zainteresowania.
-
-\todonote{Opisać problem literówek}
-\sidenote{Czy opisywać proces GPT4o?}
