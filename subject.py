@@ -186,21 +186,21 @@ def ptregion(X:gpd.GeoDataFrame, R:gpd.GeoDataFrame, idname:str):
 
 from registry import flow as f0
 
-affilG = affilgeo(f0['registry']['2013']).map('subject/affilate-geo.pkl')
-affilN = affilnames(affilG).map('subject/affilate.pkl')
+affilG = affilgeo(f0['registry']['2013']).map('cache/affilate-geo.pkl')
+affilN = affilnames(affilG).map('cache/affilate.pkl')
 
-sim = simcalc(affilN).map('subject/sim.pkl')
+sim = simcalc(affilN).map('cache/sim.pkl')
 
-identities = identify(sim=sim, all=f0['registry']['2013']).map('subject/entity.pkl')
+identities = identify(sim=sim, all=f0['registry']['2013']).map('cache/entity.pkl')
 
 geofilled0 = fillgeo(entities=identities, group='entity', loceval='identity')
-geofilled = fillgeo(entities=geofilled0, group='doc', loceval='document').map('subject/filled.pkl')
+geofilled = fillgeo(entities=geofilled0, group='doc', loceval='document').map('cache/filled.pkl')
 
 mapped0 = Flow('make gpd', lambda X: gpd.GeoDataFrame(X.reset_index().assign(year=X['grant'].dt.year), 
                                                       geometry=gpd.points_from_xy(X.lon, X.lat, crs='EPSG:4326')), 
                                                       args=[geofilled])
 mappedw = ptregion(mapped0, gloc.region[1], 'wgid')
-mappedp = ptregion(mappedw, gloc.region[2], 'pgid').map('subject/mapped.pkl')
+mappedp = ptregion(mappedw, gloc.region[2], 'pgid').map('cache/mapped.pkl')
 mapped = mappedp
 
 flow = { 'subject': { 'map': mapped,

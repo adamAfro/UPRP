@@ -224,14 +224,14 @@ from patent import flow as fP
 
 FN0 = Nameclsf({ D['UPRP']+'/assignement.yaml':   f0['UPRP']['profiling'],
                 D['Lens']+'/assignement.yaml':   f0['Lens']['profiling'],
-                D['Google']+'/assignement.yaml': f0['Google']['profiling'] }).map('registry/names.pkl')
+                D['Google']+'/assignement.yaml': f0['Google']['profiling'] }).map('cache/names.pkl')
 
-F0 = Pull(f0['UPRP']['profiling'], assignpath=D['UPRP']+'/assignement.yaml').map('registry/pulled.pkl')
+F0 = Pull(f0['UPRP']['profiling'], assignpath=D['UPRP']+'/assignement.yaml').map('cache/pulled.pkl')
 
-FN = Textual(F0, nameset=FN0).map('registry/textual.pkl')
+FN = Textual(F0, nameset=FN0).map('cache/textual.pkl')
 
 FGT = Spacetime(FN, fP['UPRP']['geoloc'], fP['UPRP']['event'], 
-                  fP['UPRP']['classify']).map('registry/spacetime.pkl')
+                  fP['UPRP']['classify']).map('cache/spacetime.pkl')
 
 sel2013 = lambda X: ((X['grant'] >= '2013-01-01') & (X['grant'] <= '2022-12-31'))
 F2013 = Flow(callback=lambda *X: X[0][sel2013(X[0])], args=[FGT])

@@ -48,7 +48,7 @@ for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']:
   data = meandist(data, gloc.dist, coords=['lat', 'lon'], rads=[50, 100], 
                   filtr=lambda X, k=k: X[f'clsf-{k}'] > 0, symbol=k)
 
-data = data.map('endo/final.pkl')
+data = data.map('cache/final.pkl')
 
 plots = dict()
 
