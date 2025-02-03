@@ -1,6 +1,6 @@
 import pandas, numpy, geopandas as gpd, altair as Plot
 from lib.flow import Flow
-import gloc, subject, lib.timeseries
+import gloc, subject
 from util import A4
 
 @Flow.From()
