@@ -1,6 +1,7 @@
 import pandas, numpy, geopandas as gpd, altair as Plot
 from lib.flow import Flow
 import gloc, subject, lib.timeseries
+from util import A4
 
 @Flow.From()
 def meandist(geo:pandas.DataFrame, dist:pandas.DataFrame, coords:list[str], rads=[], filtr=None, symbol=''):
@@ -166,6 +167,14 @@ def mseasonplot(X:pandas.DataFrame, k:str): return (
 )(X[[k]].groupby(pandas.Grouper(key=k, freq='M', label='left'))\
    .size().rename('month').reset_index())
 
+def statpos(V:pandas.Series):
+  return V.astype(float).describe().loc[['25%', '50%', '75%', 'mean', 'min', 'max']]\
+    .rename({ 'mean': 'średnia', 'max': 'maks.', 'min': 'min.' }).reset_index()
+
+def statrange(V:pandas.Series):
+  return pandas.DataFrame({ 'mean': [V.mean()], 'std': [V.std()], 'index': 'odchylenie' })\
+    .eval('y1 = mean - (std / 2)').eval('y2 = mean + (std / 2)')
+
 plots['F-Q'] = qseasonplot(data, 'grant')
 plots['F-mo'] = mseasonplot(data, 'grant')
 
@@ -264,18 +273,45 @@ for r in ['', '50', '100']:
 
     lambda X, G=G, r=r:
 
-    gpd .sjoin(gpd.GeoDataFrame(X, geometry=gpd.points_from_xy(X.lon, X.lat, crs=G.crs)), G, 
-                how='right', predicate="within")\
-        .groupby('geometry')[f'meandist{r}'].mean().reset_index()\
-        .pipe(gpd.GeoDataFrame, geometry='geometry', crs=G.crs)\
-        .pipe(Plot.Chart).mark_geoshape(stroke='black')\
-        .encode(color=Plot.Color(f'meandist{r}:Q')\
-                          .scale(scheme='blueorange')\
-                          .title('Śr. d. w pow.')).project('mercator')
+      gpd .sjoin(gpd.GeoDataFrame(X, geometry=gpd.points_from_xy(X.lon, X.lat, crs=G.crs)), G, 
+                  how='right', predicate="within")\
+          .groupby('geometry')[f'meandist{r}'].mean().reset_index()\
+          .pipe(gpd.GeoDataFrame, geometry='geometry', crs=G.crs)\
+          .pipe(Plot.Chart).mark_geoshape(stroke='black')\
+          .encode(Plot.Color(f'meandist{r}:Q')\
+                      .legend(orient='bottom')
+                      .scale(scheme='blueorange')\
+                      .title('Śr. d. w pow.'))\
 
-  )(X.value_counts(['lat', 'lon', f'meandist{r}']).reset_index()) | Plot.hconcat(*([
-    histogram(data, f'meandist{k}{r}', title=k)() for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
-  ]+[histogram(data, f'meandist{r}')()])))
+          .project('mercator').properties(width=0.3*A4.W, height=0.3*A4.W)
+
+  )(X .value_counts(['lat', 'lon', f'meandist{r}']).reset_index()) & Plot.vconcat(*([
+
+    X[[f'meandist{k}{r}']].pipe(Plot.Chart).mark_bar()\
+      .properties(width=0.3*A4.W, height=0.025*A4.H)\
+      .encode(Plot.X(f'meandist{k}{r}:Q')\
+                  .bin(step=int(int(r)//20) if r else 10)\
+                  .title(f'Dystans {k}'),
+              Plot.Y('count()')\
+                  .title(None)) +\
+
+    statpos(X[f'meandist{k}{r}'])\
+      .pipe(Plot.Chart).mark_rule(strokeWidth=2)\
+      .encode(Plot.X(f'meandist{k}{r}:Q'),
+              Plot.Color('index:N')\
+                  .legend(orient='bottom', columns=4)\
+                  .title('Statystyka')\
+                  .scale(scheme='category10')) +\
+
+    statrange(X[f'meandist{k}{r}'])\
+      .pipe(Plot.Chart).mark_rule(y=0.01*A4.H, strokeWidth=2)\
+      .encode(Plot.X('y1:Q'), Plot.X2('y2:Q'),
+              Plot.Color('index:N')\
+                  .legend(orient='bottom', columns=4))
+
+      for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', '']
+
+  ]) ) )
 
 for k, F in plots.items():
   F.name = k
@@ -287,3 +323,4 @@ for k, F in dtplots.items():
 
 plots['M-woj'] = Flow(args=[F for k, F in dtplots.items() if 'M-woj' in k], callback=lambda *X: None)
 plots['M-pow'] = Flow(args=[F for k, F in dtplots.items() if 'M-pow' in k], callback=lambda *X: None)
+plots['A-M-meandist'] = Flow(args=[F for k, F in plots.items() if 'M-meandist' in k], callback=lambda *X: None)
