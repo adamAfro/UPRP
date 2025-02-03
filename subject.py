@@ -221,11 +221,11 @@ plots[f'F-geoloc-eval-clsf'] = Flow(args=[mapped], callback=lambda X:
                         'identity': 'npdst. tożsamości' })\
               .value_counts(['IPC', 'loceval']).reset_index())
 
-      .mark_bar().encode( Plot.Y(f'count:Q').title(None),
+      .mark_bar().encode( Plot.X(f'count:Q').title(None),
                           Plot.Color('loceval:N')\
                               .title('Metoda geolokalizacji')\
                               .legend(orient='bottom', columns=1),
-                          Plot.X('IPC:N').title('Klasyfikacja')))
+                          Plot.Y('IPC:N').title('Klasyfikacja')))
 
 plots[f'F-geoloc-eval'] = Flow(args=[mapped], callback=lambda X:
 
@@ -236,8 +236,8 @@ plots[f'F-geoloc-eval'] = Flow(args=[mapped], callback=lambda X:
                         'identity': 'npdst. tożsamości' })\
              .value_counts(['year', 'loceval']).reset_index())
 
-      .mark_bar().encode( Plot.X('year:O').title('Rok'),
-                          Plot.Y('count:Q').title(None),
+      .mark_bar().encode( Plot.Y('year:O').title('Rok'),
+                          Plot.X('count:Q').title(None),
                           Plot.Color('loceval:N')\
                               .title('Metoda geolokalizacji')\
                               .legend(orient='bottom', columns=2)))
