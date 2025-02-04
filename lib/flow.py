@@ -188,3 +188,22 @@ class Flow():
 
 def forward(arg, func):
   return Flow(callback=func, args=[arg])
+
+def make(name=str(None), cls=None):
+
+  import inspect
+
+  if cls is None: cls = Flow
+
+  def decorator(func):
+    def wrapper(*args, **kwargs):
+
+      S = inspect.signature(func)
+      P = list(S.parameters.keys())
+      K = {k: v for k, v in kwargs.items() if k in P}
+      A = args[:len(P)]
+
+      return cls(name, callback=func, args=A, kwargs=K)
+
+    return wrapper
+  return decorator
