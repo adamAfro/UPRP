@@ -15,6 +15,49 @@
     \newpage\section
   {Połączenia opracowane npdst. raportów o stanie techniki}
 
+  \chartside
+{../fig/grph/F-nodes.png}
+{ Statystyki wierzchołków grafu raportów stanu techniki }
+{ Wykres \cref{../fig/grph/F-nodes.png} przedstawia statystyki
+  dotyczące wierzchołków grafu opracowanego na podstawie raportów
+  o stanie techniki. Należy zaznaczyć, że w histogramach zastosowano
+  skalę logarytmiczną. W dwóch pierwszych wykresach wartości są skupione
+  przy zerze. Obserwujemy więc, skośność w lewo, a fakt zastosowania
+  skali logarytmicznej wskazuje, że jest ona bardzo duża.
+  W przypadku rozkładu stopnii wierzchołków (wykres pierwszy od góry)
+  można zauważyć, że dużo częściej wierzchołki mają niski stopień.
+  Można to interpretować tak, że wynalazki osób zwiazanych z patentami w Polsce
+  nie są wskazywane w raportach o stanie techniki często, a więc dyfuzja wiedzy
+  jest ograniczona. }
+
+Entropia klasyfikacji odnosi się do entropii sekcji klasyfikacji \ac{IPC} w jakich
+publikowała dana osoba (pracowała przy patencie o danej klasyfikacji).
+Podobnie jak w przypadku stopnia wierzchołka, wartości są skupione przy zerze.
+W zwiazku z tym należy przypuszczać, że wynalazki tworzone przez osoby
+pracujące przy patentach w Polsce nie są zróżnicowane pod względem klasyfikacji \ac{IPC}.
+
+\TODO{interpretacja bliskości w grafie i popr. wykres}
+
+\newpage
+
+  \chartside
+{../fig/grph/F-edges.png}
+{ Statystyki krawędzi grafu raportów stanu techniki }
+{ Wykres \cref{../fig/grph/F-edges.png} przedstawia statystyki krawędzi grafu.
+  Można zaobserwować, że w przypadku prawie połowy krawędzi dystans jest zerowy.
+  Oznacza to, że osoby pracujące przy patentach bardzo często inspirowały się
+  pracami osób w bezpośrednim sąsiedztwie. Na historgamie widać również,
+  duże skupienie wartości w okolicach 20 kilometrów. Kolejną modę można zauważyć
+  przy wartościach około 270 kilometrów.
+  Okres oczekiwania \TODO{krót. opis} ...}
+
+Indeks Jaccarda
+w dużej większości jest równy $1$, w mniejszej liczbie $0.5$.
+Zgodnie z definicją \TODO{dodać def} interpretujemy to jako fakt, że
+podobieństwo patentowe, identyfikowane w raportach o stanach techniki,
+występuje zazwyczaj, gdy patenty są klasyfkowane identycznie, albo
+różnica klasyfikacji jest niewielka.
+
 Na następnej stronie znajdują się mapy z zaznaczonymi połączeniami.
 
 \newpage
@@ -23,11 +66,7 @@ Na następnej stronie znajdują się mapy z zaznaczonymi połączeniami.
 {../fig/grph/M-rprt-dist.png}
 { Połączenia opracowane npdst. raportów o stanie techniki }\newpage
 
-  \chartduo
-{../fig/grph/F-edges.png}
-{ Statystyki krawędzi grafu raportów stanu techniki }
-{../fig/grph/F-nodes.png}
-{ Statystyki wierzchołków grafu raportów stanu techniki }
+\newpage
 
   \chartside
 {../fig/grph/F-rprt-comp.png}
