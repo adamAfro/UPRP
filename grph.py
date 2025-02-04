@@ -8,6 +8,37 @@ def graph(edgdocs:pandas.DataFrame,
           edgaffil:pandas.DataFrame,
           dist:pandas.DataFrame):
 
+  """
+  Tworzenie grafu na podstawie raportów o stanie techniki
+  =======================================================
+
+  Graf $G$ jest grafem skierowanym o krawędziach $E$ i węzłach
+  będących osobami pełniącymi role patentowe.
+
+  Jest stworzony na podstawie raportów o stanie techniki
+  składa się z 2 rodzajów węzłów: patentów i osób pełniących 
+  role patentowe.
+
+  Pierwszym etapem jest utworzenie krawędzi $E_r$ między dokumentami.
+  Każdy raport dotyczy jednego patentu, a może odwoływać się 
+  do wielu innych. Odwołanie umieszczone w raporcie do innego
+  patentu traktujemy jako krawędź w grafie skierowanym $G_r$.
+  Kierunek grafu jest zgodny z przepływem informacji, co znaczy,
+  że patent którego dotyczy raport jest węzłem końcowym,
+  a wszystkie patenty wymienione w raporcie są węzłami początkowymi.
+
+  Drugim etapem jest utworzenie krawędzi $E_x$ między osobami,
+  a dokumentami. Najpierw krawędzie skierowane są tworzone 
+  w kierunku dokumentów, które były wymieniane w raportach.
+  Następnie krawędzie $E_y$ z patentów będących przedmiotami 
+  raportów są tworzone w kierunku osób, które są ich autorami.
+
+  Ostatecznie krawędzie $E$ grafu powstają jeśli istnieje ściezka
+  między 2 wierzchołkami reprezentującymi osoby. Zgodnie z kierunkiem
+  grafu, te krawędzie są skierowane, a ich zwrot reprezentuje kierunek
+  przepływu wiedzy.
+  """
+
   edgdocs = rprt.valid()
   edgaffil = endo.data()
   dist = gloc.dist()
