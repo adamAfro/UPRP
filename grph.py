@@ -9,8 +9,8 @@ def graph(edgdocs:pandas.DataFrame,
           dist:pandas.DataFrame):
 
   """
-  Tworzenie grafu na podstawie raportów o stanie techniki
-  =======================================================
+    \subsubsection
+  {Tworzenie grafu na podstawie raportów o stanie techniki}
 
   Graf $G$ jest grafem skierowanym o krawędziach $E$ i węzłach
   będących osobami pełniącymi role patentowe.
