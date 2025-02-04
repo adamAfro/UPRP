@@ -1,4 +1,4 @@
-import pandas, numpy, geopandas as gpd, altair as Plot, altair as Pt
+import pandas, numpy, geopandas as gpd, altair as Plot, altair as Pt, networkx as nx
 from lib.flow import Flow
 import lib.flow, gloc, endo, raport as rprt
 from util import A4
@@ -44,8 +44,6 @@ def graph(edgdocs:pandas.DataFrame,
 @Flow.From()
 def findcomp(nodes:pandas.DataFrame, edges:pandas.DataFrame):
 
-  import networkx as nx
-
   N = nodes
   E = edges
 
@@ -59,9 +57,6 @@ def findcomp(nodes:pandas.DataFrame, edges:pandas.DataFrame):
   C = pandas.Series(nx.connected_components(G)).explode()
   C = C.reset_index().set_index(0)['index'].rename('comp')
   N = N.join(C)
-
-  N['degree'] = pandas.DataFrame(nx.degree(G)).set_index(0)[1]
-  N['closeness'] = pandas.Series(nx.closeness_centrality(G, distance='weight'))
 
   return N
 
@@ -80,11 +75,82 @@ def statcomp(nodes:pandas.DataFrame, edges:pandas.DataFrame):
 
   return C
 
-edges = graph(rprt.valid, endo.data, gloc.dist)
-nodes = findcomp(endo.data, edges)
-comps = statcomp(nodes, edges).map('cache/compstat.pkl')
+@Flow.From()
+def aggppl(nodes:pandas.DataFrame, edges:pandas.DataFrame):
+
+  X = nodes
+  E = edges
+
+ #klasyfikacja per patent
+  for l in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']:
+    X[f'Npat{l}'] = (X[f'clsf-{l}'] > 0).astype(int)
+
+  X['gloc'] = X[['lat', 'lon']].apply(tuple, axis=1)
+  X = X.groupby('entity')\
+       .agg({ 'gloc': pandas.Series.mode,
+
+              **{ f'Npat{l}': 'sum' for l in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] } })
+
+  X['lat'] = X['gloc'].apply(lambda x: x[0])
+  X['lon'] = X['gloc'].apply(lambda x: x[1])
+
+  G = nx.Graph()
+  G.add_nodes_from(X.index)
+  G.add_weighted_edges_from(E[['entity', 'entityY', 'distance']].values)
+
+  X['degree'] = [G.degree(n) for n in X.index]
+  X['closeness'] = [1 / (G.degree(n)+1) for n in X.index]
+
+ #entropia: sumarycznie p(x) log(p(x))
+  T = X[['NpatA', 'NpatB', 'NpatC', 'NpatD', 'NpatE', 'NpatF', 'NpatG', 'NpatH']]\
+        .apply(lambda x: x/x.sum())\
+        .map(lambda x: - x*numpy.log(x) if x > 0 else 0)\
+        .sum(axis=1)
+
+  X['entropy'] = T
+  X = X.drop(columns=['gloc'])
+
+  return X
+
+
+edges = graph(rprt.valid, endo.data, gloc.dist).map('cache/edges.pkl')
+nodes0 = findcomp(endo.data, edges)
+comps = statcomp(nodes0, edges).map('cache/compstat.pkl')
+nodes = aggppl(endo.data, edges)
 
 plots = dict()
+
+plots['F-nodes'] = lib.flow.forward(nodes, lambda X:
+
+  X[['degree']]\
+    .pipe(Pt.Chart).mark_bar()\
+    .properties(width=0.4*A4.W, height=0.2*A4.H)
+    .encode(Pt.X('degree:Q')\
+              .title('Stopień węzła')\
+              .bin(step=10),
+            Pt.Y('count(degree)')\
+              .scale(type='log')\
+              .title('Ilość węzłów o danym stopniu (skala logarytmiczna)')) &\
+
+  X[['entropy']]\
+    .pipe(Pt.Chart).mark_bar()\
+    .properties(width=0.4*A4.W, height=0.1*A4.H)
+    .encode(Pt.X('entropy:Q').bin(step=0.01)\
+              .title('Poziom entropii sekcji klasyfikacji'),
+            Pt.Y('count(entropy)')\
+              .scale(type='log')\
+              .title('(Skala logarytmiczna)')) &\
+
+  X[['closeness']]\
+    .pipe(Pt.Chart).mark_bar()\
+    .properties(width=0.4*A4.W, height=0.1*A4.H)
+    .encode(Pt.X('closeness:Q').bin(step=0.01)\
+              .title('Bliskość w grafie'),
+            Pt.Y('count(closeness)')\
+              .scale(type='log')\
+              .title('(Skala logarytmiczna)'))
+
+)
 
 plots['F-edges'] = lib.flow.forward(edges, lambda X:(
 
@@ -245,7 +311,7 @@ plots[f'M-rprt-dist'] = Flow(args=[edges, gloc.region[1]], callback=lambda X, G:
 
         for start, end in [(200, 300), (300, 450), (450, 800)]])
 
-  )(X.reset_index()[['lat', 'lon', 'latY', 'lonY', 'distance', 'closeness']]))
+  )(X[['lat', 'lon', 'latY', 'lonY', 'distance', 'closeness']]))
 
 for k, F in plots.items():
   F.name = k
