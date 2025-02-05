@@ -10,7 +10,7 @@ W kontekście patentów, modelowany jest przepływ wiedzy.
 
 Składniki równania reprezetnują następujące wartości:\begin{itemize}
 
-\item \( X_{i,j} \) --- wykorzystanie patentów z regionu \( i \) 
+\item \( T_{i,j} \) --- wykorzystanie patentów z regionu \( i \) 
                         w regionie \( j \)
 
 \item \( A \) --- stała proporcjonalności
@@ -32,9 +32,7 @@ W modelu uwzględniamy także inne efekty: \begin{itemize}
 
 \item $J_{i,j}$ --- podobieństwo Jaccarda dla klasyfikacji
 
-\item $\stackrel{\mu}{P}_{i,j}$ --- średnia okresu po między składaniem aplikacji patentowych
-
-\item $\stackrel{\sigma}{P}_{i,j}$ --- rozrzut okresów po między składaniem aplikacji patentowych
+\item ${P}_{i,j}$ --- średnia okresu po między składaniem aplikacji patentowych
 
 \end{itemize}
 
@@ -45,8 +43,7 @@ dodatkowe efekty:
   + \alpha \ln N_i
   + \beta \ln N_j 
   + \gamma \ln J_{i,j}
-  + \delta \ln \stackrel{\mu}{P}_{i,j}
-  + \eta \ln \stackrel{\sigma}{P}_{i,j}
+  + \delta \ln {P}_{i,j}
   + \theta \ln D_{i,j}
   \end{equation}
 """
@@ -90,7 +87,7 @@ def prep(nodes:pandas.DataFrame, edges:pandas.DataFrame):
   N = V.value_counts('pgid')
   G = E.groupby(['pgid', 'pgidY'])
   T = G.size()
-  P = G['Adelay'].mean()
+  P = G['Adelay'].mean().rename('P')
   D = G['distance'].first().rename('D')
 
   Y = T.rename('T').reset_index()
@@ -114,7 +111,7 @@ def linr(preped:pandas.DataFrame):
   X = preped
   X = numpy.log(X)
 
-  m = sm.OLS(X['T'], sm.add_constant(X[['i', 'j', 'D']])).fit()
+  m = sm.OLS(X['T'], sm.add_constant(X[['i', 'j', 'D', 'P']])).fit()
 
   return m
 
@@ -142,7 +139,7 @@ def linrplot(m:sm.OLS, preped:pandas.DataFrame):
   X = preped
   X = numpy.log(X)
 
-  X['Y'] = m.predict(sm.add_constant(X[['i', 'j', 'D']]))
+  X['Y'] = m.predict(sm.add_constant(X[['i', 'j', 'D', 'P']]))
   X['e'] = X['T'] - X['Y']
 
   P =  X.pipe(Pt.Chart).mark_point(opacity=0.1)\
@@ -175,6 +172,7 @@ def linrplot(m:sm.OLS, preped:pandas.DataFrame):
   C['index'] = C['index'].replace({'j': 'wyjś.',
                                    'i': 'wejś.',
                                    'D': 'dystans',
+                                   'P': 'opóźnienie',
                                    'const': 'stała'})
   C['variable'] = C['variable'].replace({'P>|t|': 'p-wartość',
                                          'Coef.': 'wartość',
@@ -202,7 +200,7 @@ mplot = linrplot(model, data).map('fig/grav/linr.png')
 
 plots = dict()
 
-plots['F-data'] = lib.flow.forward(data, lambda X, K=['T', 'i', 'j', 'D', 'Pm', 'Ps']: 
+plots['F-data'] = lib.flow.forward(data, lambda X, K=['T', 'i', 'j', 'D', 'P']: 
 
   Pt.vconcat(*[X[[k]].pipe(Pt.Chart).mark_bar()\
     .properties(width=0.7*A4.W, height=0.1*A4.H)\
