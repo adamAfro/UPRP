@@ -40,3 +40,8 @@ fig/*
 !**/*/assignement.yaml
 
 *.xlsx
+
+workdir
+
+*.pdf
+*.PDF

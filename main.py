@@ -65,10 +65,6 @@ for a in sys.argv[1:]:
 
   f = None
 
-  if a.startswith('doc-'):
-    doc = True
-    a = a[4:]
-
   if ('.' in a):
     k, h = a.split('.')
     if (k in flow.keys()) and (h in flow[k].keys()):
@@ -76,23 +72,4 @@ for a in sys.argv[1:]:
   elif a in flow.keys():
     f = flow[a]
 
-  if not doc: f(forced=True)
-  else:
-
-    done = []
-    def mkdoc(f):
-
-      global done
-      if not isinstance(f, Flow): return
-      for x in f.args: mkdoc(x)
-      for x in f.kwargs.values(): mkdoc(x)
-
-      if f.name == str(None): return
-      if f.name in done: return
-      if f.callback.__doc__ is None: return
-
-      with open(f'./docs/flow/{f.name}.tex', 'w') as f0:
-        done.append(f.name)
-        f0.write(f.callback.__doc__)
-
-    mkdoc(f)
+  f(forced=True)
