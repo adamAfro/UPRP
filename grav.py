@@ -76,6 +76,8 @@ def prep(nodes:pandas.DataFrame, edges:pandas.DataFrame):
   Oznacza to, że zakładami minimalną karę na
   poziomie 1 kilometra
   \end{uwaga}
+
+  \chart{../fig/grav/F-data.png}{Rozkład zmiennych}{}
   """
 
   E = edges
@@ -199,6 +201,16 @@ model = linr(data)
 mplot = linrplot(model, data).map('fig/grav/linr.png')
 
 plots = dict()
+
+plots['F-data'] = lib.flow.forward(data, lambda X, K=['T', 'i', 'j', 'D', 'Pm', 'Ps']: 
+
+  Pt.vconcat(*[X[[k]].pipe(Pt.Chart).mark_bar()\
+    .properties(width=0.7*A4.W, height=0.1*A4.H)\
+    .encode(Pt.X(k).bin().title(k),
+            Pt.Y(f'count({k})')\
+              .scale(type='log')\
+              .title(None) ) for k in K]) )
+
 
 plots['F-linr'] = linrplot(model, data)
 
