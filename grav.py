@@ -142,6 +142,11 @@ def linrplot(m:sm.OLS, preped:pandas.DataFrame):
   X['Y'] = m.predict(sm.add_constant(X[['i', 'j', 'D', 'P']]))
   X['e'] = X['T'] - X['Y']
 
+  R =X.pipe(Pt.Chart).mark_bar()\
+      .properties(width=0.4*A4.W, height=0.05*A4.W)\
+      .encode(Pt.X('e:Q').title('Reszty').bin(step=0.25),
+              Pt.Y('count(e):Q').title(None))
+
   P =  X.pipe(Pt.Chart).mark_point(opacity=0.1)\
         .properties(width=0.4*A4.W, height=0.4*A4.W)\
         .encode(Pt.X('T')\
@@ -192,7 +197,7 @@ def linrplot(m:sm.OLS, preped:pandas.DataFrame):
                 Pt.X('variable:N').title(None),
                 Pt.Y('index:N').title(None))
 
-  return P & (S | B | A)
+  return R & P & (S | B | A)
 
 data = prep(grph.nodes0, grph.edges)
 model = linr(data)
