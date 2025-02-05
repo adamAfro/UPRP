@@ -178,28 +178,6 @@ def statrange(V:pandas.Series):
 plots['F-Q'] = qseasonplot(data, 'grant')
 plots['F-mo'] = mseasonplot(data, 'grant')
 
-
-plots['T-statio-woj'] = Flow(args=[data, gloc.region[1]], callback=lambda X, G: (
-
-  lambda S:
-
-    S .pipe(Plot.Chart).mark_point()\
-      .encode(Plot.X('name:N').title(None),
-              Plot.Y('test:N').title(None),
-              Plot.Color('z:N').title('p-wartość'),
-              Plot.Size('p:Q')) + \
-
-    S .query('p < 0.01')\
-      .pipe(Plot.Chart).mark_point(shape='stroke')\
-      .encode(Plot.X('name:N').title(None),
-              Plot.Y('test:N').title(None),
-              Plot.Color('z:N').title('p-wartość'))
-
-)(lib .timeseries.stationary(X, 'wgid', 'grant').set_index('wgid')\
-      .join(G[['name', 'gid']].set_index('gid'))\
-      .eval('name = name.fillna("Polska")')\
-      .eval('z=p<0.05').replace({ True: 'p < 0.05', False: 'p ≥ 0.05' })))
-
 dtplots = dict()
 for r, R in { 'woj': gloc.region[1], 'pow': gloc.region[2] }.items():
 
