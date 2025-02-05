@@ -34,6 +34,8 @@ W modelu uwzględniamy także inne efekty: \begin{itemize}
 
 \item ${P}_{i,j}$ --- średnia okresu po między składaniem aplikacji patentowych
 
+\item $\stackrel{\sigma}{P}_{i,j}$ --- rozrzut okresu po między składaniem aplikacji patentowych
+
 \end{itemize}
 
 Ostatecznie otrzymujemy postać liniową dla zmiennej $T$ uwzględniającej
@@ -44,6 +46,7 @@ dodatkowe efekty:
   + \beta \ln N_j 
   + \gamma \ln J_{i,j}
   + \delta \ln {P}_{i,j}
+  + \eta \ln \stackrel{\sigma}{P}_{i,j}
   + \theta \ln D_{i,j}
   \end{equation}
 """
@@ -88,6 +91,7 @@ def prep(nodes:pandas.DataFrame, edges:pandas.DataFrame):
   G = E.groupby(['pgid', 'pgidY'])
   T = G.size()
   P = G['Adelay'].mean().rename('P')
+  Pd = (G['Adelay'].std().fillna(1).replace({0: 1})/P).rename('Pd')
   D = G['distance'].first().rename('D')
 
   Y = T.rename('T').reset_index()
@@ -98,7 +102,7 @@ def prep(nodes:pandas.DataFrame, edges:pandas.DataFrame):
   Y = Y.set_index(['pgidY']).join(N.rename('j'))
 
   Y = Y .reset_index().set_index(['pgid', 'pgidY'])\
-        .join(D).join(P).reset_index()
+        .join(D).join(P).join(Pd).reset_index()
 
   Y = Y.astype(float)
   Y['D'] = Y['D'].replace(0., 1.)
@@ -129,9 +133,9 @@ def linr(preped:pandas.DataFrame):
   X = preped
   X = numpy.log(X)
 
-  m = sm.OLS(X['T'], sm.add_constant(X[['i', 'j', 'D', 'P']])).fit()
+  m = sm.OLS(X['T'], sm.add_constant(X[['i', 'j', 'D', 'P', 'Pd']])).fit()
 
-  X['Y'] = m.predict(sm.add_constant(X[['i', 'j', 'D', 'P']]))
+  X['Y'] = m.predict(sm.add_constant(X[['i', 'j', 'D', 'P', 'Pd']]))
   X['e'] = X['T'] - X['Y']
 
   R =X.pipe(Pt.Chart).mark_bar()\
@@ -199,9 +203,9 @@ def pois(preped:pandas.DataFrame):
   X = preped
   X = numpy.log(X)
 
-  m = sm.Poisson(X['T'], sm.add_constant(X[['i', 'j', 'D', 'P']])).fit()
+  m = sm.Poisson(X['T'], sm.add_constant(X[['i', 'j', 'D', 'P', 'Pd']])).fit()
 
-  X['Y'] = m.predict(sm.add_constant(X[['i', 'j', 'D', 'P']]))
+  X['Y'] = m.predict(sm.add_constant(X[['i', 'j', 'D', 'P', 'Pd']]))
   X['e'] = X['T'] - X['Y']
 
   R =X.pipe(Pt.Chart).mark_bar()\
@@ -264,11 +268,11 @@ def nelo(preped:pandas.DataFrame):
   X = preped
   X = numpy.log(X)
 
-  m = sm.GLM( X['T'], sm.add_constant(X[['i', 'j', 'D', 'P']]), 
+  m = sm.GLM( X['T'], sm.add_constant(X[['i', 'j', 'D', 'P', 'Pd']]), 
               family=sm.families.NegativeBinomial(link=sm.families.links.log())).fit()
 
 
-  X['Y'] = m.predict(sm.add_constant(X[['i', 'j', 'D', 'P']]))
+  X['Y'] = m.predict(sm.add_constant(X[['i', 'j', 'D', 'P', 'Pd']]))
   X['e'] = X['T'] - X['Y']
 
   R =X.pipe(Pt.Chart).mark_bar()\
@@ -334,7 +338,7 @@ data = prep(grph.nodes0, grph.edges)
 
 plots = dict()
 
-plots['F-data'] = lib.flow.forward(data, lambda X, K=['T', 'i', 'j', 'D', 'P']: 
+plots['F-data'] = lib.flow.forward(data, lambda X, K=['T', 'i', 'j', 'D', 'P', 'Pd']: 
 
   Pt.vconcat(*[X[[k]].pipe(Pt.Chart).mark_bar()\
     .properties(width=0.7*A4.W, height=0.1*A4.H)\
