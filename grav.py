@@ -32,7 +32,9 @@ W modelu uwzględniamy także inne efekty: \begin{itemize}
 
 \item $J_{i,j}$ --- podobieństwo Jaccarda dla klasyfikacji
 
-\item $P_{i,j}$ --- okres po między składaniem aplikacji patentowych
+\item $\stackrel{\mu}{P}_{i,j}$ --- średnia okresu po między składaniem aplikacji patentowych
+
+\item $\stackrel{\sigma}{P}_{i,j}$ --- rozrzut okresów po między składaniem aplikacji patentowych
 
 \end{itemize}
 
@@ -43,7 +45,8 @@ dodatkowe efekty:
   + \alpha \ln N_i
   + \beta \ln N_j 
   + \gamma \ln J_{i,j}
-  + \delta \ln P_{i,j}
+  + \delta \ln \stackrel{\mu}{P}_{i,j}
+  + \eta \ln \stackrel{\sigma}{P}_{i,j}
   + \theta \ln D_{i,j}
   \end{equation}
 """
