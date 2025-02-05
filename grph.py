@@ -143,8 +143,30 @@ def aggppl(nodes:pandas.DataFrame, edges:pandas.DataFrame):
 
   return X
 
+@lib.flow.make()
+def GIDassign(X:pandas.DataFrame):
 
-edges = graph(rprt.valid, endo.data, gloc.dist).map('cache/edges.pkl')
+  """
+  \textbf{Przyporządkowanie unikalnych identyfikatorów do wierzchołków grafu} ---
+  działanie optynalizacyjne, które ogranicza liczbę operacji na danych.
+  """
+
+  A = X[['lat', 'lon']].drop_duplicates()
+  B = X[['latY', 'lonY']].drop_duplicates()
+  B = B.rename(columns={'latY': 'lat', 'lonY': 'lon'})
+  I = pandas.concat([A, B]).drop_duplicates()
+  I['gid'] = range(0, len(I))
+  I = I.set_index(['lat', 'lon'])['gid']
+
+  X = X.merge(I, left_on=['lat', 'lon'], right_index=True, how='left')
+
+  I = I.rename('gidY')
+  X = X.merge(I, left_on=['latY', 'lonY'], right_index=True, how='left')
+
+  return X
+
+edges0 = graph(rprt.valid, endo.data, gloc.dist).map('cache/edges.pkl')
+edges = GIDassign(edges0)
 nodes0 = findcomp(endo.data, edges)
 comps = statcomp(nodes0, edges).map('cache/compstat.pkl')
 nodes = aggppl(endo.data, edges)

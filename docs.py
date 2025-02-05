@@ -34,6 +34,12 @@ w procesie dyfuzji wiedzy.
 
 \include{docs/metric}
 
+\include{grav}
+
+\include{grav:linr}
+
+\include{grav:linrplot}
+
 
 
   \chapter{Źródła danych patentowych}\label{ch:data}
@@ -146,7 +152,7 @@ def include(x:str, root):
 
 def main():
 
-  D = readdocstr(['grph'])
+  D = readdocstr(['grph', 'grav'])
 
   root = os.path.dirname(os.path.abspath(__file__))
   wd = './workdir'
@@ -181,7 +187,7 @@ def main():
     k0 = os.sys.argv[1]
 
     x = { k: v for k, v in D.items() if k.startswith(k0) }
-    x = '\n'.join(v for k, v in x.items())
+    x = '\n\n'.join(v for k, v in x.items() if v is not None)
 
     y = rf"""
     \documentclass[12pt, withmarginpar]{{mwbk}}
