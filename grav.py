@@ -217,8 +217,10 @@ def pois(preped:pandas.DataFrame):
                 Pt.Y('Y')\
                   .scale(domain=[-1, 10])\
                   .title('Predykcje'))
-
-  S = pandas.DataFrame([('stat', 0)], columns=['label', 'value'])
+  S = pandas.DataFrame([('AIC', m.aic),
+                        ('BIC', m.bic),
+                        ('st.s.m.', m.df_model),
+                        ('st.s.r.', m.df_resid)], columns=['label', 'value'])
 
   S = S .pipe(Pt.Chart).mark_text()\
         .properties(width=0.05*A4.W, height=0.1*A4.H)\
@@ -277,13 +279,19 @@ def nelo(preped:pandas.DataFrame):
   P =  X.pipe(Pt.Chart).mark_point(opacity=0.1)\
         .properties(width=0.4*A4.W, height=0.4*A4.W)\
         .encode(Pt.X('T')\
-                  .scale(domain=[-1, 10])\
+                  .scale(domain=[-1, 15])\
                   .title('Log. obserwacji'), 
                 Pt.Y('Y')\
-                  .scale(domain=[-1, 10])\
+                  .scale(domain=[-1, 15])\
                   .title('Predykcje'))
 
-  S = pandas.DataFrame([('stat', 0)], columns=['label', 'value'])
+  S = pandas.DataFrame([('AIC', m.aic),
+                        ('BIC', m.bic),
+                        ('st.s.m.', m.df_model),
+                        ('st.s.r.', m.df_resid),
+                        ('pseudo-R²', m.pseudo_rsquared()),
+                        ('odchyl.', m.deviance),
+                        ('chi.', m.pearson_chi2)], columns=['label', 'value'])
 
   S = S .pipe(Pt.Chart).mark_text()\
         .properties(width=0.05*A4.W, height=0.1*A4.H)\
