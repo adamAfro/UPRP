@@ -44,7 +44,7 @@ dodatkowe efekty:
   + \beta \ln N_j 
   + \gamma \ln J_{i,j}
   + \delta \ln P_{i,j}
-  + \theta \log D_{i,j}
+  + \theta \ln D_{i,j}
   \end{equation}
 """
 
