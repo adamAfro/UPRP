@@ -113,6 +113,7 @@ def prep(nodes:pandas.DataFrame, edges:pandas.DataFrame):
 def linr(preped:pandas.DataFrame):
 
   r"""
+  \newpage
   \subsubsection{Wykres modelu grawitacyjnego}
 
   Wykres przedstawia porównanie wartości obserwowanych z wartościami
@@ -174,6 +175,7 @@ def linr(preped:pandas.DataFrame):
                                    'i': 'wejś.',
                                    'D': 'dystans',
                                    'P': 'opóźnienie',
+                                   'Pd': 'rozrzut opóźnienia',
                                    'const': 'stała'})
   C['variable'] = C['variable'].replace({'P>|t|': 'p-wartość',
                                          'Coef.': 'wartość',
@@ -198,7 +200,10 @@ def linr(preped:pandas.DataFrame):
 @lib.flow.make()
 def pois(preped:pandas.DataFrame):
 
-  "Poission regression"
+  r"""
+  \newpage
+  \chartside{../fig/grav/F-pois.png}{Model regresji Poissona}{}
+  """
 
   X = preped
   X = numpy.log(X)
@@ -263,7 +268,13 @@ def pois(preped:pandas.DataFrame):
 @lib.flow.make()
 def nelo(preped:pandas.DataFrame):
 
-  "Negative Binomial regression with a log link"
+  r"""
+  \newpage
+  \chartside{../fig/grav/F-nelo.png}{
+  Model Generalized Linear Model (GLM) 
+  z rodziny dystrybucji Negative Binomial 
+  (ujemna dwumianowa) i funkcją linku logarytmicznego}{}
+  """
 
   X = preped
   X = numpy.log(X)
