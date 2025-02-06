@@ -58,10 +58,22 @@ import lib.flow, grph
 
 #calc
 import pandas, numpy, statsmodels.api as sm
+from statsmodels.stats.outliers_influence import variance_inflation_factor as vif
+
 
 #plot
 import altair as Pt
 from util import A4
+
+Translate = { 'i': 'wejś.',
+              'j': 'wyjś.',
+              'D': 'dystans',
+              'P': 'opóźnienie (śr.)',
+              'Pd': 'opóźnienia (rt.)',
+              'T': 'przepływ',
+              'pearcorr': 'kor. Pearsona',
+              'VIFC': 'VIF ze stałą',
+                                            }
 
 @lib.flow.make()
 def prep(nodes:pandas.DataFrame, edges:pandas.DataFrame):
@@ -343,20 +355,79 @@ def nelo(preped:pandas.DataFrame):
 
   return P & R & (S | B | A)
 
+@lib.flow.make()
+def varvis(X:pandas.DataFrame, K:list[str], k0:str):
+
+  r"""
+  \subsubsection{Wizualizalizacja zmiennych}
+  """
+
+ #hist
+  P = { k: Pt.Chart(X[[k]]).mark_bar() for k in K}
+  P = { k: p.encode(Pt.X(f'{k}:Q').bin().title(Translate.get(k, k)),
+                    Pt.Y(f'count({k})').scale(type='log')\
+                      .title(None)) for k, p in P.items() }
+  E = { k0:p for k, p in P.items() if k == k0 }
+  G = { k: p for k, p in P.items() if k != k0 }
+  c = X[K].corr(method='pearson')
+
+ #stat
+  S = { k: pandas.DataFrame(index=[k]) for k in G.keys() }
+  S = { k: s.assign(VIF=[vif(X[K].values, i)]) for i, (k, s) in enumerate(S.items()) }
+  S = { k: s.assign(VIFC=[vif(X[K].assign(const=1).values, i)]) for i, (k, s) in enumerate(S.items()) }
+  S = { k: s.assign(pearcorr=[c.loc[k, k0]]) for k, s in S.items() }
+  S = { k: s.T.reset_index() for k, s in S.items() }
+  S = { k: s.map(lambda x: Translate.get(x, x)) for k, s in S.items() }
+
+  S = {k: Pt.Chart(s).mark_text() for k, s in S.items() }
+  S = {k: p.encode( Pt.Text(k, format='.2f'),
+                    Pt.Y('index:N').title(None)) for k, p in S.items()}
+
+ #correxog
+  c = c.unstack().rename('value').reset_index()
+  c = c.map(lambda x: Translate.get(x, x))
+  C = {k0: Pt.Chart(c).mark_rect() }
+  C = { k: p.encode(Pt.X('level_0:N').title(None),
+                    Pt.Y('level_1:N').title(None),
+                    Pt.Color('value:Q').title(Translate.get('pearcorr', 'r'))\
+                      .legend(orient='top')
+                      .scale(scheme='blueorange', domain=[-1, 1])) for k, p in C.items() }
+
+  Ct = {k0: Pt.Chart(c).mark_text(fontSize=8) }
+  Ct = {k: p.encode(Pt.X('level_0:N').title(None),
+                    Pt.Y('level_1:N').title(None),
+                    Pt.Text('value:Q', format='.2f')) for k, p in Ct.items() }
+
+ #rozrzut
+  R0 = {k: Pt.Chart(X[[k, k0]]).mark_point(opacity=0.1).properties(width=0.1*A4.H, height=0.1*A4.H)  for k in P.keys() if k != k0 }
+  R0 = {k: p.encode(Pt.X(k).title(None)\
+                      .scale(type='log'),
+                    Pt.Y(k0).title(Translate.get(k0, k0))\
+                      .scale(type='log')) for k, p in R0.items() }
+
+ #regresja
+  R = {k: p.transform_regression(k, k0).mark_line(color='red') for k, p in R0.items() }
+  R = {k: p.encode( Pt.X(k).scale(type='log', domain=[X[k].min(), X[k].max()]),
+                    Pt.Y(k0).scale(type='log', domain=[X[k0].min(), X[k0].max()])) for k, p in R.items()}
+
+  G = { k: p.properties(width=0.6*A4.W, height=0.1*A4.H) for k, p in G.items() }
+  S = { k: p.properties(width=0.05*A4.W, height=0.1*A4.H) for k, p in S.items() }
+  R = { k: p.properties(width=0.1*A4.H, height=0.1*A4.H) for k, p in R.items() }
+  R0 = {k: p.properties(width=0.1*A4.H, height=0.1*A4.H) for k, p in R0.items()}
+  G = { k: G[k]|S[k]|(R0[k]+R[k]) for k in G.keys() }
+
+  E = { k: p.properties(width=0.6*A4.W, height=0.1*A4.H) for k, p in E.items() }
+  C = { k: p.properties(width=0.1*A4.H, height=0.1*A4.H) for k, p in C.items() }
+  E = { k: E[k]|(C[k]+Ct[k]) for k in E.keys() }
+
+  return Pt.vconcat(*{ **E, **G }.values())
 
 
 data = prep(grph.nodes0, grph.edges)
 
 plots = dict()
 
-plots['F-data'] = lib.flow.forward(data, lambda X, K=['T', 'i', 'j', 'D', 'P', 'Pd']: 
-
-  Pt.vconcat(*[X[[k]].pipe(Pt.Chart).mark_bar()\
-    .properties(width=0.7*A4.W, height=0.1*A4.H)\
-    .encode(Pt.X(k).bin().title(k),
-            Pt.Y(f'count({k})')\
-              .scale(type='log')\
-              .title(None) ) for k in K]) )
+plots['F-data'] = varvis(data, ['T', 'i', 'j', 'D', 'P', 'Pd'], 'T')
 
 
 plots['F-linr'] = linr(data)
