@@ -73,7 +73,14 @@ Translate = { 'i': 'wejś.',
               'T': 'przepływ',
               'pearcorr': 'kor. Pearsona',
               'VIFC': 'VIF ze stałą',
+              'J': 'Jaccard',
                                             }
+
+class Jaccard:
+
+  def m(a, b): return sum(map(min, a, b))
+  def M(a, b): return sum(map(max, a, b))
+  def j(a, b): return 1 if Jaccard.M(a, b) == 0 else Jaccard.m(a, b) / Jaccard.M(a, b)
 
 @lib.flow.make()
 def prep(nodes:pandas.DataFrame, edges:pandas.DataFrame):
@@ -95,12 +102,20 @@ def prep(nodes:pandas.DataFrame, edges:pandas.DataFrame):
   E = edges
   V = nodes
 
+  IPC = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+
  #klasyfikacja per patent
-  for l in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']:
+  for l in IPC:
     E[f'Npat{l}'] = (E[f'clsf-{l}'] > 0).astype(int)
+    E[f'Npat{l}Y'] = (E[f'clsf-{l}Y'] > 0).astype(int)
 
   N = V.value_counts('pgid')
   G = E.groupby(['pgid', 'pgidY'])
+  J = G.agg({**{ f'Npat{l}': 'sum' for l in IPC}, **{ f'Npat{l}Y': 'sum' for l in IPC}})
+  J = J.apply(lambda x, left, right: Jaccard.j(x[left].values, x[right].values), axis=1,
+              left=[f'Npat{l}' for l in IPC],
+              right=[f'Npat{l}Y' for l in IPC]).rename('J')
+  J = J + 1
   T = G.size()
   P = G['Adelay'].mean().rename('P')
   Pd = (G['Adelay'].std().fillna(1).replace({0: 1})/P).rename('Pd')
@@ -114,7 +129,7 @@ def prep(nodes:pandas.DataFrame, edges:pandas.DataFrame):
   Y = Y.set_index(['pgidY']).join(N.rename('j'))
 
   Y = Y .reset_index().set_index(['pgid', 'pgidY'])\
-        .join(D).join(P).join(Pd).reset_index()
+        .join(D).join(J).join(P).join(Pd).reset_index()
 
   Y = Y.astype(float)
   Y['D'] = Y['D'].replace(0., 1.)
@@ -122,7 +137,7 @@ def prep(nodes:pandas.DataFrame, edges:pandas.DataFrame):
   return Y
 
 @lib.flow.make()
-def linr(preped:pandas.DataFrame):
+def linr(preped:pandas.DataFrame, K:list[str]):
 
   r"""
   \newpage
@@ -146,9 +161,9 @@ def linr(preped:pandas.DataFrame):
   X = preped
   X = numpy.log(X)
 
-  m = sm.OLS(X['T'], sm.add_constant(X[['i', 'j', 'D', 'P', 'Pd']])).fit()
+  m = sm.OLS(X['T'], sm.add_constant(X[K])).fit()
 
-  X['Y'] = m.predict(sm.add_constant(X[['i', 'j', 'D', 'P', 'Pd']]))
+  X['Y'] = m.predict(sm.add_constant(X[K]))
   X['e'] = X['T'] - X['Y']
 
   R =X.pipe(Pt.Chart).mark_bar()\
@@ -210,7 +225,7 @@ def linr(preped:pandas.DataFrame):
   return P & R & (S | B | A)
 
 @lib.flow.make()
-def pois(preped:pandas.DataFrame):
+def pois(preped:pandas.DataFrame, K:list[str]):
 
   r"""
   \newpage
@@ -220,9 +235,9 @@ def pois(preped:pandas.DataFrame):
   X = preped
   X = numpy.log(X)
 
-  m = sm.Poisson(X['T'], sm.add_constant(X[['i', 'j', 'D', 'P', 'Pd']])).fit()
+  m = sm.Poisson(X['T'], sm.add_constant(X[K])).fit()
 
-  X['Y'] = m.predict(sm.add_constant(X[['i', 'j', 'D', 'P', 'Pd']]))
+  X['Y'] = m.predict(sm.add_constant(X[K]))
   X['e'] = X['T'] - X['Y']
 
   R =X.pipe(Pt.Chart).mark_bar()\
@@ -278,7 +293,7 @@ def pois(preped:pandas.DataFrame):
   return P & R & (S | B | A)
 
 @lib.flow.make()
-def nelo(preped:pandas.DataFrame):
+def nelo(preped:pandas.DataFrame, K:list[str]):
 
   r"""
   \newpage
@@ -291,11 +306,11 @@ def nelo(preped:pandas.DataFrame):
   X = preped
   X = numpy.log(X)
 
-  m = sm.GLM( X['T'], sm.add_constant(X[['i', 'j', 'D', 'P', 'Pd']]), 
+  m = sm.GLM( X['T'], sm.add_constant(X[K]), 
               family=sm.families.NegativeBinomial(link=sm.families.links.log())).fit()
 
 
-  X['Y'] = m.predict(sm.add_constant(X[['i', 'j', 'D', 'P', 'Pd']]))
+  X['Y'] = m.predict(sm.add_constant(X[K]))
   X['e'] = X['T'] - X['Y']
 
   R =X.pipe(Pt.Chart).mark_bar()\
@@ -401,13 +416,13 @@ def varvis(X:pandas.DataFrame, K:list[str], k0:str):
  #rozrzut
   R0 = {k: Pt.Chart(X[[k, k0]]).mark_point(opacity=0.1).properties(width=0.1*A4.H, height=0.1*A4.H)  for k in P.keys() if k != k0 }
   R0 = {k: p.encode(Pt.X(k).title(None)\
-                      .scale(type='log'),
+                      .scale(),
                     Pt.Y(k0).title(Translate.get(k0, k0))\
                       .scale(type='log')) for k, p in R0.items() }
 
  #regresja
   R = {k: p.transform_regression(k, k0).mark_line(color='red') for k, p in R0.items() }
-  R = {k: p.encode( Pt.X(k).scale(type='log', domain=[X[k].min(), X[k].max()]),
+  R = {k: p.encode( Pt.X(k).scale(domain=[X[k].min(), X[k].max()]),
                     Pt.Y(k0).scale(type='log', domain=[X[k0].min(), X[k0].max()])) for k, p in R.items()}
 
   G = { k: p.properties(width=0.6*A4.W, height=0.1*A4.H) for k, p in G.items() }
@@ -427,12 +442,12 @@ data = prep(grph.nodes0, grph.edges)
 
 plots = dict()
 
-plots['F-data'] = varvis(data, ['T', 'i', 'j', 'D', 'P', 'Pd'], 'T')
+plots['F-data'] = varvis(data, ['T', 'i', 'j', 'D', 'P', 'Pd', 'J'], 'T')
 
 
-plots['F-linr'] = linr(data)
-plots['F-pois'] = pois(data)
-plots['F-nelo'] = nelo(data)
+plots['F-linr'] = linr(data, ['i', 'j', 'D', 'P', 'Pd', 'J'])
+plots['F-pois'] = pois(data, ['i', 'j', 'D', 'P', 'Pd', 'J'])
+plots['F-nelo'] = nelo(data, ['i', 'j', 'D', 'P', 'Pd', 'J'])
 
 for k, F in plots.items():
   F.name = k
