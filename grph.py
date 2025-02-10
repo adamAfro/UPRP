@@ -174,8 +174,6 @@ def network(docrefs:pandas.DataFrame,
 
     return (((mX | mY).resolve_scale(color='shared') & mD) | (d & v0 & vj & v)).resolve_scale(size='independent')
 
-  carto()
-
   return E, N, carto()
 
 web = network(rprt.valid, endo.data, gloc.dist,
