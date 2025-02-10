@@ -128,6 +128,13 @@ def network(docrefs:pandas.DataFrame,
                    .title('Ilość patentów')\
                    .legend(orient='top', columns=2))
 
+    dt = Pt.Chart(E.assign(year=E['application'].dt.year.astype(int))).mark_circle()
+    dt = dt.encode(Pt.X('year:O').title('Rok apl. cytowanego pat.').axis(values=[2006, 2013, 2018, 2022]))
+    dt = dt.encode(Pt.Y('tapplication:Q').title('Opóźnienie').bin(step=365))
+    dt = dt.encode(Pt.Size('count()')\
+                     .title('Ilość patentów')\
+                     .legend(orient='top', columns=2))
+
     EGX = E.groupby(spatial).agg({ 'id': 'size', 'distance': 'mean' })
     mX = Pt.Chart(EGX).mark_circle().project('mercator')
     mX = mX.encode(Pt.Latitude(spatial[0], type='quantitative'))
@@ -161,6 +168,7 @@ def network(docrefs:pandas.DataFrame,
                      .legend(orient='bottom', columns=3))
 
     d = d.properties(width=0.1*A4.W, height=0.2*A4.W)
+    dt = dt.properties(width=0.1*A4.W, height=0.2*A4.W)
     v0 = v0.properties(width=0.1*A4.W, height=0.05*A4.W)
     v = v.properties(width=0.1*A4.W, height=0.05*A4.W)
     vj = vj.properties(width=0.1*A4.W, height=0.05*A4.W)
@@ -172,7 +180,7 @@ def network(docrefs:pandas.DataFrame,
       mY = Pt.Chart(borders).mark_geoshape(fill='black') + mY
       mD = Pt.Chart(borders).mark_geoshape(fill='black') + mD
 
-    return (((mX | mY).resolve_scale(color='shared') & mD) | (d & v0 & vj & v)).resolve_scale(size='independent')
+    return (((mX | mY).resolve_scale(color='shared') & mD) | (d & dt) | (v0 & vj & v)).resolve_scale(size='independent')
 
   return E, N, carto()
 
