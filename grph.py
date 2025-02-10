@@ -1,12 +1,21 @@
-import pandas, numpy, geopandas as gpd, altair as Plot, altair as Pt, networkx as nx
-from lib.flow import Flow
+#lib
 import lib.flow, gloc, endo, raport as rprt
+
+#calc
+import pandas, altair as Pt, networkx as nx
+
+#plot
+import altair as Pt
 from util import A4
 
-@Flow.From()
-def graph(edgdocs:pandas.DataFrame, 
-          edgaffil:pandas.DataFrame,
-          dist:pandas.DataFrame):
+@lib.flow.make()
+def network(docrefs:pandas.DataFrame, 
+            docsign:pandas.DataFrame,
+            dist:pandas.DataFrame,
+            spatial:list[str],
+            temporal:list[str],
+            Jsim=[], feats=[],
+            borders=None):
 
   """
     \subsubsection
@@ -39,311 +48,141 @@ def graph(edgdocs:pandas.DataFrame,
   przepływu wiedzy.
   """
 
-  edgdocs = rprt.valid()
-  edgaffil = endo.data()
-  dist = gloc.dist()
+  assert { 'application' }.issubset(docsign.columns), docsign['application']
 
-  A = edgaffil.reset_index()
+  R = docrefs
+  N = docsign
+  D = dist
 
-  D = edgdocs
-  D['edge'] = range(len(D))
+  K = spatial + temporal + Jsim + feats
+  N = N[['id', 'doc']+K]
 
-  X = A.set_index('doc').join(D.set_index('from'), how='inner')
-  Y = A.set_index('doc').join(D.set_index('to'), how='inner')
-  E = X.set_index('edge').join(Y.set_index('edge'), rsuffix='Y', how='inner').reset_index()
+ #graf
+  R['edge'] = range(len(R))
 
-  E = E.set_index(['lat', 'lon', 'latY', 'lonY'])
+  EX = N.set_index('doc').join(R.set_index('from'), how='inner')
+  EY = N.set_index('doc').join(R.set_index('to'), how='inner')
 
-  d = dist.reset_index().melt(id_vars=[('lat', ''), ('lon', '')], value_name='distance')
-  d.columns = ['lat', 'lon', 'latY', 'lonY', 'distance']
-  d = d.set_index(['lat', 'lon', 'latY', 'lonY'])
-  E = E.join(d).reset_index()
+  E = EX.reset_index().set_index('edge')
+  E = E.join(EY.set_index('edge'), rsuffix='Y', how='inner')
+  E = E.reset_index().drop(columns=['edge'])
 
-  E['closeness'] = 1 / (E['distance']+1)
-  E['Gdelay'] = (E['grantY'] - E['grant']).dt.days.astype(int)
-  E['Adelay'] = (E['applicationY'] - E['application']).dt.days.astype(int)
+ #dystans
+  Ks = spatial + [f'{k}Y' for k in spatial]
+  E = E.set_index(Ks)
+  D = D.reset_index().melt(id_vars=[(spatial[0], ''), 
+                                    (spatial[1], '')], value_name='distance')
+  D.columns = Ks + ['distance']
+  D = D.set_index(Ks)
+  E = E.join(D).reset_index()
 
-  E = E[E['Adelay'] > 0]
+ #czas
+  for k in temporal:
+    E[f't{k}'] = (E[f'{k}Y'] - E[k]).dt.days.astype(int)
+    E = E.drop(columns=[f'{k}Y'])
+
+ #poprawka na błędne dane
+  E = E[E['tapplication'] > 0]
 
  #Jaccard
-  JX = E.apply(lambda x: frozenset([l for l in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] if x[f'clsf-{l}'] > 0]), axis=1)
-  JY = E.apply(lambda x: frozenset([l for l in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] if x[f'clsf-{l}Y'] > 0]), axis=1)
+  JX = E.apply(lambda x: frozenset([k for k in Jsim if x[k] > 0]), axis=1)
+  JY = E.apply(lambda x: frozenset([k[:-1] for k in [f'{k0}Y' for k0 in Jsim] if x[k] > 0]), axis=1)
   E['Jaccard'] = JX.to_frame().join(JY.rename(1)).apply(lambda x: len(x[0] & x[1]) / len(x[0] | x[1]), axis=1)
+  E = E.drop(columns=Jsim+[f'{k}Y' for k in Jsim])
 
-  return E
-
-@Flow.From()
-def findcomp(nodes:pandas.DataFrame, edges:pandas.DataFrame):
-
-  N = nodes
-  E = edges
-
-  N = N.set_index('id')
-
-  G = nx.Graph()
-  G.add_nodes_from(N.index)
-  G.add_weighted_edges_from(E[['id', 'idY', 'distance']].values)
+  E = E.drop(columns=feats+[f'{k}Y' for k in feats])
 
  #komponenty
-  C = pandas.Series(nx.connected_components(G)).explode()
-  C = C.reset_index().set_index(0)['index'].rename('comp')
-  N = N.join(C)
-
-  return N
-
-@Flow.From()
-def statcomp(nodes:pandas.DataFrame, edges:pandas.DataFrame):
-
-  N = nodes
-  E = edges
-
-  C = N.value_counts('comp').rename('nodes').to_frame()
-  C['meandegree'] = N.groupby('comp')['degree'].mean()
-  C['meancloseness'] = N.groupby('comp')['closeness'].mean()
-  C['meandist'] = E.set_index('id').join(N['comp']).groupby('comp')['distance'].mean()
-  C['Gdelay'] = E.set_index('id').join(N['comp']).groupby('comp')['Gdelay'].mean()
-  C['Adelay'] = E.set_index('id').join(N['comp']).groupby('comp')['Adelay'].mean()
-
-  return C
-
-@Flow.From()
-def aggppl(nodes:pandas.DataFrame, edges:pandas.DataFrame):
-
-  X = nodes
-  E = edges
-
- #klasyfikacja per patent
-  for l in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']:
-    X[f'Npat{l}'] = (X[f'clsf-{l}'] > 0).astype(int)
-
-  X['gloc'] = X[['lat', 'lon']].apply(tuple, axis=1)
-  X = X.groupby('entity')\
-       .agg({ 'gloc': pandas.Series.mode,
-
-              **{ f'Npat{l}': 'sum' for l in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] } })
-
-  X['lat'] = X['gloc'].apply(lambda x: x[0])
-  X['lon'] = X['gloc'].apply(lambda x: x[1])
-
   G = nx.Graph()
-  G.add_nodes_from(X.index)
-  G.add_weighted_edges_from(E[['entity', 'entityY', 'distance']].values)
+  G.add_edges_from(E[['id', 'idY']].values)
+  C0 = list(nx.connected_components(G))
+  C = pandas.DataFrame([x for x in zip(range(len(C0)), C0)])[[1]]
+  C['len'] = C[1].apply(len)
+  C = C.sort_values('len').reset_index(drop=True).reset_index().explode(1)
+  C.columns = ['component', 'id', 'csize']
+  C['component'] = C['component'].map(lambda x: f'C{x}')
+  N = N.set_index('id').join(C.set_index('id')).reset_index()
 
-  X['degree'] = [G.degree(n) for n in X.index]
-  X['closeness'] = [1 / (G.degree(n)+1) for n in X.index]
+  def carto():
 
- #entropia: sumarycznie p(x) log(p(x))
-  T = X[['NpatA', 'NpatB', 'NpatC', 'NpatD', 'NpatE', 'NpatF', 'NpatG', 'NpatH']]\
-        .apply(lambda x: x/x.sum())\
-        .map(lambda x: - x*numpy.log(x) if x > 0 else 0)\
-        .sum(axis=1)
+    v0 = Pt.Chart(pandas.Series({ 'izolowane': N['component'].isna().sum(), 
+                                 'w składowych': (~N['component'].isna()).sum() }).rename('count').reset_index()).mark_bar()
+    v0 = v0.encode(Pt.Y('index:N').title(''))
+    v0 = v0.encode(Pt.X('count:Q').title('Ilość osób'))
 
-  X['entropy'] = T
-  X = X.drop(columns=['gloc'])
+    v = Pt.Chart(N['component'].value_counts().reset_index()).mark_area()
+    v = v.transform_density('count', as_=['count', 'density'])
+    v = v.encode(Pt.X('count:Q').title('Ilość składowych'))
+    v = v.encode(Pt.Y('density:Q').title('Gęstość'))
 
-  return X
+    vj = Pt.Chart(N['component'].value_counts().reset_index()).mark_circle(size=1)
+    vj = vj.transform_calculate(jitter='sqrt(-2*log(random()))*cos(2*PI*random())')
+    vj = vj.encode(Pt.X('count:Q').title(None))
+    vj = vj.encode(Pt.Y('jitter:Q').axis(None).title(None))
+    vj = vj.encode(Pt.Opacity('count:Q').scale(range=[0.5, 1]).legend(None))
 
+    d = Pt.Chart(E).mark_circle()
+    d = d.encode(Pt.X('distance:Q').title('Dystans').bin(step=100))
+    d = d.encode(Pt.Y('tapplication:Q').title('Opóźnienie').bin(step=365))
+    d = d.encode(Pt.Size('count()')\
+                   .title('Ilość patentów')\
+                   .legend(orient='top', columns=2))
 
-edges = graph(rprt.valid, endo.data, gloc.dist).map('cache/edges.pkl')
-nodes0 = findcomp(endo.data, edges)
-comps = statcomp(nodes0, edges).map('cache/compstat.pkl')
-nodes = aggppl(endo.data, edges)
-
-plots = dict()
-
-plots['F-nodes'] = lib.flow.forward(nodes, lambda X:
-
-  X[['degree']]\
-    .pipe(Pt.Chart).mark_bar()\
-    .properties(width=0.4*A4.W, height=0.2*A4.H)
-    .encode(Pt.X('degree:Q')\
-              .title('Stopień węzła')\
-              .bin(step=10),
-            Pt.Y('count(degree)')\
-              .scale(type='log')\
-              .title('Ilość węzłów o danym stopniu (skala logarytmiczna)')) &\
-
-  X[['entropy']]\
-    .pipe(Pt.Chart).mark_bar()\
-    .properties(width=0.4*A4.W, height=0.1*A4.H)
-    .encode(Pt.X('entropy:Q').bin(step=0.01)\
-              .title('Poziom entropii sekcji klasyfikacji'),
-            Pt.Y('count(entropy)')\
-              .scale(type='log')\
-              .title('(Skala logarytmiczna)')) &\
-
-  X[['closeness']]\
-    .pipe(Pt.Chart).mark_bar()\
-    .properties(width=0.4*A4.W, height=0.1*A4.H)
-    .encode(Pt.X('closeness:Q').bin(step=0.01)\
-              .title('Bliskość w grafie'),
-            Pt.Y('count(closeness)')\
-              .scale(type='log')\
-              .title('(Skala logarytmiczna)'))
-
-)
-
-plots['F-edges'] = lib.flow.forward(edges, lambda X:(
-
-  lambda X:
-
-    ( X .pipe(Pt.Chart).mark_circle()\
-        .properties(width=0.05*A4.W, height=0.05*A4.H)\
-        .encode(Pt.Y('idgeo:N').title(None),
-                Pt.Size('count(idgeo)').legend(None)) |\
-      X .pipe(Pt.Chart).mark_text()\
-        .properties(width=0.05*A4.W, height=0.05*A4.H)\
-        .encode(Pt.Y('idgeo:N').axis(None),
-                Pt.Text('count(idgeo)')) ) &\
-
-    X .query('distance > 0')\
-      .pipe(Pt.Chart).mark_bar()\
-      .properties(width=0.4*A4.W, height=0.1*A4.H)\
-      .encode(Pt.X('distance:Q')\
-                .title('Niezerowy dystans [km]')\
-                .bin(step=10),
-              Pt.Y('count(distance)')\
-                .title(None)) &\
-
-    X .pipe(Pt.Chart).mark_bar()\
-      .properties(width=0.4*A4.W, height=0.1*A4.H)\
-      .encode(Pt.X('Adelay:Q')\
-                .title('Okres między składaniem aplikacji patentowych [dni]')\
-                .bin(step=100),
-              Pt.Y('count(Adelay)')\
-                .title(None)) &\
-
-   ( X .pipe(Pt.Chart).mark_circle()\
-      .properties(width=0.4*A4.W, height=0.025*A4.H)\
-      .encode(Pt.Size('count(Jaccard)').title(None),
-              Pt.X('Jaccard:Q')\
-                .title(['Liczność krawędzi o danym', 
-                        'indeksie Jaccarda dla klasyfikacji'])) +\
-
-    X .pipe(Pt.Chart).mark_text(yOffset=-0.01*A4.H)\
-      .properties(width=0.4*A4.W, height=0.025*A4.H)\
-      .encode(Pt.X('Jaccard:Q'),
-              Pt.Text('count(Jaccard)')) )
-
-) (X [['distance', 'Jaccard', 'Adelay']]\
-      .eval('idgeo = distance > 0')\
-      .replace({'idgeo': {True: 'd > 0', 
-                          False: '0-wy dystans'}})) )
-
-plots[f'F-rprt-comp'] = Flow.Forward([comps], lambda X:
-(
-  ( lambda S:
-    Pt.Chart(S).mark_circle()\
-      .properties(width=0.05*A4.W, height=0.05*A4.H)\
-      .encode(Pt.Y('multi:N').title(None),
-              Pt.Size('count(multi)').legend(None)) |\
-    Pt.Chart(S).mark_text()\
-      .properties(width=0.05*A4.W, height=0.05*A4.H)\
-      .encode(Pt.Y('multi:N').axis(None),
-              Pt.Text('count(multi)'))\
-
-  )(X .eval('multi = nodes > 1')\
-      .replace({'multi': {True: 'n-węzłów',
-                          False: '1 węzeł'}})) |\
-
-  ( lambda S:
-    Pt.Chart(S).mark_circle()\
-      .properties(width=0.05*A4.W, height=0.05*A4.H)\
-      .encode(Pt.Y('idgeo:N').title(None),
-              Pt.Size('count(idgeo)').legend(None)) |\
-    Pt.Chart(S).mark_text()\
-      .properties(width=0.05*A4.W, height=0.05*A4.H)\
-      .encode(Pt.Y('idgeo:N').axis(None),
-              Pt.Text('count(idgeo)'))\
-
-  )(X .eval('idgeo = meandist > 0')\
-      .replace({'idgeo': {True: 'd > 0', 
-                          False: '0-wy dystans'}}))
-) &\
-
-  X .query('nodes > 1')\
-    .pipe(Pt.Chart).mark_bar()\
-    .properties(width=0.4*A4.W, height=0.1*A4.H)\
-    .encode(Pt.X('nodes:Q').title('Liczba węzłów (n >1)').bin(step=5),
-            Pt.Y('count(nodes)').title(None)) &\
-
-  X .query('nodes > 1')\
-    .pipe(Pt.Chart).mark_bar()\
-    .properties(width=0.4*A4.W, height=0.1*A4.H)\
-    .encode(Pt.X('meandegree:Q').title('Średni stopień węzła (n >1)').bin(step=3),
-            Pt.Y('count(meandegree)').title(None)) &\
-
-  X .query('nodes > 1')\
-    .pipe(Pt.Chart).mark_bar()\
-    .properties(width=0.4*A4.W, height=0.1*A4.H)\
-    .encode(Pt.X('Adelay:Q').title('Dni między składaniem aplikacji').bin(step=100),
-            Pt.Y('count(Adelay)').title(None)) &\
-
-  X .query('nodes > 1')\
-    .pipe(Pt.Chart).mark_bar()\
-    .properties(width=0.4*A4.W, height=0.1*A4.H)\
-    .encode(Pt.X('Gdelay:Q').title('Dni między ochroną patentową').bin(step=100),
-            Pt.Y('count(Gdelay)').title(None)) &\
-
-  X .query('meandist > 0')\
-    .pipe(Pt.Chart).mark_bar()\
-    .properties(width=0.4*A4.W, height=0.1*A4.H)\
-    .encode(Pt.X('meandist:Q').title('Średni dystans krawędzi (d > 0)').bin(step=10),
-            Pt.Y('count(meandist)').title(None)) )
-
-plots[f'M-rprt-dist'] = Flow(args=[edges, gloc.region[1]], callback=lambda X, G: (
-
-  lambda X, G=G:
-
-    Plot.vconcat(
-
-      Plot.Chart(G).mark_geoshape(stroke='black', fill=None) + \
-
-      X .query(f'distance == 0')\
-        .pipe(Plot.Chart).mark_circle(fill='green')\
-        .properties(width=0.5*A4.W, height=0.3*A4.H)\
-        .encode(Plot.Latitude('lat'), 
-                Plot.Longitude('lon'),
-                Plot.Size('count()')\
+    EGX = E.groupby(spatial).agg({ 'id': 'size', 'distance': 'mean' })
+    mX = Pt.Chart(EGX).mark_circle().project('mercator')
+    mX = mX.encode(Pt.Latitude(spatial[0], type='quantitative'))
+    mX = mX.encode(Pt.Longitude(spatial[1], type='quantitative'))
+    mX = mX.encode(Pt.Color('distance', type='quantitative')\
                     .legend(orient='top')\
-                    .title('Ilość połączeń w tej samej geolokalizacji')), *[
+                    .title(['Średni dystans od osób ref.'])\
+                    .scale(range=['yellow', 'red', 'blue']))
+    mX = mX.encode(Pt.Size('id:Q'))
 
-      Plot.Chart(G).mark_geoshape(stroke='black', fill=None) + \
+    EGY = E.groupby([f'{k}Y' for k in spatial]).agg({ 'id': 'size', 'distance': 'mean' })
+    EGY.index.names = spatial
+    mY = Pt.Chart(EGY).mark_circle().project('mercator')
+    mY = mY.encode(Pt.Latitude(spatial[0], type='quantitative'))
+    mY = mY.encode(Pt.Longitude(spatial[1], type='quantitative'))
+    mY = mY.encode(Pt.Color('distance', type='quantitative'))
+    mY = mY.encode(Pt.Size('id:Q'))
 
-      X .query(f'{start} < distance <= {end}')\
-        .pipe(Plot.Chart, title=f'{start} - {end} km').mark_rule(opacity=0.1)\
-        .properties(width=0.5*A4.W, height=0.3*A4.H)\
-        .encode(Plot.Color('distance:Q')\
-                    .title('Dystans [km]')\
-                    .scale(scheme='greens', reverse=True)\
-                    .legend(orient='bottom'),
-                Plot.Latitude('lat'),
-                Plot.Longitude('lon'),
-                Plot.Latitude2('latY'),
-                Plot.Longitude2('lonY')).project('mercator')
+    ED = (EGX - EGY)[['id']].reset_index()
+    ED['minus'] = (ED['id'] < 0).replace({ True: 'odpływ', False: 'dopływ' })
+    ED['id'] = ED['id'].abs()
+    mD = Pt.Chart(ED).mark_circle().project('mercator')
+    mD = mD.encode(Pt.Latitude(spatial[0], type='quantitative'))
+    mD = mD.encode(Pt.Longitude(spatial[1], type='quantitative'))
+    mD = mD.encode(Pt.Color('minus', type='nominal')\
+                    .legend(orient='bottom')\
+                    .title(['Dominujący kierunek przepływu'])\
+                    .scale(range=['red', 'blue']))
+    mD = mD.encode(Pt.Size('id:Q')\
+                     .title('Ilość referowanych osób')\
+                     .legend(orient='bottom', columns=3))
 
-        for start, end in [(0, 100), (100, 200)]]) | \
+    d = d.properties(width=0.1*A4.W, height=0.2*A4.W)
+    v0 = v0.properties(width=0.1*A4.W, height=0.05*A4.W)
+    v = v.properties(width=0.1*A4.W, height=0.05*A4.W)
+    vj = vj.properties(width=0.1*A4.W, height=0.05*A4.W)
+    mX = mX.properties(width=0.1*A4.W, height=0.1*A4.W)
+    mY = mY.properties(width=0.1*A4.W, height=0.1*A4.W)
+    mD = mD.properties(width=0.25*A4.W, height=0.25*A4.W)
+    if borders is not None:
+      mX = Pt.Chart(borders).mark_geoshape(fill='black') + mX
+      mY = Pt.Chart(borders).mark_geoshape(fill='black') + mY
+      mD = Pt.Chart(borders).mark_geoshape(fill='black') + mD
 
-    Plot.vconcat(*[
+    return (((mX | mY).resolve_scale(color='shared') & mD) | (d & v0 & vj & v)).resolve_scale(size='independent')
 
-      Plot.Chart(G).mark_geoshape(stroke='black', fill=None) + \
+  carto()
 
-      X .query(f'{start} < distance <= {end}')\
-        .pipe(Plot.Chart, title=f'{start} - {end} km').mark_rule(opacity=0.1)\
-        .properties(width=0.5*A4.W, height=0.3*A4.H)\
-        .encode(Plot.Color('distance:Q')\
-                    .title('Dystans [km]')\
-                    .scale(scheme='greens', reverse=True)\
-                    .legend(orient='bottom'),
-                Plot.Latitude('lat'),
-                Plot.Longitude('lon'),
-                Plot.Latitude2('latY'),
-                Plot.Longitude2('lonY')).project('mercator')
+  return E, N, carto()
 
-        for start, end in [(200, 300), (300, 450), (450, 800)]])
+web = network(rprt.valid, endo.data, gloc.dist,
+              spatial=['lat', 'lon'], temporal=['grant', 'application'],
+              Jsim=[f'clsf-{l}' for l in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']],
+              feats=['entity', 'pgid', 'wgid'], borders=gloc.region[0])
 
-  )(X[['lat', 'lon', 'latY', 'lonY', 'distance', 'closeness']]))
+web = web.map(('cache/grph/edges.pkl', 'cache/grph/nodes.pkl', 'fig/grph/M.png'))
 
-for k, F in plots.items():
-  F.name = k
-  F.map(f'fig/grph/{k}.png')
+FLOW = dict(web=web)
