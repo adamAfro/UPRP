@@ -3,9 +3,9 @@ altair.data_transformers.enable('vegafusion')
 
 flow = dict()
 
-import endo, patent, registry, subject, clst, grph, corr, raport, exog
+import endo, patent, registry, subject, clst, grph, corr, raport
 
-for d in [endo, patent, registry, subject, clst, grph, corr, raport, exog]:
+for d in [endo, patent, registry, subject, clst, grph, corr, raport]:
   try: flow[d.__name__] = d.FLOW
   except AttributeError: pass
 
