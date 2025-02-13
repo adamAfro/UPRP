@@ -17,8 +17,8 @@ def network(docrefs:pandas.DataFrame,
             Jsim=[], feats=[],
             borders=None):
 
-  """
-    \subsubsection
+  r"""
+  \subsubsection
   {Tworzenie grafu na podstawie raportów o stanie techniki}
 
   Graf $G$ jest grafem skierowanym o krawędziach $E$ i węzłach
@@ -46,6 +46,16 @@ def network(docrefs:pandas.DataFrame,
   między 2 wierzchołkami reprezentującymi osoby. Zgodnie z kierunkiem
   grafu, te krawędzie są skierowane, a ich zwrot reprezentuje kierunek
   przepływu wiedzy.
+
+  \newpage
+  \begin{multicols}{2}
+
+    \chart{fig/grph/M.pdf}{}
+
+    \chart{fig/grph/F-dist-delay.pdf}{}
+    \chart{fig/grph/F-components.pdf}{}
+
+  \end{multicols}
   """
 
   assert { 'application' }.issubset(docsign.columns), docsign['application']
@@ -103,45 +113,15 @@ def network(docrefs:pandas.DataFrame,
   C['component'] = C['component'].map(lambda x: f'C{x}')
   N = N.set_index('id').join(C.set_index('id')).reset_index()
 
-  def carto():
-
-    v0 = Pt.Chart(pandas.Series({ 'izolowane': N['component'].isna().sum(), 
-                                 'w składowych': (~N['component'].isna()).sum() }).rename('count').reset_index()).mark_bar()
-    v0 = v0.encode(Pt.Y('index:N').title(''))
-    v0 = v0.encode(Pt.X('count:Q').title('Ilość osób'))
-
-    v = Pt.Chart(N['component'].value_counts().reset_index()).mark_area()
-    v = v.transform_density('count', as_=['count', 'density'])
-    v = v.encode(Pt.X('count:Q').title('Ilość składowych'))
-    v = v.encode(Pt.Y('density:Q').title('Gęstość'))
-
-    vj = Pt.Chart(N['component'].value_counts().reset_index()).mark_circle(size=1)
-    vj = vj.transform_calculate(jitter='sqrt(-2*log(random()))*cos(2*PI*random())')
-    vj = vj.encode(Pt.X('count:Q').title(None))
-    vj = vj.encode(Pt.Y('jitter:Q').axis(None).title(None))
-    vj = vj.encode(Pt.Opacity('count:Q').scale(range=[0.5, 1]).legend(None))
-
-    d = Pt.Chart(E).mark_circle()
-    d = d.encode(Pt.X('distance:Q').title('Dystans').bin(step=100))
-    d = d.encode(Pt.Y('tapplication:Q').title('Opóźnienie').bin(step=365))
-    d = d.encode(Pt.Size('count()')\
-                   .title('Ilość patentów')\
-                   .legend(orient='top', columns=2))
-
-    dt = Pt.Chart(E.assign(year=E['application'].dt.year.astype(int))).mark_circle()
-    dt = dt.encode(Pt.X('year:O').title('Rok apl. cytowanego pat.').axis(values=[2006, 2013, 2018, 2022]))
-    dt = dt.encode(Pt.Y('tapplication:Q').title('Opóźnienie').bin(step=365))
-    dt = dt.encode(Pt.Size('count()')\
-                     .title('Ilość patentów')\
-                     .legend(orient='top', columns=2))
+  def cartplot():
 
     EGX = E.groupby(spatial).agg({ 'id': 'size', 'distance': 'mean' })
     mX = Pt.Chart(EGX).mark_circle().project('mercator')
     mX = mX.encode(Pt.Latitude(spatial[0], type='quantitative'))
     mX = mX.encode(Pt.Longitude(spatial[1], type='quantitative'))
     mX = mX.encode(Pt.Color('distance', type='quantitative')\
-                    .legend(orient='top')\
-                    .title(['Średni dystans od osób ref.'])\
+                    .legend(orient='right')\
+                    .title('Śr. dys. do os.~referującej'.split('~'))\
                     .scale(range=['yellow', 'red', 'blue']))
     mX = mX.encode(Pt.Size('id:Q'))
 
@@ -150,7 +130,10 @@ def network(docrefs:pandas.DataFrame,
     mY = Pt.Chart(EGY).mark_circle().project('mercator')
     mY = mY.encode(Pt.Latitude(spatial[0], type='quantitative'))
     mY = mY.encode(Pt.Longitude(spatial[1], type='quantitative'))
-    mY = mY.encode(Pt.Color('distance', type='quantitative'))
+    mY = mY.encode(Pt.Color('distance', type='quantitative')\
+                    .legend(orient='right')\
+                    .title('Śr. dys. od os.~referowanej'.split('~'))\
+                    .scale(range=['yellow', 'red', 'blue']))
     mY = mY.encode(Pt.Size('id:Q'))
 
     ED = (EGX - EGY)[['id']].reset_index()
@@ -160,35 +143,81 @@ def network(docrefs:pandas.DataFrame,
     mD = mD.encode(Pt.Latitude(spatial[0], type='quantitative'))
     mD = mD.encode(Pt.Longitude(spatial[1], type='quantitative'))
     mD = mD.encode(Pt.Color('minus', type='nominal')\
-                    .legend(orient='bottom')\
-                    .title(['Dominujący kierunek przepływu'])\
+                    .legend(orient='right')\
+                    .title('Dominujący kierunek przepływu'.split(' '))\
                     .scale(range=['red', 'blue']))
     mD = mD.encode(Pt.Size('id:Q')\
                      .title('Ilość referowanych osób')\
-                     .legend(orient='bottom', columns=3))
+                     .legend(orient='bottom', columns=4,
+                             values=[50, 100, 200, 500,
+                                     1000, 2000, 3000, 5000,
+                                     10000, 15000]))
 
-    d = d.properties(width=0.1*A4.W, height=0.2*A4.W)
-    dt = dt.properties(width=0.1*A4.W, height=0.2*A4.W)
-    v0 = v0.properties(width=0.1*A4.W, height=0.05*A4.W)
-    v = v.properties(width=0.1*A4.W, height=0.05*A4.W)
-    vj = vj.properties(width=0.1*A4.W, height=0.05*A4.W)
-    mX = mX.properties(width=0.1*A4.W, height=0.1*A4.W)
-    mY = mY.properties(width=0.1*A4.W, height=0.1*A4.W)
-    mD = mD.properties(width=0.25*A4.W, height=0.25*A4.W)
+    mX = mX.properties(width=0.4*A4.W, height=0.25*A4.W)
+    mY = mY.properties(width=0.4*A4.W, height=0.25*A4.W)
+    mD = mD.properties(width=0.4*A4.W, height=0.25*A4.W)
     if borders is not None:
       mX = Pt.Chart(borders).mark_geoshape(fill='black') + mX
       mY = Pt.Chart(borders).mark_geoshape(fill='black') + mY
       mD = Pt.Chart(borders).mark_geoshape(fill='black') + mD
 
-    return (((mX | mY).resolve_scale(color='shared') & mD) | (d & dt) | (v0 & vj & v)).resolve_scale(size='independent')
+    return (mX & mY).resolve_scale(color='shared') & mD
 
-  return E, N, carto()
+  def compplot():
+
+    v0 = Pt.Chart(pandas.Series({ 'izolowane': N['component'].isna().sum(), 
+                                 'w składowych': (~N['component'].isna()).sum() }).rename('count').reset_index()).mark_bar()
+    v0 = v0.encode(Pt.X('index:N').title(None))
+    v0 = v0.encode(Pt.Y('count:Q').title(None))
+
+    v = Pt.Chart(N['component'].value_counts().reset_index())
+    v = v.mark_area()
+    v = v.transform_density('count', as_=['count', 'density'])
+    v = v.encode(Pt.X('count:Q').title('Ilość składowych'))
+    v = v.encode(Pt.Y('density:Q').title('Gęstość'))
+
+    vj = Pt.Chart(N['component'].value_counts().reset_index())
+    vj = vj.mark_circle(size=1)
+    vj = vj.transform_calculate(jitter='sqrt(-2*log(random()))*cos(2*PI*random())')
+    vj = vj.encode(Pt.X('count:Q').title(None))
+    vj = vj.encode(Pt.Y('jitter:Q').axis(None).title(None))
+    vj = vj.encode(Pt.Opacity('count:Q').scale(range=[0.5, 1]).legend(None))
+
+    v0 = v0.properties(width=0.05*A4.W, height=0.15*A4.W)
+    v = v.properties(width=0.4*A4.W, height=0.15*A4.W)
+    vj = vj.properties(width=0.4*A4.W, height=0.05*A4.W)
+
+    return v0 | (vj & v)
+
+  def ddplot():
+
+    d = Pt.Chart(E).mark_circle()
+    d = d.encode(Pt.X('distance:Q').title('Dystans').bin(step=100))
+    d = d.encode(Pt.Y('tapplication:Q').title('Opóźnienie').bin(step=365))
+    d = d.encode(Pt.Size('count()'))
+
+    dt = Pt.Chart(E.assign(year=E['application'].dt.year.astype(int))).mark_circle()
+    dt = dt.encode(Pt.X('year:O').title('Rok cytowanego').axis(values=[2006, 2013, 2018, 2022]))
+    dt = dt.encode(Pt.Y('tapplication:Q').title('Opóźnienie').bin(step=365))
+    dt = dt.encode(Pt.Size('count()')\
+                     .title('Ilość patentów')\
+                     .legend(orient='top'))
+
+    d = d.properties(width=0.2*A4.W, height=0.2*A4.W)
+    dt = dt.properties(width=0.2*A4.W, height=0.2*A4.W)
+
+    return (d | dt).resolve_axis(y='shared')
+
+  return E, N, cartplot(), ddplot(), compplot()
 
 web = network(rprt.valid, endo.data, gloc.dist,
               spatial=['lat', 'lon'], temporal=['grant', 'application'],
               Jsim=[f'clsf-{l}' for l in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']],
               feats=['entity', 'pgid', 'wgid'], borders=gloc.region[0])
 
-web = web.map(('cache/grph/edges.pkl', 'cache/grph/nodes.pkl', 'fig/grph/M.png'))
+web = web.map(('cache/grph/edges.pkl', 'cache/grph/nodes.pkl', 
+               'fig/grph/M.pdf',
+               'fig/grph/F-dist-delay.pdf', 
+               'fig/grph/F-components.pdf'))
 
 FLOW = dict(web=web)
