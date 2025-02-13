@@ -294,8 +294,8 @@ def Spacetime(textual:pandas.DataFrame,
   return X
 
 from util import data as D
-from profiling import flow as f0
-from patent import flow as fP
+from prfl import flow as f0
+from patt import flow as fP
 
 FN0 = Nameclsf({ D['UPRP']+'/assignement.yaml':   f0['UPRP']['profiling'],
                 D['Lens']+'/assignement.yaml':   f0['Lens']['profiling'],

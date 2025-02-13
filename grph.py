@@ -1,5 +1,5 @@
 #lib
-import lib.flow, gloc, endo, raport as rprt
+import lib.flow, gloc, endo, rprt as rprt
 
 #calc
 import pandas, altair as Pt, networkx as nx

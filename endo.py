@@ -12,7 +12,7 @@ r"""
 
 #lib
 from lib.flow import Flow
-import gloc, subject
+import gloc, subj
 
 #calc
 import pandas, numpy, geopandas as gpd
@@ -91,7 +91,7 @@ def meandist(geo:pandas.DataFrame, dist:pandas.DataFrame, coords:list[str], rads
 
   return X
 
-data = subject.mapped
+data = subj.mapped
 data = meandist(data, gloc.dist, coords=['lat', 'lon'], rads=[50, 100])
 for k in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']:
   data = meandist(data, gloc.dist, coords=['lat', 'lon'], rads=[50, 100], 

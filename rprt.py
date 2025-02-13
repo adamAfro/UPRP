@@ -597,7 +597,7 @@ def edges(X:pandas.DataFrame):
                         'from': X.index.get_level_values('doc')})
   return Y
 
-from profiling import flow as f0
+from prfl import flow as f0
 from util import data as D
 
 flow = { k: dict() for k in D.keys() }

@@ -396,7 +396,7 @@ def ptregion(X:gpd.GeoDataFrame, R:gpd.GeoDataFrame, idname:str):
 
   return Y
 
-from registry import flow as f0
+from rgst import flow as f0
 
 affilG = affilgeo(f0['registry']['2013']).map('cache/affilate-geo.pkl')
 affilN = affilnames(affilG).map('cache/affilate.pkl')

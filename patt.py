@@ -132,7 +132,7 @@ techniki dla danego patentu.
 #lib
 import lib.flow, lib.geo, lib.storage, gloc
 from util import strnorm, data as D
-from profiling import flow as f0
+from prfl import flow as f0
 
 #calc
 import pandas, yaml

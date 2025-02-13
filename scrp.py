@@ -1,7 +1,7 @@
 import pandas, re, os, asyncio, aiohttp
 
 from lib.flow import Flow
-import raport as rprt
+import rprt as rprt
 
 @Flow.From()
 def Fetch(queries:pandas.Series, URL:str, outdir:str):
