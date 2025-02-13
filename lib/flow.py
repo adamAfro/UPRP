@@ -141,6 +141,21 @@ class Flow():
         self.info(f'saved {f0}')
         return
 
+    elif f0.endswith('.pdf'):
+
+      if any(isinstance(x, y) for y in [alt.Chart, 
+                                        alt.LayerChart, 
+                                        alt.ConcatChart,
+                                        alt.VConcatChart,
+                                        alt.FacetChart,
+                                        alt.HConcatChart]):
+
+        import vl_convert
+        with open(f0, 'wb') as f:
+          f.write(vl_convert.vega_to_pdf(x.to_json(format='vega')))
+        self.info(f'saved {f0}')
+        return
+
     raise NotImplementedError()
 
   def lazyload(x):
