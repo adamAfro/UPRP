@@ -152,7 +152,7 @@ def include(x:str, root):
 
 def main():
 
-  D = readdocstr(['grph', 'grav'])
+  D = readdocstr(['grph'])
 
   root = os.path.dirname(os.path.abspath(__file__))
   wd = './workdir'
