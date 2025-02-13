@@ -1,9 +1,60 @@
-import pandas, geopandas as gpd, altair as Plot
+r"""
+\section{Identyfikacja osób}
+
+Głownym problemen danych jest niejednoznaczność w kontekście identyfikacji osób.
+W danych patentowych, osoby rozróżnia się za pomocą imienia, nazwiska
+oraz nazwy miejscowości. Jak wiadomo wiele osób może mieć te same imię i nazwisko,
+także w jednym miejscu. Jest to duże ograniczenie wynikające z samego zbioru danych.
+Należy także wspomnieć o drobnych niespójnościach danych w zapisie imion i nazwisk
+(\cref{def:drobne-niespójności}) --- występowanie diaktryk i akcentów w zapisie
+nie jest gwarantowane, a jednocześnie nie jest wykluczone.
+
+Kolejną niejednoznacznością jest podobne zjawisko dla nazw miejscowości.
+W Polsce jest wiele miejscowości o identycznych nazwach, a rejestry nie oferują
+nic po za samą nazwą. Tutaj także występuje problem z diaktrykami i akcentami.
+
+Ponadto występują też 2 inne problemy. Pierwszym jest 
+niespójność fragmentacji danych (\cref{def:niespójność-fragmentacji}).
+W przypadku tabeli z danymi osobowymi wynalazców są do dyspozycji ich
+imiona i nazwiska. W przypadku pozostałych osób związanych z patentem
+są to najczęściej ciągi imion i nazwisk. Nie jest jednak gwarantowane,
+że dotyczą one osób fizycznych. Drugim problemem jest niespójność 
+typów danych (\cref{def:niespójność-typów}). Część danych oznaczonych
+jako imiona dotyczy nazw firm lub instytucji. Oznaczenie tego faktu
+istnieje tylko w niektórych przypadkach, dużo częściej jest to pominięte.
+
+\begin{uwaga}
+Dane w zbiorach uwzględniają różną szczegółowość w zapisie imion i nazwisk.
+Niektóre zawierają drugie imię, niektóre wyłącznie literę drugiego imienia.
+Przypadków jest wiele. Poniższe podejście pomija tę ambiwalencję.
+\end{uwaga}
+"""
+
+#lib
 from lib.flow import Flow
 import gloc
 
+#calc
+import pandas, geopandas as gpd
+
+#plot
+import altair as Plot
+
 @Flow.From()
 def affilgeo(registry:pandas.DataFrame):
+
+  """
+  \begin{defi}\label{defi:podobieństwo-af-geo}
+  Podobieństwo afiliacyjno-geolokalizacyjne $\tilde\gamma$ --- ilość identycznych geolokalizacji
+  dla dwóch osób: $p_i$ oraz $p_j$:
+
+  $$
+  \tilde\gamma(p_i, p_j) = | \tilde G_i \cap \tilde G_j | \ge 0,
+  $$
+
+  gdzie $\tilde G_i$ to zbiór geolokalizacji osób w relacji współautorstwa z $p_i$.
+  \end{defi}
+  """
 
   import tqdm
   tqdm.tqdm.pandas()
@@ -23,6 +74,34 @@ def affilgeo(registry:pandas.DataFrame):
 
 @Flow.From()
 def affilnames(registry:pandas.DataFrame):
+
+  r"""
+  \begin{defi}
+  Główna para imiennicza $\hat N_k$ --- zbiór 2-elementowy pierwszego 
+  i ostatniego słowa ciągu imienniczego
+  \end{defi}
+
+  \begin{defi}
+  Zbiór afiliacyjno-nazewniczy $k$-osoby $\tilde N_k$ - zbiór imion, 
+  nazwisk oraz słów, które mogą być imieniem lub nazwą; zawiera
+  wyżej wymienione elementy, którymi identyfiują się osoby będące
+  współautorami patentów razem z $k$-osobą.
+  $$\tilde N_k \subset N_0$$
+  \end{defi}
+
+  \begin{defi}\label{defi:podobieństwo-af-nazw}
+  Podobieństwo afiliacyjno-nazewnicze $\tilde \varphi$ --- dotyczy wpisów,
+  które są związane z patentami badanej pary wpisów $w_i, w_j$.
+  Zbiór $N_i$ jest zbiorem zbiorów głównych par imienniczych wpisów
+  dotyczących patentu zawierającego wpis $w_i$. Analogicznie jest
+  dla $N_j$:
+
+  $$
+  \tilde \varphi(p_i, p_j) = | \tilde N_i \cap \tilde N_j | \ge 0,\quad
+  \tilde N_i = \{ \hat N_k \mid w_k \in W_i \land k \ne i \}
+  $$
+  \end{defi}
+  """
 
   import tqdm
   tqdm.tqdm.pandas()
@@ -58,6 +137,74 @@ def affilnames(registry:pandas.DataFrame):
 
 @Flow.From('calculating similarity')
 def simcalc(affilated:pandas.DataFrame):
+
+  r"""
+  \begin{defi}\label{defi:zgodność-nazw}
+  Zgodność nazewnicza 2 wpisów $w_i,w_j$ występuje pod warunkiem, że
+  elementy suma zbiorów ich głównych par imienniczych jest im równa:
+  $$
+  \varphi(w_i, w_j) = \begin{cases}
+    1 & \text{jeśli } \hat N_i = (\hat N_i \cap \hat N_j) = \hat N_j\\
+    0 & \text{w przeciwnym przypadku}
+  \end{cases}
+  $$
+  \end{defi}
+
+  \begin{defi}\label{defi:zgodność-geolokalizacyjna}
+  Zgodność geolokalizacyjna:
+  $$
+  \gamma(p_i, p_j) = \begin{cases}
+    1 & \text{jeśli } G_i = G_j\\
+    0 & \text{w przeciwnym przypadku}
+  \end{cases}
+  $$
+  gdzie $G_i$ to zbiór geolokalizacji przypisanej danej osobie.
+  \end{defi}
+
+  \begin{uwaga}
+  Wpisy zawierają nazwy miejscowości zameldowania, jednak wyszukwianie za ich
+  pomocą odbywa się po geolokalizacji patentowej.
+  W związku z tym, mimo identycznej nazwy miejscowości może nie dojść do
+  zgodności geolokalizacyjnej.
+  \end{uwaga}
+
+  Kolejnym determinantem jest klasyfikacja. \Cref{wniosek:klasyfikacje-deter-1}
+  pokazuje, że klasyfikacje nie są dobrym determinantem jeśli opierać by się wyłącznie 
+  na nich. Warto jednak zauważyć, że klasyfikacje mogą być dobrym uzupełnieniem
+  dla pozostałych determinantów.
+
+  \begin{defi}\label{defi:zgodność-clsf}
+  Zgodność klasyfikacyjna $\eta$ --- ilość identycznych sekcji klasyfikacji,
+  w których znajdują się aplikacje patentowe dwóch osób: $p_i$ oraz $p_j$:
+  $$\eta(p_i, p_j) = | C_i \cap C_j | \ge 0,$$
+  gdzie $C_i$ to zbiór sekcji klasyfikacji dla osoby $p_i$.
+  \end{defi}
+
+  \begin{uwaga}
+  Zgodność $\varphi$ (\cref{defi:zgodność-nazw}) oraz podobieństwo $\tilde \varphi$ 
+  (\cref{defi:podobieństwo-af-nazw}) pomija rozróżnienie na imiona i nazwiska.
+  \end{uwaga}
+
+
+
+  \subsubsection{Przebieg wyszukiwania}
+
+  \begin{uwaga}
+  Przyjmujemy uproszczenie: zakładamy, że dana osoba w różnych patentach 
+  jest podpisana w jednolity sposób.
+  \end{uwaga}
+
+  Pierwszym etapem wyszukiwania jest zawężenie zakresu wyłącznie do relacji
+  spełniających warunek $\varphi(p_i, p_j) = 1$.
+  W efekcie otrzymujemy zbiór $W_0$:
+
+  $$W_0 = \{ (p_i, p_j)\mid \varphi(p_i, p_j) = 1 \}$$
+
+  Kolejnym etapem jest wyznaczenie wartości zgodności klasyfikacji oraz 
+  podobieństw afiliacyjnych.
+
+  $$W_1 = \{ ( \eta(p_i, p_j), \tilde \gamma(p_i, p_j), \tilde \varphi(p_i, p_j) ) \mid (p_i, p_j) \in W_0 \}$$
+  """
 
   import tqdm
 
@@ -125,6 +272,28 @@ def simcalc(affilated:pandas.DataFrame):
 @Flow.From()
 def identify(sim:pandas.DataFrame, all:pandas.DataFrame):
 
+  """
+  Zbiór $W_1$ dzielimy na dwa podzbiory zgodnie z wartościami zgodności lokalizacyjnej:
+
+  $$
+  W_2 = \{ ( w \mid w \in W_1, \gamma(p_i, p_j) = 0 \}\qquad 
+  W_3 = \{ ( w \mid w \in W_1, \gamma(p_i, p_j) = 1 \}
+  $$
+
+  \begin{uwaga}
+  Zgodność lokalizacyjną można zastąpić miarą odległości geograficznej,
+  jednak na potrzeby uproszczenia jest to wartość binarna.
+  \end{uwaga}
+
+  Oba zbiory rozważamy jako oddzielne przypadki ze względu na ich
+  gruntownie różną naturę. Przyjmując pewne stałe jako wartości
+  graniczne dla zgodności klasyfikacji oraz podobieństw afiliacyjnych
+  możemy podjąć decyzję o zgodności dwóch wpisów pod względem
+  opisywania jednej osoby. Na podstawie grafu tych zgodności
+  identyfikujemy spójne składowe. Każda taka część grafu to
+  zbiór wpisów, które opisują tę samą osobę.
+  """
+
   import networkx as nx
 
   S = sim
@@ -155,6 +324,49 @@ def identify(sim:pandas.DataFrame, all:pandas.DataFrame):
 
 @Flow.From()
 def fillgeo(entities:pandas.DataFrame, group:str, loceval:str):
+
+  """
+  \subsection{Uzupełnianie braków geolokalizacji za pomocą innych danych}
+
+  Brak danych dotyczących położenia osób związanych z danym patentem jest
+  istotnym problemem w analizie dyfuzji przestrzennej. Pominięcie obserwacji
+  z powodu braku danych może prowadzić do błędnych wniosków. 
+  Determinacja położenia osób za pomocą innych danych patentowych jest
+  więc kluczowa.
+
+  W danych można wyróżnić 3 przypadki dostępności geolokalizacji.
+
+  \begin{przyp}\label{przyp:brak-geo-0}
+  Geolokalizacja jest dostępna dla każdej osoby związanej z patentem.
+  \end{przyp}
+
+  \begin{przyp}\label{przyp:brak-geo-n}
+  Geolokalizacja jest dostępna dla części osób zwiazanych z patentem.
+  \end{przyp}
+
+  \begin{przyp}\label{przyp:brak-geo-N}
+  Geolokalizacja nie jest dostępna dla żadnej osoby związanej z patentem.
+  \end{przyp}
+
+  W przypadku \ref{przyp:brak-geo-0} nie ma potrzeby uzupełniania danych.
+  W przypadkach \ref{przyp:brak-geo-n} i \ref{przyp:brak-geo-N} 
+  rozważamy sytuację po identyfiakcji za pomocą podobieństw. 
+  Jeśli dany wpis osoby jest przypisane osobie, 
+  która w innych wpisach ma geolokalizacje, to jest ona uzupełniana
+  najczęściej powtarzającą sie geolokalizacją.
+
+  Efektem jest zmiana części przypadków z \ref{przyp:brak-geo-N} na
+  \ref{przyp:brak-geo-n}, potencjalnie także na \ref{przyp:brak-geo-0}.
+  W takiej sytuacji należy powtórzyć czynność wyszukiwania podobieństw ---
+  dane zostały uzupełnione o geolokalizację, więc potencjalnie można
+  oczekiwać znalezienia nowych relacji identyczności.
+  Te 2 kroki należy powtarzać dopóki dają efekt. Ostatecznie
+  przypadki, które pozostały przypadkami \ref{przyp:brak-geo-N}
+  nie mogą zostać uzupełnione wiarygodnymi metodami.
+  W przypadkach \ref{przyp:brak-geo-n} można zastosować wyróżnianie
+  najczęściej powtarzanego miejsca związania pośród innych osób i przyjąć
+  je za geolokalizację osób bez niej.
+  """
 
   import tqdm
 

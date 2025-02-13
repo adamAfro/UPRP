@@ -1,13 +1,41 @@
-import pandas, yaml, numpy, altair as Plot
-from lib.storage import Storage
-from lib.name import mapnames
-from lib.flow import Flow
+r"""
+\section{Identyfikacja osób}
+
+Głownym problemen danych jest niejednoznaczność w kontekście identyfikacji osób.
+W danych patentowych, osoby rozróżnia się za pomocą imienia, nazwiska
+oraz nazwy miejscowości. Jak wiadomo wiele osób może mieć te same imię i nazwisko,
+także w jednym miejscu. Jest to duże ograniczenie wynikające z samego zbioru danych.
+Należy także wspomnieć o drobnych niespójnościach danych w zapisie imion i nazwisk
+(\cref{def:drobne-niespójności}) --- występowanie diaktryk i akcentów w zapisie
+nie jest gwarantowane, a jednocześnie nie jest wykluczone.
+
+Kolejną niejednoznacznością jest podobne zjawisko dla nazw miejscowości.
+W Polsce jest wiele miejscowości o identycznych nazwach, a rejestry nie oferują
+nic po za samą nazwą. Tutaj także występuje problem z diaktrykami i akcentami.
+
+Ponadto występują też 2 inne problemy. Pierwszym jest 
+niespójność fragmentacji danych (\cref{def:niespójność-fragmentacji}).
+W przypadku tabeli z danymi osobowymi wynalazców są do dyspozycji ich
+imiona i nazwiska. W przypadku pozostałych osób związanych z patentem
+są to najczęściej ciągi imion i nazwisk. Nie jest jednak gwarantowane,
+że dotyczą one osób fizycznych. Drugim problemem jest niespójność 
+typów danych (\cref{def:niespójność-typów}). Część danych oznaczonych
+jako imiona dotyczy nazw firm lub instytucji. Oznaczenie tego faktu
+istnieje tylko w niektórych przypadkach, dużo częściej jest to pominięte.
+"""
+
+#lib
+import lib.storage, lib.name, lib.flow
 from util import strnorm
 
-pandas.set_option('future.no_silent_downcasting', True)
+#calc
+import pandas, yaml, numpy
 
-@Flow.From()
-def Nameclsf(asnstores:dict[Storage, str],
+#plot
+import altair as Plot
+
+@lib.flow.make()
+def Nameclsf(asnstores:dict[lib.storage.Storage, str],
              assignements = ['names', 'firstnames', 'lastnames', 'ambignames'],
              typeassign='type-name'):
 
@@ -31,7 +59,7 @@ def Nameclsf(asnstores:dict[Storage, str],
 
       Y = pandas.concat([Y, X]) if not Y.empty else X
 
-  return mapnames(Y.reset_index(drop=True), 
+  return lib.name.mapnames(Y.reset_index(drop=True), 
                   orgqueries=['type.str.upper() == "LEGAL"'],
                   orgkeysubstr=['&', 'INTERNAZIO', 'INTERNATIO', 'INC.', 'ING.', 'SP. Z O. O.', 'S.P.A.'],
                   orgkeywords=[x for X in [ 'THE', 'INDIVIDUAL', 'CORP',
@@ -48,11 +76,20 @@ def Nameclsf(asnstores:dict[Storage, str],
                                             'UNIWERSYTET UNIVERSITY AKADEMIA ACADEMY',
                                             'POLITECHNIKA'] for x in X.split()])
 
-@Flow.From()
-def Pull(storage:Storage, assignpath:str,
-            assignements = ['firstnames', 'lastnames'],
-            assignentities = ['names', 'ambignames'],
-            cityassign='city'):
+@lib.flow.make()
+def Pull( storage:lib.storage.Storage, assignpath:str,
+          assignements = ['firstnames', 'lastnames'],
+          assignentities = ['names', 'ambignames'],
+          cityassign='city'):
+
+  r"""
+  \begin{defi}
+  Wpis osobowy $w_i$ --- pojedynczy obiekt przypisany danemu patentowi. Zawiera
+  informacje o osobie powiązanej z patentem. Jeden paten może zawierać
+  wiele wpisów osobowych. Każdy składa się z: imienia i nazwiska albo
+  ciągu imienniczego (\cref{def:ciąg-imienniczy}); nazwy miejscowości zameldowania.
+  \end{defi}
+  """
 
   S = storage
   with open(assignpath, 'r') as f:
@@ -110,8 +147,46 @@ def Pull(storage:Storage, assignpath:str,
 
   return Y
 
-@Flow.From()
+@lib.flow.make()
 def Textual(pulled:pandas.DataFrame, nameset:pandas.DataFrame):
+
+  r"""
+  \subsection{Niespójność typów}
+
+  Rozwiązaniem problemu pomieszania nazw organizacji oraz imion osób
+  jest wykorzystanie danych o odpowiednim typowaniu i fragmentacji.
+  Wyróżniamy w nich pojedyncze słowa albo ciągi i przyjmujemy, 
+  że są charakterystyczne dla danego typu. W przypadku nazw organizacji
+  są to ciągi, a w przypadku imion i nazwisk --- pojedyncze słowa.
+  Dodatkowo testujemy podpisy na zawartość ustalonego zbioru słów
+  kluczowych, które są charakterystyczne dla nazw organizacji.
+  Po utworzeniu zbiorów słów i ciągów kluczowych imiona i nazwy
+  są klasyfikowane na podstawie ich zawartości. W ten sposób
+  możemy zidentyfikować, czy dany wpis dotyczy osoby fizycznej
+  czy organizacji.
+
+  \begin{uwaga}
+  Duża część nazw i imion nie ulega klasyfikacji w wyniku powyższego
+  algorytmu. Dla uproszczenia zakładamy, że dotyczą one wtedy imion
+  osób fizycznych.
+  \end{uwaga}
+
+  \begin{defi}\label{def:ciąg-imienniczy}
+  Ciąg imienniczy $N_k$ --- ciąg imion oraz nazwisk przypisany danej osobie.
+  Nazwy podwójne rozdzielone znakami interpunkcyjnymi są traktowane jako
+  oddzielne imiona.
+  \end{defi}
+
+  Każdy element ciągu imienniczego podlega normalizacji. Wszystkie jego 
+  znaki są traktowane jako wielkie litery, a znaki diaktryczne oraz akcenty 
+  są zastępowane ich odpowiednikami tych wyróżnień piśmienniczych.
+  Wynika to z faktu, że ich obecność nie jest pewna w danych.
+
+  \begin{uwaga}
+  To czy dany element $n,\ n\in N_k$ jest imieniem, czy nazwiskiem nie zawsze
+  jest jednoznaczne.
+  \end{uwaga}
+  """
 
   X = pulled
   M = nameset
@@ -172,7 +247,7 @@ def Textual(pulled:pandas.DataFrame, nameset:pandas.DataFrame):
 
   return Y
 
-@Flow.From()
+@lib.flow.make()
 def Spacetime(textual:pandas.DataFrame, 
               geoloc:pandas.DataFrame, 
               event:pandas.DataFrame, 
@@ -234,14 +309,14 @@ FGT = Spacetime(FN, fP['UPRP']['geoloc'], fP['UPRP']['event'],
                   fP['UPRP']['classify']).map('cache/spacetime.pkl')
 
 sel2013 = lambda X: ((X['grant'] >= '2013-01-01') & (X['grant'] <= '2022-12-31'))
-F2013 = Flow(callback=lambda *X: X[0][sel2013(X[0])], args=[FGT])
+F2013 = lib.flow.Flow(callback=lambda *X: X[0][sel2013(X[0])], args=[FGT])
 flow = { 'registry': {'2013': F2013,
                       'pull': F0, 
                       'spacetime':FGT } }
 
 plots = dict()
 
-plots[f'F-geoloc-eval-appl'] = Flow(args=[FGT], callback=lambda X:
+plots[f'F-geoloc-eval-appl'] = lib.flow.Flow(args=[FGT], callback=lambda X:
 
   Plot.Chart(X.assign(year=X['application'].dropna().dt.year.astype(int))\
               .assign(loceval=X['loceval'].fillna(~X['city'].isna())\
@@ -258,7 +333,7 @@ plots[f'F-geoloc-eval-appl'] = Flow(args=[FGT], callback=lambda X:
                               .title('Metoda geolokalizacji / rodzaj braku')\
                               .legend(orient='bottom', columns=4)))
 
-plots[f'F-geoloc-eval-grant'] = Flow(args=[FGT], callback=lambda X:
+plots[f'F-geoloc-eval-grant'] = lib.flow.Flow(args=[FGT], callback=lambda X:
 
   Plot.Chart(X.assign(year=X['grant'].dropna().dt.year.astype(int))\
               .assign(loceval=X['loceval'].fillna(~X['city'].isna())\
@@ -275,7 +350,7 @@ plots[f'F-geoloc-eval-grant'] = Flow(args=[FGT], callback=lambda X:
                               .title('Metoda geolokalizacji / rodzaj braku')\
                               .legend(orient='bottom', columns=4)))
 
-plots['F-grant-delay'] = Flow(args=[FGT], callback=lambda X:(
+plots['F-grant-delay'] = lib.flow.Flow(args=[FGT], callback=lambda X:(
 
   lambda X:
 
@@ -292,7 +367,7 @@ plots['F-grant-delay'] = Flow(args=[FGT], callback=lambda X:(
 
 )((X['grant'] - X['application']).dt.days.rename('days').reset_index()))
 
-plots['F-application-grant'] = Flow(args=[F2013], callback=lambda X:
+plots['F-application-grant'] = lib.flow.Flow(args=[F2013], callback=lambda X:
 
     X .assign(grant=X['grant'].dropna().dt.year.astype(int))\
       .assign(application=X['application'].dt.year.astype(int))\

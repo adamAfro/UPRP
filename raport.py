@@ -1,10 +1,211 @@
-import pandas, yaml, tqdm, altair as Plot
-from lib.storage import Storage
-from lib.query import Query
-from lib.flow import Flow
+r"""
+\section{Raporty o stanie techniki jako informacja o dyfuzji}
 
-@Flow.From()
-def Indexing(storage:Storage, assignpath:str):
+Na stronie \ac{UPRP} wyróżniono etapy w procesie patentowania.
+Etapem po spełnieniu formalności jest 
+\textit{sprawozdanie ze stanu techniki}\cite{UPRP-pat-prd}.
+Słownik urzędu wskazuje, że \textit{stan techniki} to wszelka
+wiedza dostępna do wskazanej daty powszechnie, albo taka,
+która nie jest publiczna, ale została już ogłoszona 
+w określony sposób\cite{UPRP-dict}.
+
+Sprawozdanie jest realizowane przez urzędników i składa się z
+klasyfikacji zgłoszenia, informacji o innych klasyfikacjach,
+w których prowadzono poszukiwania, wykaz baz komputerowych,
+użytych w trakcie procesu oraz tabelę zawierającą odniesienia
+do innych prac. Wśród odniesień można wyróżnić odniesienia do
+patentów, artykułów naukowych, książek, stron internetowych,
+a także do innych zgłoszeń patentowych.
+Przykłady takich odniesień są przedstawione na następnej stronie.
+
+\newpage
+\begin{figure}[H]\centering
+\label{fig:raport-biblio-ex}
+\includegraphics[width=0.8\textwidth]{fig/img/rprt/bilblio-ex-1.jpg}
+\caption{Przykład odniesienia do literatury technicznej 
+         w raporcie o stanie techniki.}
+\end{figure}
+\begin{figure}[H]\centering
+\label{fig:raport-pat-ex}
+\includegraphics[width=0.8\textwidth]{fig/img/rprt/pat-ex-1.jpg}
+\caption{Przykład odniesienia do innych patentów 
+         w raporcie o stanie techniki.}
+\end{figure}
+\begin{figure}[H]\centering
+\label{fig:raport-url-ex}
+\includegraphics[width=0.8\textwidth]{fig/img/rprt/url-ex-1.jpg}
+\caption{Przykład odniesienia do strony internetowej 
+         w raporcie o stanie techniki.}
+\end{figure}
+\newpage
+
+Z danych zebranych z \ac{API} można wyodrębnić tabelę 
+\textit{other-documents}, która zawiera listę adresów internetowych
+z plikami związanymi z danym zgłoszeniem. Tabela składa się
+z kodów \ac{URI} oraz kodów rozróżniających typ dokumentu.
+Kody o typie \textit{RAPORT} albo \textit{RAPORT1} są kodami 
+\ac{URI} do z adresami \ac{URL} do plików zawierających raporty 
+o stanie techniki. Są to pliki w formacie \ac{PDF}.
+
+Poniżej przedstawiono przykład tego jaką strukturę mogą tworzyć 
+\cref{fig:raport-ex}. Są to raporty dla patentów $p_1, p_2, p_3$. 
+Zawierają odniesienia do patentów, które istnieją w zbiorze danych, 
+tj. $p_1, p_2, p_3$. Oprócz tego mają odniesienia do patentów 
+spoza domeny $\hat p_4, \hat p_5$ oraz publikacji naukowych 
+$\hat l_1, \hat l_2$, które nie są uwzględnione w poniższej analizie.
+
+\begin{figure}[H]\centering
+\begin{tikzpicture}
+	\draw[draw=black, thin, solid] (-5.00,3.00) rectangle (-3.00,0.00);
+	\draw[draw=black, thin, solid] (-1.50,3.50) rectangle (1.50,-0.50);
+	\draw[draw=black, thin, solid] (2.50,3.50) rectangle (5.50,-0.50);
+	\draw[draw=black, thin, solid] (-1.00,3.00) rectangle (1.00,0.00);
+	\draw[draw=black, thin, solid] (3.00,3.00) rectangle (5.00,0.00);
+	\draw[draw=black, thin, solid] (-5.50,3.50) rectangle (-2.50,-0.50);
+	\node[black, anchor=south west] at (-5.56,3.75) {$p_1$};
+	\node[black, anchor=south west] at (-1.56,3.75) {$p_2$};
+	\node[black, anchor=south west] at (2.44,3.75) {$p_3$};
+	\node[black, anchor=south west] at (-5.06,1.25) {$p_3$};
+	\node[black, anchor=south west] at (-5.06,2.25) {$p_2$};
+	\node[black, anchor=south west] at (-1.06,2.25) {$p_3$};
+	\node[black, anchor=south west] at (-5.06,0.25) {$\hat l_1$};
+	\node[black, anchor=south west] at (-1.06,0.25) {$\hat l_2$};
+	\node[black, anchor=south west] at (2.94,1.25) {$\hat l_3$};
+	\node[black, anchor=south west] at (-1.06,1.25) {$\hat p_4$};
+	\node[black, anchor=south west] at (2.94,2.25) {$\hat p_5$};
+\end{tikzpicture}
+\caption{Przykład raportów o stanie techniki}
+\label{fig:raport-ex}
+\end{figure}
+
+\subsubsection{Tworzenie grafu za pomocą danych z tabel
+               raportów o stanie techniki}
+\label{sec:graf-raporty}
+
+Dane z raportów o stanie techniki tworzą graf skierowany
+patentów $G$. Krawędź w takim grafie istnieje jeśli patent
+$p_1$ zawiera w swoim raporcie wzmiankę o patencie~$p_2$.
+
+Wracając do przykładu \cref{fig:raport-ex}, zastosowanie algorytmu 
+tworzy graf o krawędziach $E = \{ (p_2, p_1), (p_3, p_1), (p_3, p_2) \}$ i
+wierzchołkach $V = { p_1, p_2, p_3 }$.
+
+\begin{figure}\centering
+\begin{tikzpicture}
+	\draw[draw=black, thin, solid] (-1.50,1.50) ellipse (0.50 and -0.50);
+	\node[black, anchor=south west] at (-2.06,1.25) {$p_1$};
+	\draw[draw=black, thin, solid] (1.50,2.50) ellipse (0.50 and -0.50);
+	\draw[draw=black, thin, solid] (0.50,-0.50) ellipse (0.50 and -0.50);
+	\node[black, anchor=south west] at (0.94,2.25) {$p_2$};
+	\node[black, anchor=south west] at (-0.06,-0.75) {$p_3$};
+	\draw[draw=black, -latex, thin, solid] (-0.14,0.04) -- (-0.92,0.96);
+	\draw[draw=black, -latex, thin, solid] (0.78,0.32) -- (1.14,1.67);
+	\draw[draw=black, -latex, thin, solid] (0.49,2.33) -- (-0.62,1.90);
+\end{tikzpicture}
+\caption{Graf dla przykładowego zestawu raportów \cref{fig:raport-ex}}
+\label{fig:raport-ex-G}
+\end{figure}
+
+Zakładając, że wpisy ekspertów zawierają wyłącznie kody publikacji 
+patentów, graf mógłby być stworzony przez bezpośrednie powiązanie
+ich z danymi. Istotnym problemem w takiej sytuacji jest jakość \ac{OCR},
+która jest dobra, ale nie pewna.
+Wpisy ekspertów nie są jednak jednorodne w taki sposób. Problem
+rozpoznania znaków nie jest jedyny, bo pojawiają się kolejne:
+
+\begin{itemize}
+\item wątpliwa jakość \ac{OCR}
+\item wpisy to nie tylko kody patentowe
+\item wspominane kody patentowe nie zawsze są publikacjami,
+      mogą to być np. kody złożenia aplikacji
+\end{itemize}
+
+\begin{figure}[H]\centering
+\includegraphics[width=0.8\textwidth]{fig/img/rprt/pat-ex-P.jpg}
+\caption{Przykład odniesienia poprzez numer publikacji.}
+\end{figure}
+
+\begin{figure}[H]\centering
+\includegraphics[width=0.8\textwidth]{fig/img/rprt/pat-ex-A.jpg}
+\caption{Przykład odniesienia poprzez numer aplikacji.}
+\end{figure}
+
+\begin{figure}[H]\centering
+\includegraphics[width=0.8\textwidth]{fig/img/rprt/pat-ex-A-P.jpg}
+\caption{Przykład odniesienia poprzez numer aplikacji i publikacji
+         jako jeden numer.}
+\end{figure}
+
+Sposobem na minimalizację zjawiska błędnych powiązań jest zastosowanie
+algorytmu wyszukiwania (\cref{sec:wyszukiwanie}).
+
+Ninejsze wyszukiwanie polega na wskazaniu sumy zbiorów
+słów: numerów patentowych, słów języka naturalnego oraz dat. 
+Wskazanie tej sumy zachodzi dla każdej pary wszystkich słów zapytań
+ze wszystkimi słowami ze zbioru danych. Dodatkowo zachodzi łączenie
+częściowe, które dopasowuje n-gramy poszczególnych słów. Od pewnego
+minimalnego dopasowania zostają one uwzględnione. Całość wymaga
+pewnych kroków optymalizacyjnych. Głównym jest zasada, że słowa
+są dopasowywane tylko pod warunkiem, że zaszło dopasowanie numeru
+patentu.
+
+W trakcie wyszukiwania tworzona jest jego punktacja, aby odróżnić
+wartościowe wyniki. Oprócz punktacji jest też ustalanie poziomu
+wyszukiwania na podstawie tego jakie rzeczywiste dane są łącznikami.
+Wybierane są wyłącznie pojedyncze, najlepsze wyniki.
+
+
+
+Raporty \ac{PDF} nie posiadają adnotacji tekstowych. 
+Znaczy to tyle, że dane są zawarte w sposób czytelny
+jedynie dla człowieka i nie są dostępne dla urządzeń w sposób
+ustruktoryzowany inny niż ciąg binarny pikseli.
+Rozwiązaniem jest proces \ac{OCR}, który obrazy zawierające tekst
+przekształca na kod binarny, które można przetwarzać na komputerze
+jako ciągi znaków odpowiadające prawdziwemu tekstowi. Pierwszą
+czynnością w tym procesie jest zastosowanie pakietu \textit{paddle}.
+Zastosowanie modułu pozwala na pozyskanie linijek tekstu z przypisaniem
+do ich pozycji. Wynika z tego problem taki, że nie brak jest informacji
+o tym gdzie zaczyna i kończy się tekst dotyczący wskazanej obserwacji.
+W związku z tym nie sposób jest przypisać tekstu do odpowiednich
+wpisów. Dodatkowo dochodzą problemy wynikające z błędów w procesie
+skanowania samych dokumentów - zniekształcenia, zaciemnienia, czy
+rotacje kartek sprawiają, że proces \ac{OCR} nie jest idealny.
+Dodatkowo samo formatowanie nierzadko jest wadliwe co wynika
+z wprowadzania danych jeszcze na etapie tworzenia dokumentów.
+
+
+
+\subsubsection{Zastosowanie dużego modelu językowego}
+
+Do skutecznego pozyskania danych z dokumentów kluczowe było zastosowanie
+dużych modeli językowych z multimodalnymi wejściami. Stan tej technologii
+na dzień procesu wyciągania danych był na tyle zaawansowany, że
+aspekty techniczne ograniczają się do zastosowania zewnętrznego \ac{API}
+dla modelu \textit{openai} \textit{GPT4o}. Model ten w wystarczający
+sposób był w stanie przetworzyć obrazy zawierające tekst na ustruktoryzowany
+zbiór wpisów tekstowych.
+
+Mimo, że model \textit{paddle} nie dawał wyników pozwalających na
+poprawną dalszą analizę to pozwolił na ograniczenie kosztów. Znalezienie
+słów kluczowych nagłówków i stopek tabeli z informacjami było wystarczające
+aby przyciąć zdjęcia do obszarów zainteresowania.
+
+"""
+
+
+#lib
+import lib.storage, lib.query, lib.flow
+
+#calc
+import pandas, yaml, tqdm
+
+#plot
+import altair as Plot
+
+
+@lib.flow.make()
+def Indexing(storage:lib.storage.Storage, assignpath:str):
 
   """
   Indeksowanie danych z profili, jest wymagane do przeprowadzenia
@@ -54,8 +255,8 @@ def Indexing(storage:Storage, assignpath:str):
 
   return P0, P, D0, W0, W
 
-@Flow.From()
-def Qdentify(qpath:str, storage:Storage, docsframe:str):
+@lib.flow.make()
+def Qdentify(qpath:str, storage:lib.storage.Storage, docsframe:str):
 
   """
   Dopasowanie zapytań do dokumentów na podstawie nazwy pliku.
@@ -84,7 +285,7 @@ def Qdentify(qpath:str, storage:Storage, docsframe:str):
 
   return Y
 
-@Flow.From()
+@lib.flow.make()
 def Parsing(searches: pandas.Series):
 
   """
@@ -102,7 +303,7 @@ def Parsing(searches: pandas.Series):
 
   for i, q0 in Q.iterrows():
 
-    q = Query.Parse(q0['query'])
+    q = lib.query.Query.Parse(q0['query'])
 
     P.extend([{ 'entrydoc': q0['doc'], 'entry': i, **v } for v in q.codes])
 
@@ -174,7 +375,7 @@ class Search:
 
     return Y
 
-@Flow.From()
+@lib.flow.make()
 def Narrow(queries:pandas.Series, indexes:tuple, pbatch:int=2**14, ngram=True):
 
   """
@@ -268,8 +469,8 @@ def Narrow(queries:pandas.Series, indexes:tuple, pbatch:int=2**14, ngram=True):
 
   return Y.to_pandas()
 
-@Flow.From()
-def Family(queries:pandas.Series, matches:pandas.DataFrame, storage:Storage, assignpath:str):
+@lib.flow.make()
+def Family(queries:pandas.Series, matches:pandas.DataFrame, storage:lib.storage.Storage, assignpath:str):
 
   "Podmienia kody w zapytaniach na te znalezione w rodzinie patentowej."
 
@@ -304,7 +505,7 @@ def Family(queries:pandas.Series, matches:pandas.DataFrame, storage:Storage, ass
 
   Z = []
   for i, q0 in P['value'].items():
-    Z.extend([{ 'entry': i, **v } for v in Query.Parse("PL"+q0).codes])
+    Z.extend([{ 'entry': i, **v } for v in lib.query.Query.Parse("PL"+q0).codes])
 
   Z = pandas.DataFrame(Z).set_index('entry')
 
@@ -312,7 +513,7 @@ def Family(queries:pandas.Series, matches:pandas.DataFrame, storage:Storage, ass
 
 
 
-@Flow.From()
+@lib.flow.make()
 def Drop(queries:pandas.Series, matches:list[pandas.DataFrame]):
 
   "Usuwa z wyników zapytań te, które już zostały dopasowane w zadowalający sposób."
@@ -343,7 +544,7 @@ def Drop(queries:pandas.Series, matches:list[pandas.DataFrame]):
 
   return Q[ ~ Q.index.isin(q)], P[ ~ P.index.isin(p) ]
 
-@Flow.From()
+@lib.flow.make()
 def Preview(path:str,
             profile:dict[str, pandas.DataFrame],
             matches:pandas.DataFrame,
@@ -376,7 +577,7 @@ def Preview(path:str,
     with open(path, 'w') as f: f.write(Y)
 
 
-@Flow.From()
+@lib.flow.make()
 def result(R: dict[str, pandas.DataFrame]):
 
   for k in R.keys():
@@ -388,7 +589,7 @@ def result(R: dict[str, pandas.DataFrame]):
 
   return Y
 
-@Flow.From()
+@lib.flow.make()
 def edges(X:pandas.DataFrame):
 
   X = X[X[('', '', '', 'level')] >= "partial-dated-supported"]
@@ -453,7 +654,7 @@ valid = edges(flow['UPRP']['narrow'])
 
 plots = dict()
 
-plots['F-results'] = Flow(args=[linkback, results], callback=lambda Q, Y:
+plots['F-results'] = lib.flow.Flow(args=[linkback, results], callback=lambda Q, Y:
 
   pandas.concat([pandas.DataFrame({'count': [Q.shape[0]], 'source': 'UPRP', 'kind': 'Cytowania' }),
                  Y.value_counts('source').reset_index().assign(kind='Wyniki')])\

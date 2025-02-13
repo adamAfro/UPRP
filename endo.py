@@ -1,10 +1,58 @@
-import pandas, numpy, geopandas as gpd, altair as Plot
+r"""
+\subsection{Obszary peryferyjne}
+
+\newpage\charttripled
+{../fig/endo/M-meandist.png}
+{ Mapa i histogramy średniej odległości do innych osób pełniących role patentowe }
+{../fig/endo/M-meandist100.png}
+{ Mapa i histogramy średniej odległości do innych osób pełniących role patentowe do 100 km }
+{../fig/endo/M-meandist50.png}
+{ Mapa i histogramy średniej odległości do innych osób pełniących role patentowe do 50 km }
+"""
+
+#lib
 from lib.flow import Flow
 import gloc, subject
+
+#calc
+import pandas, numpy, geopandas as gpd
+
+#plot
+import altair as Plot
 from util import A4
 
 @Flow.From()
 def meandist(geo:pandas.DataFrame, dist:pandas.DataFrame, coords:list[str], rads=[], filtr=None, symbol=''):
+
+  r"""
+  \subsection{Średni dystans}
+
+  Średni dystans jest miarą odległości między wszystkimi punktami w przestrzeni.
+  Każdy punkt ma przyporządkowaną wagę równą ilości osób pełniących role patentowe,
+  które meldowały się w danym punkcie podczas składania aplikacji patentowej.
+
+  \D{mean-dist}{Średni dystans}{
+    \begin{math}
+      \bar{d} = \frac{1}{n(n-1)} \sum_{i=1}^{n} \sum_{j=1}^{n} d_{ij}
+    \end{math}
+    gdzie $d_{ij}$ to odległość między punktami $i$ i $j$.
+  }
+
+  Średni dystans jest wskaźnikiem centralności danego punktu względem
+  wszystkich innych punktów. Co za tym idzie jest to miara o poziomie krajowym.
+  Aby wyznaczyć inne poziomy centralności warto ograniczyć ją do maksymalnego
+  promienia --- wtedy otrzymamy średni dystans do innych punktów w danym promieniu.
+  Świadczy on jak bliskości danego punktu do innych w ograniczonym obszarze.
+
+  Obszary o wysokiej wartości średniego dystansu określamy jako peryferyjne krajowo,
+  a te o niskiej jako centralne. W przypadku ograniczonych promienii metryki mamy
+  do czynienie z bardziej szczegółową informacją o centralności danego punktu.
+  Punkty o wysokiej wartości średniego dystansu w ograniczonym promieniu określamy
+  zwyczajnie, jako peryferyjne, z racji nie są w bliskim sąsiedztwie z innymi punktami;
+  z kolei punkty o niskiej wartości średniego dystansu w ograniczonym promieniu
+  określamy jako centralne lokalnie.
+  \newpage
+  """
 
   X = geo
   X = X.dropna(subset=coords)
@@ -101,31 +149,6 @@ plots[f'M'] = Flow(args=[data, gloc.region[1]], callback=lambda X, G:
       .mark_circle().encode(longitude='lon:Q', latitude='lat:Q', 
                             color=Plot.Color(f'count:Q').scale(scheme='goldgreen'),
                             size=Plot.Size('count').title('Ilość pkt.')).project('mercator'))
-
-@Flow.From()
-def histogram(X:pandas.DataFrame, k:str, step=None, title=None): return (\
-
-  X[[k]].pipe(Plot.Chart).mark_bar()\
-    .encode(Plot.Y(f'{k}:Q').bin(**(dict(step=step) if step else {})).title(None),
-            Plot.X('count()').title(title)) + \
-
-  X[k].astype(float).describe().loc[['25%', '50%', '75%', 'mean', 'min', 'max']]\
-    .rename({ 'mean': 'średnia', 'max': 'maks.', 'min': 'min.' }).reset_index()\
-    .pipe(Plot.Chart).mark_rule()\
-    .encode(Plot.Y(f'{k}:Q'),
-            Plot.Color('index:N')\
-                .legend(orient='right')\
-                .title('Statystyka')\
-                .scale(scheme='category10')) + \
-
-  pandas.DataFrame({ 'mean': [X[k].mean()], 'std': [X[k].std()], 
-                     'index': 'odchylenie' })\
-    .eval('y1 = mean - (std / 2)').eval('y2 = mean + (std / 2)')
-    .pipe(Plot.Chart).mark_rule()\
-    .encode(Plot.Y('y1:Q'), Plot.Y2('y2:Q'),
-            Plot.Color('index:N'))
-
-).properties(width=100)
 
 @Flow.From()
 def qseasonplot(X:pandas.DataFrame, k:str): return (

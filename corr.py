@@ -1,13 +1,57 @@
-#local
-import lib.flow, endo, gloc
+"""
+\subsection{Autokorelacja przestrzenna}
 
-#plot
-import altair as Pt
-from util import A4
+Autokorelacja przestrzenna mówi o braku losowości w położeniu punktów:
+jeśli autokorelacja jest statystycznie istotna to punkty są skupione w 
+globalne klastry przestrzenne\cite{Se-Ar-Da-Wo-20}.
+W kontekście analizy patentowej, globalność odnosi się do poziomu krajowego.
+
+\D{spat-weight}{Wagi przestrzenne}
+{ macierz liczbowych wag przestrzennych $W$,
+  która określa siłę zależności przestrzenne między obiektami.
+  Indeks rzędu macierzy $W$ odnosi się do obiektu przestrzennego,
+  a indeks kolumny do obiektu co do którego występuje zależność.}
+
+Zależność wag przestrzennych w poniżeszej analizie dotyczy 
+konkretnie tego jak blisko siebie są obiekty przestrzenne ---
+wynika wyłącznie z położenia i sąsiedztwa regionów.
+Sąsiedztwo jest określane zgodnie z metodą \foreign{queen contiguity}
+--- znaczy to tyle, że dwa regiony sąsiadują ze sobą
+jeśli mają wspólną granicę lub punkt.
+
+\D{lag}{Lag}{
+  Macierz $Y_{l}$ jest iloczynem wag przestrzennych $W$ i wektora cechy $Y$
+  dla każdej obserwacji przestrzennej. Lag jest miarą zależności przestrzennej
+  w sąsiedztwie.
+  \begin{math}
+    Y_{l} = W\cdot Y
+  \end{math}}
+
+\D{Moran-I}{Statystyka I Morana}{
+\begin{math}
+  I = (n / \sum_i \sum_j w_{ij})\cdot (\sum_i \sum_j w_{ij} z_i z_j / \sum_i z_i^2)
+\end{math}}
+
+
+  \subsection
+{Udział klasyfikacji \ac{IPC} w profilu punktu}\label{udział-klasyfikacji}
+
+Udział klasyfikacji odnosi się do tego jak wiele osób dostawało 
+ochronę patentową w danej sekcji ze wskazanego punktu, 
+bądź współpracowało przy takim dokumencie z innymi osobami.
+"""
+
+
+#lib
+import lib.flow, endo, gloc
 
 #calc
 import pandas, numpy, geopandas as gpd
 import libpysal as sal, esda as sale
+
+#plot
+import altair as Pt
+from util import A4
 
 @lib.flow.Flow.From()
 def Moran(X:pandas.DataFrame, R:gpd.GeoDataFrame, counted: list, by:str):

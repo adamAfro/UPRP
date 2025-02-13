@@ -1,15 +1,147 @@
-import pandas, yaml, altair as Plot
+r"""
+\section{Dane patentowe}
 
-from lib.storage import Storage
-from lib.geo import closest
-from lib.flow import Flow
-from util import strnorm
-from util import data as D
+\subsection{Role patentowe w aplikacjach patentowych}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+	\draw[draw=black, fill=lightgray, thin, solid] (-2.00,2.00) rectangle (-1.00,0.50);
+	\node[black, anchor=south west] at (-3.06,2.25) {patent};
+	\draw[draw=black, thin, solid] (-1.00,1.50) -- (1.00,4.00);
+	\draw[draw=black, thin, solid] (-1.00,1.00) -- (1.00,-2.00);
+	\node[black, anchor=south west] at (1.94,-2.25) {wynalazek};
+	\node[black, anchor=south west] at (1.94,-0.25) {wynalazca};
+	\draw[draw=black, thin, solid] (-1.00,1.50) -- (1.00,2.00);
+	\draw[draw=black, thin, solid] (-1.00,1.50) -- (1.00,0.00);
+	\node[black, anchor=south west] at (1.94,1.75) {aplikant};
+	\node[black, anchor=south west] at (1.94,3.75) {właściciel};
+	\draw[draw=black, thin, solid] (1.50,4.00) ellipse (0.50 and 0.50);
+	\draw[draw=black, thin, solid] (1.50,2.00) ellipse (0.50 and 0.50);
+	\draw[draw=black, thin, solid] (1.50,0.00) ellipse (0.50 and 0.50);
+	\draw[draw=black, fill=black, thin, solid] (-1.00,1.50) circle (0.1);
+	\draw[draw=black, fill=black, thin, solid] (-1.00,1.00) circle (0.1);
+	\draw[draw=black, fill=black, thin, solid] (1.00,-1.50) rectangle (2.00,-2.50);
+	\node[black, anchor=south west] at (-5.06,3.25) {biuro};
+	\draw[draw=black, thin, solid] (-1.50,4.00) ellipse (0.50 and -0.50);
+	\draw[draw=black, thin, solid] (-5.00,3.00) rectangle (-4.00,2.00);
+	\node[black, anchor=south west] at (-1.2,4.5) {pełnomocnik};
+	\draw[draw=black, thin, solid] (-1.50,2.00) -- (-1.50,3.50);
+	\draw[draw=black, fill=black, thin, solid] (-1.50,2.00) circle (0.1);
+	\draw[draw=black, fill=black, thin, solid] (-2.00,1.50) circle (0.1);
+	\draw[draw=black, thin, solid] (-2.00,1.50) -- (-4.00,2.50);
+	\draw[draw=black, thin, solid] (-4.50,0.00) ellipse (0.50 and -0.50);
+	\node[black, anchor=south west] at (-5.06,0.75) {urzędnik};
+	\node[black, anchor=south west] at (-3.06,-3.25) {raport};
+	\draw[draw=black, fill=gray, thin, solid] (-4.00,-2.00) rectangle (-3.00,-3.50);
+	\draw[draw=black, thin, solid] ([shift=(90:0.50 and -1.25)]-5.00,1.25) arc (90:270:0.50 and -1.25);
+	\draw[draw=black, thin, solid] (-4.50,-0.50) -- (-4.00,-2.00);
+	\draw[draw=black, fill=black, thin, solid] (-4.00,-2.00) circle (0.1);
+	\draw[draw=black, thin, dotted] (-4.00,0.00) -- (-2.00,1.50);
+	\draw[draw=black, thin, solid] (-3.00,-2.00) -- (-2.00,1.00);
+	\draw[draw=black, fill=black, thin, solid] (-2.00,1.00) circle (0.1);
+	\draw[draw=black, fill=black, thin, solid] (-3.00,-2.00) circle (0.1);
+\end{tikzpicture}
+\caption{Struktura powiązań patentu}
+\label{fig:struktura-patentowa}
+\end{figure}
+
+\begin{defi}
+Wynalazca --- osoba podająca się za autora bądź współautora nowej
+wiedzy technicznej.
+\end{defi}
+
+\begin{defi}
+Wynalazek --- nowa wiedza techniczna, która jest opatentowana.
+\end{defi}
+
+\begin{defi}
+\label{defi:wynalazca}
+Wynalazca --- osoba podająca się za autora bądź współautora nowej
+wiedzy technicznej.
+\end{defi}
+
+\begin{defi}
+\label{defi:aplikant}
+Aplikant --- osoba składająca wniosek patentowy na podstawie autorstwa,
+albo innych przesłanek do własności nad patentem; przykładowo patent
+może być efektem pracy w organizacji w zatrudnieniu --- wtedy to
+organizacja może być składać wniosek patentowy.
+\end{defi}
+
+\begin{defi}
+Właściciel --- osoba posiadająca prawo do patentu; może je utrzymać
+na przykład w wyniku sprzedaży.
+\end{defi}
+
+\begin{defi}
+Pełnomocnik --- osoba wykonująca czynności urzędowe związane z
+utrzymaniem patentu w mocy; może to być wyznaczona osoba niepowiązana z 
+patentem, ale posiadająca uprawenienia wymagane przez urząd, albo
+osoba fizyczna współuprawniona bądź z bliskiej rodziny.
+\end{defi}
+
+\begin{defi}
+Biuro --- instytucja zajmująca się przyznawaniem patentów.
+\end{defi}
+
+\begin{defi}
+Urzędnik --- tutaj: pracownik biura wykonujący raport o stanie
+techniki dla danego patentu.
+\end{defi}
+
+
+\newpage\begin{acronym}
+
+\acro
+{UPRP}{Urząd Patentowy Rzeczypospolitej Polskiej}
+
+\acro
+{EPO}{European Patent Office}
+
+\acro
+{WIPO}{World Intellectual Property Organization}
+
+\acro
+{MKP}{Międzynarodowa Klasyfikacja Patentów}
+
+\acro
+{IPC}{International Patent Classification}
+
+\acro
+{API}{Application Programming Interface}
+
+\acro
+{URI}{Uniform Resource Identifier}
+
+\acro
+{URL}{Uniform Resource Locator}
+
+\acro
+{OCR}{Optical Character Recognition}
+
+\acro
+{XML}{Extensible Markup Language}
+
+\acro
+{PDF}{Portable Document Format}
+
+\end{acronym}
+"""
+
+#lib
+import lib.flow, lib.geo, lib.storage, gloc
+from util import strnorm, data as D
 from profiling import flow as f0
-import gloc as gloc
 
-@Flow.From()
-def code(storage:Storage, assignpath:str):
+#calc
+import pandas, yaml
+
+#plot
+import altair as Plot
+
+@lib.flow.make()
+def code(storage:lib.storage.Storage, assignpath:str):
 
   S = storage
   with open(assignpath, 'r') as f:
@@ -33,8 +165,90 @@ def code(storage:Storage, assignpath:str):
   assert { 'doc' }.issubset(Y.index.names)
   return Y
 
-@Flow.From()
-def event(storage:Storage, assignpath:str, codes:pandas.DataFrame):
+@lib.flow.make()
+def event(storage:lib.storage.Storage, assignpath:str, codes:pandas.DataFrame):
+
+  r"""
+  \subsection
+  {Rejestr dat związanych z patentami}
+
+  Poszczególne czynności związane z ochroną patentów są rejestrowane.
+  Każde wydarzenie jest powiązane z konkretną datą kalendarzową.
+  Można wyróżnić kilka typów wydarzeń związanych z patentami:
+
+    \begin{itemize}
+
+  \item
+  publiczne ujawnienie \foreign{ang}{exhibition};
+
+
+  \item
+  roszczenia z pierwszeństwa \foreign{ang}{priority claim} --- 
+  data rozszczenia sprzed rozpoczęcia procesu patentowania dla wybranego urzędu;
+
+
+  \item
+  regionalna deklaracja \foreign{ang}{regional filing};
+
+
+  \item
+  deklaracja \foreign{ang}{filing};
+
+
+  \item
+  aplikacja \foreign{ang}{application} --- data złożenia aplikacji;
+
+
+  \item
+  przyznanie ochrony \foreign{ang}{grant};
+
+
+  \item
+  decyzja urzędowa;
+
+
+  \item
+  publikacja.
+  \end{itemize}
+
+
+
+  \newpage
+  \figpage{0.8}{../fig/patt/F-UPRP-event.png}
+  {Wydarzenia związane z patentami w kolejnych latach}
+
+  Wykres obrazuje kolejne lata i to jakie
+  działania podejmował urząd w stosunku do składanych patentów.
+
+
+
+  \newpage
+  \figsides
+  {../fig/rgst/F-grant-delay.png}
+  {Okres po między złożeniem aplikacji, a przyznaniem ochrony w Polsce}
+  {../fig/rgst/F-grant-delay.png}
+  { Okres po między złożeniem aplikacji, a przyznaniem ochrony w Polsce 
+    w latach 2013-2022 }
+
+  \figside
+  {../fig/rgst/F-application-grant.png}
+  { Lata składania aplikacji dla patentów, które otrzymały ochrone w Polsce
+    w latach 2013-2022 }
+  { W analizie czasowej opartej o patenty istotny jest fakt, że przyznawanie ochrony
+    nie jest natychmiastowe. W Polsce średni czas oczekiwania na ochronę wynosi
+    5.5 roku, chociaż najczęściej nie przekracza on okresu 5 lat (mediana).
+    W związku z tym wszelkie wnioski dotyczące innowacji w Polsce są istotnie
+    opóźnione w stosunku do powstawania wynalazków, przeciętnie o niespełna 5 lat. }
+
+
+  \newpage
+  \figside
+  {../fig/subj/F-geoloc-eval.png}
+  { Stan uzupełnienia informacji o geolokalizacjach, w Polsce, 
+    osób i organizacji pełniących role patentowe
+    w aplikacjach patentowych w zależności od roku}
+
+  """
 
   S = storage
   with open(assignpath, 'r') as f:
@@ -72,10 +286,96 @@ def event(storage:Storage, assignpath:str, codes:pandas.DataFrame):
   assert { 'doc' }.issubset(X.index.names)
   return X
 
-@Flow.From()
-def classify(storage:Storage, assignpath:str, codes:pandas.DataFrame, extended=False):
+@lib.flow.make()
+def classify(storage:lib.storage.Storage, assignpath:str, codes:pandas.DataFrame, extended=False):
 
-  "Zwraca ramkę z klasyfikacjami."
+  """
+  \newpage\subsection
+  {Klasyfikacje patentów}
+
+  Klasyfikacje patentowe to systemy, które pozwalają na przypisanie
+  patentów do odpowiednich dziedzin.
+
+
+
+  \subsubsection
+  {Międzynarodowa Klasyfikacja Patentów}
+  \label{IPC}
+
+  W Polsce funkcjonuje klasyfikacja
+  \ac{MKP}, czyli \ac{IPC}. Zapis klasyfikacji w tym systemie to ciąg
+  cyfrowo-literowy składający się z 4 części:
+
+
+
+  \begin{enumerate}
+
+  \item Dział - najwyższa hierarchia złożona z 8 kategorii
+
+  \begin{itemize}
+  \item ma tytuł informacyjny
+  \item każdy tytuł działu ma swój symbol: A, B, C, D, E, F, G albo H
+
+  \begin{itemize}
+  \item A – podstawowe potrzeby ludzkie
+  \item B – różne procesy przemysłowe; transport
+  \item C – chemia; metalurgia
+  \item D – włókiennictwo; papiernictwo
+  \item E – budownictwo; górnictwo
+  \item F – budowa maszyn; oświetlenie; ogrzewanie; uzbrojenie; technika minerska
+  \item G – fizyka
+  \item H – elektrotechnika
+  \end{itemize}
+
+  \item poddział - każdy dział może zawierać poddział, który nie jest oznaczany symbolem
+  \end{itemize}
+
+
+
+  \item Klasa - drugi poziom hierarchii
+
+  \begin{itemize}
+  \item ma tytuł informacyjny
+  \item oznaczana przez liczbę 2-cyfrową
+  \item zakres klasy - skrótowa informacja o treści klasy
+  \end{itemize}
+
+
+
+  \item Podklasa - trzeci poziom hierarchii
+
+  \begin{itemize}
+  \item ma tytuł informacyjny
+  \item oznaczana dużą literą
+  \item ma zakres i tytuł pomocniczy
+  \end{itemize}
+
+
+
+  \item Grupa - czwarty poziom hierarchii
+
+  \begin{itemize}
+  \item 2 zestawy cyfr oddzielone ukośnikiem
+
+  \begin{itemize}
+  \item zestaw pierwszy składa się od 1 do 3 cyfr i określa grupę główną
+  \item zestaw drugi składa się z 2 cyfr i określa grupę pomocniczą, grupa główna jest oznaczana 00
+  \end{itemize}
+
+  \item grupa ma tytuł informacyjny, podgrupa ma bardziej szczegółowe hasło
+  \end{itemize}
+
+  \end{enumerate}
+
+
+
+
+  \figside
+  {../fig/subj/F-geoloc-eval-clsf.png}
+  { Stan uzupełnienia informacji o geolokalizacjach, w Polsce, 
+    osób i organizacji pełniących role patentowe
+    w aplikacjach patentowych w zależności od klasyfikacji patentu}
+  """
 
   H = storage
   a = assignpath
@@ -129,12 +429,52 @@ def classify(storage:Storage, assignpath:str, codes:pandas.DataFrame, extended=F
   assert { 'doc' }.issubset(Y.index.names)
   return Y
 
-@Flow.From()
-def geolocate(storage:Storage, 
+@lib.flow.make()
+def geolocate(storage:lib.storage.Storage, 
              assignpath:str, 
              geodata:pandas.DataFrame, 
              codes:pandas.DataFrame,
              NAstr = ['bd', '~']):
+
+  r"""
+  \subsection{Dane przestrzenne}
+
+  Dane przestrzenne odnoszą się do miejsc z jakimi są powiązane
+  osoby albo organizacje związane z patentami. Pozostawia to więc 
+  różne możliwości analizy przestrzennej:
+
+  \begin{enumerate}
+  \item[$A$:] przypisanie każdego patentu do pojedynczej lokalizacji;
+  \item[$B$:] przypisanie patentu do wielu lokalizacji.
+  \end{enumerate}
+
+  W przypadku $A$ powstaje problem przypisania głównej lokalizacji.
+  Jest to kwestia $A_1$ priorytetowania organizacji ponad osoby, bądź
+  odwrotnie, oraz $A_2$ wyboru głównej osoby/organizacji.
+  Problem $A_1$ wiąże się z potencjalnymi różnicami w modelu zależnie
+  od wybranego podejścia. Problem $A_2$ może być niejednoznaczny
+  w rozwiązaniu z powodu zbyt małego zakresu informacji zawartych w danych.
+  Wymagałoby to dodatkowych danych z samego procesu powstawania wynalazku,
+  co jest poza zakresem tej pracy.
+
+  Dalsza analiza odnosi się wyłącznie do podejścia $B$.
+  Patent może mieć więc kilka lokalizacji, żadna nie jest określona jako główna.
+
+  \newpage
+  Opis tego jak uzupełnione są braki danych znajduje się w kolejnej sekcji.
+  Obok znajduje się wykres ilustrujący ilość patentów z geolokalizacjiami,
+  zgodnie z tym jak zostały określone.
+
+  \fig{../fig/rgst/F-geoloc-eval-appl.png}
+  { Stan uzupełnienia informacji o geolokalizacjach, w Polsce, 
+    osób i organizacji  pełniących role patentowe
+    w aplikacjach patentowych}
+
+  \fig{../fig/rgst/F-geoloc-eval-grant.png}
+  { Stan uzupełnienia informacji o geolokalizacjach, w Polsce, 
+    osób i organizacji  pełniących role patentowe
+    w aplikacjach patentowych, które otrzymały ochronę}
+  """
 
   S = storage
   with open(assignpath, 'r') as f:
@@ -166,7 +506,7 @@ def geolocate(storage:Storage,
 
   Y['lat'] = pandas.to_numeric(Y['lat'])
   Y['lon'] = pandas.to_numeric(Y['lon'])
-  Y = closest(Y, 'doc', 'city', 'lat', 'lon')
+  Y = lib.geo.closest(Y, 'doc', 'city', 'lat', 'lon')
 
   Y = Y.set_index('doc')
   Y = Y.join(codes, how='left')
@@ -194,13 +534,13 @@ for h in flow.keys():
                                 geodata=gloc.geodata,).map(D[h]+'/geoloc/data.pkl')
 
 for h in flow.keys():
-  flow[h]['patentify'] = Flow(callback=lambda *x: x, args=[flow[h][k] for k in flow[h].keys()])
+  flow[h]['patentify'] = lib.flow.Flow(callback=lambda *x: x, args=[flow[h][k] for k in flow[h].keys()])
 
 
 plots = dict()
 for h in ['UPRP']:
 
-  plots[f'F-{h}-event'] = Flow(args=[flow[h]['event']], callback=lambda X:
+  plots[f'F-{h}-event'] = lib.flow.Flow(args=[flow[h]['event']], callback=lambda X:
 
     X .assign(year=X['date'].dt.year.astype(int))\
       .value_counts(['event', 'year']).reset_index()\

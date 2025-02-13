@@ -2,7 +2,84 @@ r"""
 \documentclass[12pt, withmarginpar]{mwbk}
 \include{defs}
 \begin{document}
-\include{docs/preface}
+
+
+
+
+\thispagestyle{empty}%brak numeracji
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%tytuły definiuje jako makrodefinicje, gdyż zamierzam je%%%
+%%%%%powtórzyć na stronie ze streszczeniami, to nic nie boli%%%
+%%%%%a gwarantuje, że będą one takie same, i~tak ma być.%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%P.Wlaź
+\newcommand\tytul{Dyfuzja wiedzy innowacyjnej w czasie i przestrzeni
+                  na podstawie patentów z ostatnich dziesięciu lat}
+
+\newcommand\tytulangielski{Diffusion of innovative knowledge 
+                           in time and space based on patents 
+                           from the last ten years}
+
+\noindent
+\hspace*{-3mm}\includegraphics[width=8.67cm]{logo.pdf}
+\fontfamily{qhv}\fontsize{12pt}{15pt}\selectfont
+
+\vfil 
+\noindent Katedra Matematyki Stosowanej
+
+\vfil\vfil\vfil\vfil
+
+
+\fontsize{40pt}{50pt}\selectfont
+\noindent Praca inżynierska
+
+\fontsize{12pt}{15pt}\selectfont
+
+
+\vfil
+\noindent
+na kierunku \emph{inżynieria i~analiza danych}
+\vfil\vfil
+
+\vspace{2cm}
+\fontsize{16pt}{18pt}\selectfont
+\noindent \tytul
+
+\vspace{1cm}
+\fontsize{16pt}{18pt}\selectfont
+\noindent \tytulangielski
+
+\vfil\vfil\vfil\vfil
+\fontsize{16pt}{20pt}\selectfont
+
+\noindent 
+Adam Jakubczak
+
+\vfil
+\fontsize{12pt}{15pt}\selectfont
+\noindent
+numer albumu: 098750
+
+
+\vfil
+
+\noindent
+promotor: dr inż. Korneliusz Pylak
+
+\vfil\vfil\vfil
+
+\fontsize{9pt}{12pt}\selectfont
+
+\noindent
+Lublin 2025
+
+\normalsize \rm
+
+
+
+
+
 \tableofcontents
 \chapter*{Wstęp}
 
@@ -24,43 +101,10 @@ w procesie dyfuzji wiedzy.
 
 
 
-  \chapter{Przegląd literatury}\label{ch:intro}
-
-\include{docs/lit}
-
+\chapter{Przegląd literatury}\label{ch:intro}
+\include{main}
 
 
-  \chapter{Metryki i statystyki przestrzenne}\label{ch:metric}
-
-\include{docs/metric}
-
-\include{grav}
-
-\include{grav:linr}
-
-\include{grav:linrplot}
-
-
-
-  \chapter{Źródła danych patentowych}\label{ch:data}
-
-\include{docs/src}
-
-\include{docs/patent}
-
-\include{docs/subject}
-
-\include{docs/raport}
-
-\include{grph:graph}
-
-\include{docs/raport-OCR}
-
-
-
-  \chapter{Analiza danych}
-
-\include{docs/endo}
 
 
 \bibliographystyle{plain}\bibliography{cit}
@@ -152,7 +196,7 @@ def include(x:str, root):
 
 def main():
 
-  D = readdocstr(['grph'])
+  D = readdocstr(['main', 'grph', 'clst', 'endo', 'patent', 'registry', 'subject', 'corr', 'raport'])
 
   root = os.path.dirname(os.path.abspath(__file__))
   wd = './workdir'
@@ -168,10 +212,9 @@ def main():
       if d is None: continue
       y = y.replace(rf'\include{{{k}}}', d)
 
-   #legacy
     y = include(y, root)
-   #legacy img
-    y = re.sub(r'(\\includegraphics\[.*?\]{)(.*?)(})', r'\1../docs/\2\3', y)
+   #../workdir
+    y = re.sub(r'(\\includegraphics\[.*?\]{)(.*?)(})', r'\1../\2\3', y)
 
     with open('main.tex', 'w') as f: f.write(y)
 
