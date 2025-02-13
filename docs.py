@@ -236,7 +236,11 @@ def main():
     y = rf"""
     \documentclass[12pt, withmarginpar]{{mwbk}}
     \include{{defs}}
-    \begin{{document}}{x}\end{{document}}
+    \begin{{document}}
+
+    {x}
+
+    \end{{document}}
     """
 
     y = y.replace(r'{fig/', r'{../fig/')
