@@ -5,7 +5,7 @@ data = { 'UPRP': 'api.uprp.gov.pl',
          'Google': 'patents.google.com' }
 
 class A4:
-  DPI = 150
+  DPI = 74
   W = DPI/2.54*(21.0 - 2.6 - 3.0)
   H = DPI/2.54*(29.7 - 2.6 - 3.0)
 
