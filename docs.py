@@ -196,7 +196,7 @@ def include(x:str, root):
 
 def main():
 
-  D = readdocstr(['main', 'grph', 'clst', 'endo', 'patt', 'rgst', 'subj', 'corr', 'rprt'])
+  D = readdocstr(['main', 'grph', 'clst', 'endo', 'patt', 'rgst', 'subj', 'corr', 'rprt', 'difu'])
 
   root = os.path.dirname(os.path.abspath(__file__))
   wd = './workdir'

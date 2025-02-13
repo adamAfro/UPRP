@@ -87,9 +87,10 @@ def network(docrefs:pandas.DataFrame,
   E = E.join(D).reset_index()
 
  #czas
+  E['year'] = E['application'].dt.year.astype(int)
+  E['yearY'] = E['applicationY'].dt.year.astype(int)
   for k in temporal:
     E[f't{k}'] = (E[f'{k}Y'] - E[k]).dt.days.astype(int)
-    E = E.drop(columns=[f'{k}Y'])
 
  #poprawka na błędne dane
   E = E[E['tapplication'] > 0]
