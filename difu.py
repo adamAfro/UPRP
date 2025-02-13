@@ -16,7 +16,8 @@ from util import A4
 
 
 @lib.flow.make()
-def ncited(edges:DF, by:list[str], coords:list[str], borders:GDF, width:float, extent:dict|None=None):
+def ncited(edges:DF, by:list[str], coords:list[str], region:GDF, width:float, extent:dict|None=None, 
+           embed=False, compose=True):
 
   r"""
   \subsection{Regiony, z których pochodzi najwięcej cytowanych prac}
@@ -24,6 +25,8 @@ def ncited(edges:DF, by:list[str], coords:list[str], borders:GDF, width:float, e
   \chart{fig/difu/M-ncited.pdf}{Polska \TODO{opisać}}
 
   \chart{fig/difu/M-ncited-lesser.pdf}{Małopolska \TODO{opisać}}
+
+  \todo{pozostałe wykresy}
   """
 
   E = edges
@@ -31,32 +34,62 @@ def ncited(edges:DF, by:list[str], coords:list[str], borders:GDF, width:float, e
 
   assert all( c in E.columns for c in by ), f'all( c in {E.columns} for c in {by} )'
   assert all( c in E.columns for c in coords ), f'all( c in {E.columns} for c in {coords} )'
+  if embed: assert len(by) == 1, by
 
   G = E.groupby(by+coords)
   N = G.size().rename('size').reset_index()
   N0 = N.drop(columns=by).groupby(coords).sum().reset_index()
   B = N[by].value_counts().index
 
-  def ptplot(X):
+  if embed:
+
+    N = N.pivot_table(index=coords, columns=by, values='size', fill_value=0).reset_index()
+    N = N.melt(id_vars=coords, var_name=by[0], value_name='size')
+    N = N.merge(region.set_index('gid'), left_on=coords, right_index=True)
+                     #^ TODO indeks już powinien taki być
+    N = GDF(N, geometry='geometry')
+
+    N0 = N0.merge(region.set_index('gid'), left_on=coords, right_index=True)
+    N0 = GDF(N0, geometry='geometry')
+
+  d = (0, N0['size'].max())
+
+  def mapplot(X):
 
     f = Pt.Chart(X.sort_values(by=['size'], ascending=False))
+
+    if embed:
+
+      if compose:
+        f = f.encode( Pt.Color('size', type='quantitative')\
+                        .legend(orient='bottom')\
+                        .title(None)\
+                        .scale(range=['black', 'red', 'green'], domain=d))
+      else:
+        f = f.encode( Pt.Color('size', type='quantitative')\
+                        .legend(orient='bottom')\
+                        .title(None)\
+                        .scale(range=['black', 'red', 'green']))
+
+      return f.mark_geoshape(stroke=None)
+
     f = f.mark_circle(size=10, clip=True)
-    f = f.encode(Pt.Latitude(coords[0], type='quantitative'))
-    f = f.encode(Pt.Longitude(coords[1], type='quantitative'))
-    f = f.encode(Pt.Size('size', type='quantitative'))
     f = f.encode(Pt.Color('size', type='quantitative')\
                    .legend(orient='bottom', values=[10, 100, 200, 500, 1000, 2000, 5000])\
                    .title('Ilość patentów, które zostały cytowane')\
-                   .scale(range=['green', 'red', 'black']))
-    return f
+                   .scale(range=['green', 'red', 'black'], domain=d))
+    f = f.encode(Pt.Latitude(coords[0], type='quantitative'))
+    f = f.encode(Pt.Longitude(coords[1], type='quantitative'))
+    f = f.encode(Pt.Size('size', type='quantitative'))
+
+    return Pt.Chart(region).mark_geoshape(fill=None, stroke='black') + f
 
   w = width
   w0 = int(1/w)
-  M0 = Pt.Chart(borders).mark_geoshape(fill=None, stroke='black')
   M = [N[(N[by] == b).all(axis=1)] for b in B]
-  M = [M0 + ptplot(X) for X in M]
+  M = [mapplot(X) for X in M]
   M = [m.properties(title=', '.join([str(k) for k in b])) for m, b in zip(M, B)]
-  M+= [(M0 + ptplot(N0)).properties(title='Łącznie')]
+  M+= [mapplot(N0).properties(title='Łącznie')]
   M = [m.properties(width=w*A4.W, height=w*A4.W) for m in M]
 
   if extent is not None:
@@ -64,6 +97,8 @@ def ncited(edges:DF, by:list[str], coords:list[str], borders:GDF, width:float, e
   else:
     M = [m.project('mercator') for m in M]
 
+  if not compose:
+    return tuple([N]+M)
 
   M = [ [m for m in M[i*w0:(i+1)*w0]] for i in range(math.ceil(len(M)/w0)) ]
   M = [Pt.hconcat(*m) for m in M]
@@ -75,9 +110,22 @@ def ncited(edges:DF, by:list[str], coords:list[str], borders:GDF, width:float, e
 FLOW = dict(
             ptPL=ncited(edges=grph.web[0], 
                         by=['year'], coords=['lat', 'lon'], 
-                        borders=gloc.region[0], width=0.33).map((None, 'fig/difu/M-ncited.pdf')),
+                        region=gloc.region[0], width=0.33).map((None, 'fig/difu/M-ncited.pdf')),
 
             ptLsrPL=ncited(edges=grph.web[0], by=['year'], 
-                           coords=['lat', 'lon'], borders=gloc.region[1], width=0.33, 
-                           extent=dict(scale=2500, center=[17.0, 51.0])).map((None, 'fig/difu/M-ncited-lesser.pdf'))
+                           coords=['lat', 'lon'], region=gloc.region[1], width=0.33, 
+                           extent=dict(scale=2500, center=[17.0, 51.0])).map((None, 'fig/difu/M-ncited-lesser.pdf')),
+
+            wojPL=ncited(edges=grph.web[0], 
+                         by=['year'], coords=['wgid'], embed=True,
+                         region=gloc.region[1], width=0.33).map((None, 'fig/difu/M-ncited-woj.pdf')),
+
+            powPL=ncited(edges=grph.web[0], compose=False,
+                         by=['year'], coords=['pgid'], embed=True,
+                         region=gloc.region[2], width=0.33).map((None, *[f'fig/difu/M-ncited-pow-{k}.pdf' for k in range(13,20+1)], f'fig/difu/M-ncited-pow.pdf')),
+
+            powLsrPL=ncited(edges=grph.web[0], compose=False,
+                         by=['year'], coords=['pgid'], embed=True,
+                         region=gloc.region[2], width=0.33,
+                         extent=dict(scale=2000, center=[18.0, 50.5])).map((None, *[f'fig/difu/M-ncited-lesser-pow-{k}.pdf' for k in range(13,20+1)], f'fig/difu/M-ncited-lesser-pow.pdf'))
            )

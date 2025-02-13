@@ -101,8 +101,6 @@ def network(docrefs:pandas.DataFrame,
   E['Jaccard'] = JX.to_frame().join(JY.rename(1)).apply(lambda x: len(x[0] & x[1]) / len(x[0] | x[1]), axis=1)
   E = E.drop(columns=Jsim+[f'{k}Y' for k in Jsim])
 
-  E = E.drop(columns=feats+[f'{k}Y' for k in feats])
-
  #komponenty
   G = nx.Graph()
   G.add_edges_from(E[['id', 'idY']].values)
