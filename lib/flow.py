@@ -100,6 +100,9 @@ class Flow():
     if f0.endswith('.png'):
       return None
 
+    if f0.endswith('.pdf'):
+      return None
+
     raise NotImplementedError()
 
   def dump(self):
