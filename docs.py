@@ -215,6 +215,7 @@ def main():
     y = include(y, root)
    #../workdir
     y = re.sub(r'(\\includegraphics\[.*?\]{)(.*?)(})', r'\1../\2\3', y)
+    y = y.replace(r'{fig/', r'{../fig/')
 
     with open('main.tex', 'w') as f: f.write(y)
 
@@ -238,6 +239,7 @@ def main():
     \begin{{document}}{x}\end{{document}}
     """
 
+    y = y.replace(r'{fig/', r'{../fig/')
     with open('temp.tex', 'w') as f:
       f.write(include(y, root))
 
