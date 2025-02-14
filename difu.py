@@ -107,7 +107,37 @@ def ncited(edges:DF, by:list[str], coords:list[str], region:GDF, width:float, ex
 
   return N, M
 
+@lib.flow.make()
+def mxtransfer(edges:DF, nodes:DF, by:list[str]):
+
+  N = nodes
+  E = edges
+
+  assert all( c in E.columns for c in by ), f'all( c in {E.columns} for c in {by} )'
+  assert by[0] in N.columns, f'{by[0]} in {N.columns}'
+
+  B = N.groupby(by[0]).size().rename('base').to_frame()
+
+  G = E.groupby(by)
+  C = G.size().rename('size').to_frame().reset_index()
+  C = C.set_index(by[0]).join(B).reset_index()
+  C['ratio'] = C['size'] / C['base']
+
+  M = Pt.Chart(C).mark_circle()
+  M = M.encode(Pt.X(by[0], type='nominal'))
+  M = M.encode(Pt.Y(by[1], type='nominal'))
+  M = M.encode(Pt.Size('size', type='quantitative'))
+  M = M.encode(Pt.Color('ratio', type='quantitative')
+                 .scale(range=['green', 'red', 'black']))
+
+  return M
+
+
 FLOW = dict(
+
+            #TODO: nazwy zamiast ID
+            wmx = mxtransfer(grph.web[0], grph.web[1], by=['wgid', 'wgidY']).map('fig/difu/F-wmx.pdf'),
+
             ptPL=ncited(edges=grph.web[0], 
                         by=['year'], coords=['lat', 'lon'], 
                         region=gloc.region[0], width=0.33).map((None, 'fig/difu/M-ncited.pdf')),
