@@ -106,6 +106,23 @@ w procesie dyfuzji wiedzy.
 
 
 
+
+    \newpage\section*{Objaśnienia skrótów}
+  \begin{acronym}
+\acro{UPRP}{Urząd Patentowy Rzeczypospolitej Polskiej}
+\acro{EPO}{European Patent Office}
+\acro{WIPO}{World Intellectual Property Organization}
+\acro{MKP}{Międzynarodowa Klasyfikacja Patentów}
+\acro{IPC}{International Patent Classification}
+\acro{API}{Application Programming Interface}
+\acro{URI}{Uniform Resource Identifier}
+\acro{URL}{Uniform Resource Locator}
+\acro{OCR}{Optical Character Recognition}
+\acro{XML}{Extensible Markup Language}
+\end{acronym}
+
+
+
   \chapter{Dane}
 
 W Polsce centralnym organem odpowiedzialnym za przyznawanie 
