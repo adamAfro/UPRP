@@ -106,6 +106,24 @@ w procesie dyfuzji wiedzy.
 
 
 
+  \chapter{Dane}
+
+W Polsce centralnym organem odpowiedzialnym za przyznawanie 
+patentów jest \acf{UPRP}. Oprócz ochroną patentową oraz 
+publikowaniem informacji o patentach, urząd prowadzi bazę 
+danych patentów, która jest dostępna publicznie przy użyciu \ac{API}.
+Pozwala to na automatyczne pobieranie danych przy pomocy skryptów.
+Dane te są ograniczone w swojej szczegółowości, co jest powodem
+istotnego spadku ufności wobec prezentowanej później analizy.
+
+Niniejszy rozdział opisuje wyłącznie proces pozyskiwania danych 
+i przetwarzania ich do postaci, która może być użyta 
+w dalszym wnioskowaniu.
+
+    \include{prfl}
+  \include{prfl:Profiling}
+
+
 
 \bibliographystyle{plain}\bibliography{cit}
 
@@ -196,7 +214,7 @@ def include(x:str, root):
 
 def main():
 
-  D = readdocstr(['main', 'grph', 'clst', 'endo', 'patt', 'rgst', 'subj', 'corr', 'rprt', 'difu'])
+  D = readdocstr(['main', 'prfl', 'grph', 'clst', 'endo', 'patt', 'rgst', 'subj', 'corr', 'rprt', 'difu'])
 
   root = os.path.dirname(os.path.abspath(__file__))
   wd = './workdir'
