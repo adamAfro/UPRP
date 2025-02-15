@@ -298,16 +298,19 @@ może prowadzić do zniekształcenia obrazu innowacyjności w
 danej dziedzinie.
 """
 
-import sys, altair
+import sys, altair, lib.flow
 altair.data_transformers.enable('vegafusion')
 
 flow = dict()
 
 import prfl, patt, rgst, subj, grph, rprt, difu
 
-for d in [patt, rgst, subj, grph, rprt, difu]:
-  try: flow[d.__name__] = d.FLOW
-  except AttributeError: pass
+for d in [prfl, patt, rgst, subj, grph, rprt, difu]:
+
+  X = { k : getattr(d, k) for k in dir(d) }
+  X = { k : x for k, x in X.items() if isinstance(x, lib.flow.Flow) }
+
+  flow[d.__name__] = X
 
 for a in sys.argv[1:]:
 

@@ -1,10 +1,12 @@
-import pandas, re, numpy, geopandas as gpd
+#lib
+import lib.flow, lib.geo, rprt as rprt
+
+#calc
+import pandas, re, geopandas as gpd
 import xml.etree.ElementTree as ET
 from pyproj import Transformer
-from lib.flow import Flow
-from lib.geo import distmx
 
-@Flow.From()
+@lib.flow.placeholder()
 def GMLParse(path:str):
 
     tree = ET.parse(path)
@@ -39,7 +41,7 @@ def GMLParse(path:str):
 
     return L
 
-@Flow.From()
+@lib.flow.placeholder()
 def GeoXLSXload(path:str):
 
     L = pandas.read_excel(path, engine='openpyxl')
@@ -50,7 +52,7 @@ def GeoXLSXload(path:str):
 
     return L
 
-@Flow.From()
+@lib.flow.placeholder()
 def distcalc(cities:pandas.DataFrame, coords:list[str]):
 
   X = cities
@@ -58,12 +60,12 @@ def distcalc(cities:pandas.DataFrame, coords:list[str]):
   X = X.dropna(subset=coords)
   X = X[ X['type'] == 'miasto' ]
   X = X.set_index(coords, drop=False)
-  Y = distmx(X, coords[1], coords[0])
+  Y = lib.geo.distmx(X, coords[1], coords[0])
 
   return Y
 
 #https://gis-support.pl/baza-wiedzy-2/dane-do-pobrania/granice-administracyjne/
-@Flow.From()
+@lib.flow.placeholder()
 def gisload(path:str):
 
   names = {

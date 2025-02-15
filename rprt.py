@@ -195,7 +195,8 @@ aby przyciąć zdjęcia do obszarów zainteresowania.
 
 
 #lib
-import lib.storage, lib.query, lib.flow
+import lib.storage, lib.query, lib.flow, prfl
+from util import data as D
 
 #calc
 import pandas, yaml, tqdm
@@ -204,7 +205,7 @@ import pandas, yaml, tqdm
 import altair as Plot
 
 
-@lib.flow.make()
+@lib.flow.placeholder()
 def Indexing(storage:lib.storage.Storage, assignpath:str):
 
   """
@@ -255,7 +256,7 @@ def Indexing(storage:lib.storage.Storage, assignpath:str):
 
   return P0, P, D0, W0, W
 
-@lib.flow.make()
+@lib.flow.placeholder()
 def Qdentify(qpath:str, storage:lib.storage.Storage, docsframe:str):
 
   """
@@ -285,7 +286,7 @@ def Qdentify(qpath:str, storage:lib.storage.Storage, docsframe:str):
 
   return Y
 
-@lib.flow.make()
+@lib.flow.placeholder()
 def Parsing(searches: pandas.Series):
 
   """
@@ -375,7 +376,7 @@ class Search:
 
     return Y
 
-@lib.flow.make()
+@lib.flow.placeholder()
 def Narrow(queries:pandas.Series, indexes:tuple, pbatch:int=2**14, ngram=True):
 
   """
@@ -469,7 +470,7 @@ def Narrow(queries:pandas.Series, indexes:tuple, pbatch:int=2**14, ngram=True):
 
   return Y.to_pandas()
 
-@lib.flow.make()
+@lib.flow.placeholder()
 def Family(queries:pandas.Series, matches:pandas.DataFrame, storage:lib.storage.Storage, assignpath:str):
 
   "Podmienia kody w zapytaniach na te znalezione w rodzinie patentowej."
@@ -513,7 +514,7 @@ def Family(queries:pandas.Series, matches:pandas.DataFrame, storage:lib.storage.
 
 
 
-@lib.flow.make()
+@lib.flow.placeholder()
 def Drop(queries:pandas.Series, matches:list[pandas.DataFrame]):
 
   "Usuwa z wyników zapytań te, które już zostały dopasowane w zadowalający sposób."
@@ -544,7 +545,7 @@ def Drop(queries:pandas.Series, matches:list[pandas.DataFrame]):
 
   return Q[ ~ Q.index.isin(q)], P[ ~ P.index.isin(p) ]
 
-@lib.flow.make()
+@lib.flow.placeholder()
 def Preview(path:str,
             profile:dict[str, pandas.DataFrame],
             matches:pandas.DataFrame,
@@ -577,7 +578,7 @@ def Preview(path:str,
     with open(path, 'w') as f: f.write(Y)
 
 
-@lib.flow.make()
+@lib.flow.placeholder()
 def result(R: dict[str, pandas.DataFrame]):
 
   for k in R.keys():
@@ -589,7 +590,7 @@ def result(R: dict[str, pandas.DataFrame]):
 
   return Y
 
-@lib.flow.make()
+@lib.flow.placeholder()
 def edges(X:pandas.DataFrame):
 
   X = X[X[('', '', '', 'level')] >= "partial-dated-supported"]
@@ -597,20 +598,19 @@ def edges(X:pandas.DataFrame):
                         'from': X.index.get_level_values('doc')})
   return Y
 
-from prfl import flow as f0
-from util import data as D
+
 
 flow = { k: dict() for k in D.keys() }
 
 linkback = Qdentify(qpath='raport.uprp.gov.pl.csv', 
-                    storage=f0['UPRP']['profiling'], 
+                    storage=prfl.repos['UPRP'], 
                     docsframe='raw').map(D['UPRP']+'/identify.pkl')
 
 queries = Parsing(linkback).map('queries.pkl')
 
 for k, p in D.items():
 
-  flow[k]['index'] = Indexing(f0[k]['profiling'], assignpath=p+'/assignement.yaml').map(p+'/indexes.pkl')
+  flow[k]['index'] = Indexing(prfl.repos[k], assignpath=p+'/assignement.yaml').map(p+'/indexes.pkl')
 
   flow[k]['narrow'] = Narrow(queries, flow[k]['index'], pbatch=2**14).map(p+'/narrow.pkl')
 
@@ -628,7 +628,7 @@ for k, p in D.items():
 
   flow[k]['drop'] = Drop(queries, [flow[k]['narrow']]).map(p+'/alien.pkl')
 
-  flow[k]['preview'] = Preview(f"{p}/profile.txt", f0[k]['profiling'], flow[k]['narrow'], queries)
+  flow[k]['preview'] = Preview(f"{p}/profile.txt", prfl.repos[k], flow[k]['narrow'], queries)
 
 flow['Google']['narrow'] = Narrow(drop0, flow['Google']['index'], pbatch=2**10).map(D["Google"]+'/narrow.pkl')
 
@@ -641,7 +641,7 @@ for k0 in ['Lens', 'Google']:
 
   flow[k] = dict()
 
-  flow[k]['query'] = Family(queries=queries, matches=flow[k0]['narrow'], storage=f0[k0]['profiling'], assignpath=D[k0]+'/assignement.yaml').map(p+'/family.pkl')
+  flow[k]['query'] = Family(queries=queries, matches=flow[k0]['narrow'], storage=prfl.repos[k0], assignpath=D[k0]+'/assignement.yaml').map(p+'/family.pkl')
 
   flow[k]['narrow'] = Narrow(queries=flow[k]['query'], indexes=flow['UPRP']['index'], pbatch=None, ngram=False).map(D[k]+'/narrow.pkl')
 

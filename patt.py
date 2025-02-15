@@ -7,9 +7,8 @@ metadanych, wydarzeń, klasyfikacji oraz lokalizacji.
 """
 
 #lib
-import lib.flow, lib.geo, lib.storage, gloc
+import lib.flow, lib.geo, lib.storage, gloc, prfl
 from util import strnorm, data as D
-from prfl import flow as f0
 
 #calc
 import pandas, yaml
@@ -17,8 +16,8 @@ import pandas, yaml
 #plot
 import altair as Plot
 
-@lib.flow.make()
-def code(storage:lib.storage.Storage, assignpath:str):
+@lib.flow.placeholder()
+def Code(storage:lib.storage.Storage, assignpath:str):
 
   r"""
   \subsection{Metadane}
@@ -57,8 +56,8 @@ def code(storage:lib.storage.Storage, assignpath:str):
   assert { 'doc' }.issubset(Y.index.names)
   return Y
 
-@lib.flow.make()
-def event(storage:lib.storage.Storage, assignpath:str, codes:pandas.DataFrame):
+@lib.flow.placeholder()
+def Event(storage:lib.storage.Storage, assignpath:str, codes:pandas.DataFrame):
 
   r"""
   \subsection{Wydarzenia związane z patentami}
@@ -106,8 +105,8 @@ def event(storage:lib.storage.Storage, assignpath:str, codes:pandas.DataFrame):
   assert { 'doc' }.issubset(X.index.names)
   return X
 
-@lib.flow.make()
-def classify(storage:lib.storage.Storage, assignpath:str, codes:pandas.DataFrame, extended=False):
+@lib.flow.placeholder()
+def Classify(storage:lib.storage.Storage, assignpath:str, codes:pandas.DataFrame, extended=False):
 
   r"""
   \subsection{Klasyfikacje patentów}
@@ -209,8 +208,8 @@ def classify(storage:lib.storage.Storage, assignpath:str, codes:pandas.DataFrame
   assert { 'doc' }.issubset(Y.index.names)
   return Y
 
-@lib.flow.make()
-def geolocate(storage:lib.storage.Storage, 
+@lib.flow.placeholder()
+def Geolocate(storage:lib.storage.Storage, 
              assignpath:str, 
              geodata:pandas.DataFrame, 
              codes:pandas.DataFrame,
@@ -289,33 +288,34 @@ def geolocate(storage:lib.storage.Storage,
   assert { 'doc' }.issubset(Y.index.names)
   return Y
 
-flow = { k: dict() for k in D.keys() }
+repos = { k: dict() for k in D.keys() }
 
-for h in flow.keys():
+for h in repos.keys():
 
-  flow[h]['code'] = code(f0[h]['profiling'], assignpath=D[h]+'/assignement.yaml').map(D[h]+'/code/data.pkl')
+  repos[h]['code'] = Code(prfl.repos[h], assignpath=D[h]+'/assignement.yaml').map(D[h]+'/code/data.pkl')
 
-  flow[h]['event'] = event(f0[h]['profiling'], 
-                           assignpath=D[h]+'/assignement.yaml',
-                           codes=flow[h]['code']).map(D[h]+'/event/data.pkl')
+  repos[h]['event'] = Event(prfl.repos[h], assignpath=D[h]+'/assignement.yaml',
+                            codes=repos[h]['code']).map(D[h]+'/event/data.pkl')
 
-  flow[h]['classify'] = classify(f0[h]['profiling'],
-                                 assignpath=D[h]+'/assignement.yaml',
-                                 codes=flow[h]['code']).map(D[h]+'/classify/data.pkl')
+  repos[h]['classify'] = Classify(prfl.repos[h], assignpath=D[h]+'/assignement.yaml',
+                                  codes=repos[h]['code']).map(D[h]+'/classify/data.pkl')
 
-  flow[h]['geoloc'] = geolocate(f0[h]['profiling'], 
-                                assignpath=D[h]+'/assignement.yaml', codes=flow[h]['code'], 
-                                geodata=gloc.geodata,).map(D[h]+'/geoloc/data.pkl')
+  repos[h]['geoloc'] = Geolocate(prfl.repos[h], assignpath=D[h]+'/assignement.yaml', codes=repos[h]['code'], 
+                                 geodata=gloc.geodata,).map(D[h]+'/geoloc/data.pkl')
 
-for h in flow.keys():
-  flow[h]['patentify'] = lib.flow.Flow(callback=lambda *x: x, args=[flow[h][k] for k in flow[h].keys()])
+for h in repos.keys():
+  repos[h]['patentify'] = lib.flow.Flow(callback=lambda *x: x, args=[repos[h][k] for k in repos[h].keys()])
 
-UPRP = flow['UPRP']
+UPRP = repos['UPRP']
+Lens = repos['Lens']
+USPG = repos['USPG']
+USPA = repos['USPA']
+Google = repos['Google']
 
 plots = dict()
 for h in ['UPRP']:
 
-  plots[f'F-{h}-event'] = lib.flow.Flow(args=[flow[h]['event']], callback=lambda X:
+  plots[f'F-{h}-event'] = lib.flow.Flow(args=[repos[h]['event']], callback=lambda X:
 
     X .assign(year=X['date'].dt.year.astype(int))\
       .value_counts(['event', 'year']).reset_index()\

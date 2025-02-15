@@ -8,7 +8,15 @@ import pandas, altair as Pt, networkx as nx
 import altair as Pt
 from util import A4
 
-@lib.flow.make()
+
+@lib.flow.map(('cache/grph/edges.pkl', 'cache/grph/nodes.pkl', 
+               'fig/grph/M.pdf',
+               'fig/grph/F-dist-delay.pdf', 
+               'fig/grph/F-components.pdf'))
+@lib.flow.init(rprt.valid, subj.mapped, gloc.dist,
+               spatial=['lat', 'lon'], temporal=['grant', 'application'],
+               Jsim=[f'clsf-{l}' for l in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']],
+               feats=['entity', 'pgid', 'wgid'], borders=gloc.region[0])
 def network(docrefs:pandas.DataFrame, 
             docsign:pandas.DataFrame,
             dist:pandas.DataFrame,
@@ -208,15 +216,3 @@ def network(docrefs:pandas.DataFrame,
     return (d | dt).resolve_axis(y='shared')
 
   return E, N, cartplot(), ddplot(), compplot()
-
-web = network(rprt.valid, subj.mapped, gloc.dist,
-              spatial=['lat', 'lon'], temporal=['grant', 'application'],
-              Jsim=[f'clsf-{l}' for l in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']],
-              feats=['entity', 'pgid', 'wgid'], borders=gloc.region[0])
-
-web = web.map(('cache/grph/edges.pkl', 'cache/grph/nodes.pkl', 
-               'fig/grph/M.pdf',
-               'fig/grph/F-dist-delay.pdf', 
-               'fig/grph/F-components.pdf'))
-
-FLOW = dict(web=web)

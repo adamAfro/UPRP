@@ -105,11 +105,12 @@ należy oczekiwać braków danych w niektórych obiektach.
 
 #lib
 import lib.storage, lib.profile, lib.flow, lib.alias
+from util import data as D
 
 #calc
 import yaml, re
 
-@lib.flow.make()
+@lib.flow.placeholder()
 def Profiling(dir:str, kind:str, assignpath:str, aliaspath:str,  profargs:dict={}):
 
   r"""
@@ -187,28 +188,32 @@ def Profiling(dir:str, kind:str, assignpath:str, aliaspath:str,  profargs:dict={
 
   return lib.storage.Storage(dir, H)
 
-from util import data as D
+UPRP = Profiling(D['UPRP']+'/raw/', kind='XML',
+                 assignpath=D['UPRP']+'/assignement.null.yaml', 
+                 aliaspath=D['UPRP']+'/alias.yaml').map(D['UPRP']+'/storage.pkl')
 
-flow = { k: dict() for k in D.keys() }
+Lens = Profiling(D['Lens']+'/res/', kind='JSONL',
+                 assignpath=D['Lens']+'/assignement.null.yaml', 
+                 aliaspath=D['Lens']+'/alias.yaml').map(D['Lens']+'/storage.pkl')
 
-flow['UPRP']['profiling'] = Profiling(D['UPRP']+'/raw/', kind='XML',
-                                      assignpath=D['UPRP']+'/assignement.null.yaml', 
-                                      aliaspath=D['UPRP']+'/alias.yaml').map(D['UPRP']+'/storage.pkl')
+USPG = Profiling(D['USPG']+'/raw/', kind='XML',
+                 profargs=dict(only=['developer.uspto.gov/grant/raw/us-patent-grant/us-bibliographic-data-grant/']),
+                 assignpath=D['USPG']+'/assignement.null.yaml',
+                 aliaspath=D['USPG']+'/alias.yaml').map(D['USPG']+'/storage.pkl')
 
-flow['Lens']['profiling'] = Profiling(D['Lens']+'/res/', kind='JSONL',
-                                      assignpath=D['Lens']+'/assignement.null.yaml', 
-                                      aliaspath=D['Lens']+'/alias.yaml').map(D['Lens']+'/storage.pkl')
+USPA = Profiling(D['USPA']+'/raw/', kind='XML',
+                 profargs=dict(only=['developer.uspto.gov/application/raw/us-patent-application/us-bibliographic-data-application/']),
+                 assignpath=D['USPA']+'/assignement.null.yaml', 
+                 aliaspath=D['USPA']+'/alias.yaml').map(D['USPA']+'/storage.pkl')
 
-flow['USPG']['profiling'] = Profiling(D['USPG']+'/raw/', kind='XML',
-                                      profargs=dict(only=['developer.uspto.gov/grant/raw/us-patent-grant/us-bibliographic-data-grant/']),
-                                      assignpath=D['USPG']+'/assignement.null.yaml',
-                                      aliaspath=D['USPG']+'/alias.yaml').map(D['USPG']+'/storage.pkl')
+Google = Profiling(D['Google']+'/web/', kind='HTMLmicrodata',
+                   assignpath=D['Google']+'/assignement.null.yaml', 
+                   aliaspath=D['Google']+'/alias.yaml').map(D['Google']+'/storage.pkl')
 
-flow['USPA']['profiling'] = Profiling(D['USPA']+'/raw/', kind='XML',
-                                      profargs=dict(only=['developer.uspto.gov/application/raw/us-patent-application/us-bibliographic-data-application/']),
-                                      assignpath=D['USPA']+'/assignement.null.yaml', 
-                                      aliaspath=D['USPA']+'/alias.yaml').map(D['USPA']+'/storage.pkl')
-
-flow['Google']['profiling'] = Profiling(D['Google']+'/web/', kind='HTMLmicrodata',
-                                        assignpath=D['Google']+'/assignement.null.yaml', 
-                                        aliaspath=D['Google']+'/alias.yaml').map(D['Google']+'/storage.pkl')
+repos = {'UPRP': UPRP, 
+         'UPRP-Lens': UPRP,
+         'UPRP-Google': UPRP,
+         'Lens': Lens, 
+         'USPG': USPG, 
+         'USPA': USPA, 
+         'Google': Google }

@@ -1,10 +1,11 @@
+#lib
+import lib.flow, rprt as rprt
+
+#calc
 import pandas, re, os, asyncio, aiohttp
 
-from lib.flow import Flow
-import rprt as rprt
-
-@Flow.From()
-def Fetch(queries:pandas.Series, URL:str, outdir:str):
+@lib.flow.placeholder()
+def fetch(queries:pandas.Series, URL:str, outdir:str):
 
   "Pobieranie pełnych stron HTML z wynikami wyszukiwania."
 
@@ -26,4 +27,4 @@ def Fetch(queries:pandas.Series, URL:str, outdir:str):
   _, P = queries
   asyncio.run(scrap(P))
 
-Google = Fetch(rprt.drop, 'https://patents.google.com/patent', outdir='patents.google.com/web')
+Google = fetch(rprt.drop, 'https://patents.google.com/patent', outdir='patents.google.com/web')

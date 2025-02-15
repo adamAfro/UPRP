@@ -4,7 +4,7 @@ r"""
 
 #lib
 from lib.flow import Flow
-import gloc
+import lib.flow, gloc, rgst
 
 #calc
 import pandas, geopandas as gpd
@@ -12,8 +12,9 @@ import pandas, geopandas as gpd
 #plot
 import altair as Plot
 
-@Flow.From()
-def affilgeo(registry:pandas.DataFrame):
+@lib.flow.map('cache/affilate-geo.pkl')
+@lib.flow.init(rgst.selected)
+def affilgeo(registers:pandas.DataFrame):
 
   r"""
   \D{defi}{Podobieństwo afiliacyjno-geolokalizacyjne $\tilde\gamma$}
@@ -29,7 +30,7 @@ def affilgeo(registry:pandas.DataFrame):
   import tqdm
   tqdm.tqdm.pandas()
 
-  X = registry
+  X = registers
   assert { 'id' }.issubset(X.index.names) and X.index.is_unique
   assert { 'doc', 'lat', 'lon', 'organisation' }.issubset(X.columns)
 
@@ -42,7 +43,8 @@ def affilgeo(registry:pandas.DataFrame):
   assert { 'id' }.issubset(Y.index.names) and  Y.index.is_unique
   return Y
 
-@Flow.From()
+@lib.flow.map('cache/affilate.pkl')
+@lib.flow.init(affilgeo)
 def affilnames(registry:pandas.DataFrame):
 
   r"""
@@ -99,7 +101,8 @@ def affilnames(registry:pandas.DataFrame):
   assert Y.index.is_unique
   return Y
 
-@Flow.From('calculating similarity')
+@lib.flow.map('cache/sim.pkl')
+@lib.flow.init(affilnames)
 def simcalc(affilated:pandas.DataFrame):
 
   r"""
@@ -224,7 +227,8 @@ def simcalc(affilated:pandas.DataFrame):
   assert { i+'L', i+'R' }.issubset(S.index.names)
   return S
 
-@Flow.From()
+@lib.flow.map('cache/entity.pkl')
+@lib.flow.init(simcalc, rgst.selected)
 def identify(sim:pandas.DataFrame, all:pandas.DataFrame):
 
   r"""
@@ -284,8 +288,8 @@ def identify(sim:pandas.DataFrame, all:pandas.DataFrame):
 
   return Y
 
-@Flow.From()
-def fillgeo(entities:pandas.DataFrame, group:str, loceval:str):
+@lib.flow.placeholder()
+def fillgeo(identified:pandas.DataFrame, group:str, loceval:str):
 
   """
   \subsection{Uzupełnianie braków geolokalizacji}
@@ -303,9 +307,9 @@ def fillgeo(entities:pandas.DataFrame, group:str, loceval:str):
 
   import tqdm
 
-  assert group in entities.columns
+  assert group in identified.columns
 
-  E = entities
+  E = identified
   G = E.groupby(group)
 
   for g, G in tqdm.tqdm(G, total=G.ngroups):
@@ -320,7 +324,17 @@ def fillgeo(entities:pandas.DataFrame, group:str, loceval:str):
 
   return E
 
-@Flow.From()
+geofilled0 = fillgeo(identified=identify, group='entity', loceval='identity')
+geofilled = fillgeo(identified=geofilled0, group='doc', loceval='document').map('cache/filled.pkl')
+
+@lib.flow.map('cache/mapped.pkl')
+@lib.flow.init(geofilled)
+def geopandas(X:pandas.DataFrame):
+
+  return gpd.GeoDataFrame(X.reset_index().assign(year=X['grant'].dt.year), 
+                          geometry=gpd.points_from_xy(X.lon, X.lat, crs='EPSG:4326'))
+
+@lib.flow.placeholder()
 def ptregion(X:gpd.GeoDataFrame, R:gpd.GeoDataFrame, idname:str):
 
   Y = gpd.sjoin(X, R[['geometry', 'gid']], how='left', predicate='within')
@@ -329,65 +343,9 @@ def ptregion(X:gpd.GeoDataFrame, R:gpd.GeoDataFrame, idname:str):
 
   return Y
 
-from rgst import flow as f0
+geofilled0 = fillgeo(identified=identify, group='entity', loceval='identity')
+geofilled = fillgeo(identified=geofilled0, group='doc', loceval='document').map('cache/filled.pkl')
 
-affilG = affilgeo(f0['registry']['2013']).map('cache/affilate-geo.pkl')
-affilN = affilnames(affilG).map('cache/affilate.pkl')
-
-sim = simcalc(affilN).map('cache/sim.pkl')
-
-identities = identify(sim=sim, all=f0['registry']['2013']).map('cache/entity.pkl')
-
-geofilled0 = fillgeo(entities=identities, group='entity', loceval='identity')
-geofilled = fillgeo(entities=geofilled0, group='doc', loceval='document').map('cache/filled.pkl')
-
-mapped0 = Flow('make gpd', lambda X: gpd.GeoDataFrame(X.reset_index().assign(year=X['grant'].dt.year), 
-                                                      geometry=gpd.points_from_xy(X.lon, X.lat, crs='EPSG:4326')), 
-                                                      args=[geofilled])
-mappedw = ptregion(mapped0, gloc.region[1], 'wgid')
+mappedw = ptregion(geopandas, gloc.region[1], 'wgid')
 mappedp = ptregion(mappedw, gloc.region[2], 'pgid').map('cache/mapped.pkl')
 mapped = mappedp
-
-flow = { 'subject': { 'map': mapped,
-                      'fillgeo': geofilled,
-                      'identify': identities,
-                      'simcalc': sim,
-                      'affilate': affilN } }
-
-plots = dict()
-
-plots[f'F-geoloc-eval-clsf'] = Flow(args=[mapped], callback=lambda X:
-
-  Plot.Chart(X[['IPC', 'loceval']]\
-              .explode('IPC')\
-              .replace({'unique': 'jednoznaczna',
-                        'proximity': 'najlbiższa innym',
-                        'document': 'npdst. współautorów',
-                        'identity': 'npdst. tożsamości' })\
-              .value_counts(['IPC', 'loceval']).reset_index())
-
-      .mark_bar().encode( Plot.X(f'count:Q').title(None),
-                          Plot.Color('loceval:N')\
-                              .title('Metoda geolokalizacji')\
-                              .legend(orient='bottom', columns=1),
-                          Plot.Y('IPC:N').title('Klasyfikacja')))
-
-plots[f'F-geoloc-eval'] = Flow(args=[mapped], callback=lambda X:
-
-  Plot.Chart(X.assign(year=X['grant'].dt.year.astype(int))\
-              .replace({'unique': 'jednoznaczna',
-                        'proximity': 'najlbiższa innym',
-                        'document': 'npdst. współautorów',
-                        'identity': 'npdst. tożsamości' })\
-             .value_counts(['year', 'loceval']).reset_index())
-
-      .mark_bar().encode( Plot.Y('year:O').title('Rok'),
-                          Plot.X('count:Q').title(None),
-                          Plot.Color('loceval:N')\
-                              .title('Metoda geolokalizacji')\
-                              .legend(orient='bottom', columns=2)))
-
-
-for k, F in plots.items():
-  F.name = k
-  F.map(f'fig/subj/{k}.png')

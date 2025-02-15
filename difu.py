@@ -15,7 +15,7 @@ import altair as Pt
 from util import A4
 
 
-@lib.flow.make()
+@lib.flow.placeholder()
 def ncited(edges:DF, by:list[str], coords:list[str], region:GDF, width:float, extent:dict|None=None, 
            embed=False, compose=True):
 
@@ -107,7 +107,9 @@ def ncited(edges:DF, by:list[str], coords:list[str], region:GDF, width:float, ex
 
   return N, M
 
-@lib.flow.make()
+#TODO: nazwy zamiast ID
+@lib.flow.map('fig/difu/F-wmx.pdf')
+@lib.flow.init(grph.network[0], grph.network[1], by=['wgid', 'wgidY'])
 def mxtransfer(edges:DF, nodes:DF, by:list[str]):
 
   N = nodes
@@ -132,30 +134,23 @@ def mxtransfer(edges:DF, nodes:DF, by:list[str]):
 
   return M
 
+ptPL=ncited(edges=grph.network[0], 
+            by=['year'], coords=['lat', 'lon'], 
+            region=gloc.region[0], width=0.33).map((None, 'fig/difu/M-ncited.pdf')),
 
-FLOW = dict(
+ptLsrPL=ncited(edges=grph.network[0], by=['year'], 
+              coords=['lat', 'lon'], region=gloc.region[1], width=0.33, 
+              extent=dict(scale=2500, center=[17.0, 51.0])).map((None, 'fig/difu/M-ncited-lesser.pdf')),
 
-            #TODO: nazwy zamiast ID
-            wmx = mxtransfer(grph.web[0], grph.web[1], by=['wgid', 'wgidY']).map('fig/difu/F-wmx.pdf'),
+wojPL=ncited(edges=grph.network[0], 
+             by=['year'], coords=['wgid'], embed=True,
+             region=gloc.region[1], width=0.33).map((None, 'fig/difu/M-ncited-woj.pdf')),
 
-            ptPL=ncited(edges=grph.web[0], 
-                        by=['year'], coords=['lat', 'lon'], 
-                        region=gloc.region[0], width=0.33).map((None, 'fig/difu/M-ncited.pdf')),
+powPL=ncited(edges=grph.network[0], compose=False,
+             by=['year'], coords=['pgid'], embed=True,
+             region=gloc.region[2], width=0.33).map((None, *[f'fig/difu/M-ncited-pow-{k}.pdf' for k in range(13,20+1)], f'fig/difu/M-ncited-pow.pdf')),
 
-            ptLsrPL=ncited(edges=grph.web[0], by=['year'], 
-                           coords=['lat', 'lon'], region=gloc.region[1], width=0.33, 
-                           extent=dict(scale=2500, center=[17.0, 51.0])).map((None, 'fig/difu/M-ncited-lesser.pdf')),
-
-            wojPL=ncited(edges=grph.web[0], 
-                         by=['year'], coords=['wgid'], embed=True,
-                         region=gloc.region[1], width=0.33).map((None, 'fig/difu/M-ncited-woj.pdf')),
-
-            powPL=ncited(edges=grph.web[0], compose=False,
-                         by=['year'], coords=['pgid'], embed=True,
-                         region=gloc.region[2], width=0.33).map((None, *[f'fig/difu/M-ncited-pow-{k}.pdf' for k in range(13,20+1)], f'fig/difu/M-ncited-pow.pdf')),
-
-            powLsrPL=ncited(edges=grph.web[0], compose=False,
-                         by=['year'], coords=['pgid'], embed=True,
-                         region=gloc.region[2], width=0.33,
-                         extent=dict(scale=2000, center=[18.0, 50.5])).map((None, *[f'fig/difu/M-ncited-lesser-pow-{k}.pdf' for k in range(13,20+1)], f'fig/difu/M-ncited-lesser-pow.pdf'))
-           )
+powLsrPL=ncited(edges=grph.network[0], compose=False,
+                by=['year'], coords=['pgid'], embed=True,
+                region=gloc.region[2], width=0.33,
+                extent=dict(scale=2000, center=[18.0, 50.5])).map((None, *[f'fig/difu/M-ncited-lesser-pow-{k}.pdf' for k in range(13,20+1)], f'fig/difu/M-ncited-lesser-pow.pdf'))

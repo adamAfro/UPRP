@@ -185,36 +185,42 @@ class Flow():
 
     return Flow(self.name, self.callback, args, kwargs, mapping)
 
-  def From(name=str(None), cls=None):
-
-    import inspect
-
-    if cls is None: cls = Flow
-
-    def decorator(func):
-      def wrapper(*args, **kwargs):
-
-        S = inspect.signature(func)
-        P = list(S.parameters.keys())
-        K = {k: v for k, v in kwargs.items() if k in P}
-        A = args[:len(P)]
-
-        return cls(name, callback=func, args=A, kwargs=K)
-
-      return wrapper
-    return decorator
-
-  def Forward(args=[], callback=lambda x: x):
-    return Flow(callback=callback, args=args)
-
 def forward(arg, func):
   return Flow(callback=func, args=[arg])
 
-def make(name=str(None), cls=None):
+def init(*args, **kwargs):
 
   import inspect
 
-  if cls is None: cls = Flow
+  def decorator(func):
+
+    S = inspect.signature(func)
+    P = list(S.parameters.keys())
+    K = {k: v for k, v in kwargs.items() if k in P}
+    A = args[:len(P)]
+    F = Flow(callback=func, args=A, kwargs=K)
+
+    return F
+
+  return decorator
+
+def map(mapping):
+
+  def decorator(F:Flow):
+    return F.map(mapping)
+
+  return decorator
+
+def trigger(after:Flow):
+
+  def decorator(F:Flow):
+    return after.trigger(F)
+
+  return decorator
+
+def placeholder():
+
+  import inspect
 
   def decorator(func):
     def wrapper(*args, **kwargs):
@@ -223,8 +229,11 @@ def make(name=str(None), cls=None):
       P = list(S.parameters.keys())
       K = {k: v for k, v in kwargs.items() if k in P}
       A = args[:len(P)]
+      F = Flow(callback=func, args=A, kwargs=K)
 
-      return cls(name, callback=func, args=A, kwargs=K)
+      return F
 
     return wrapper
   return decorator
+
+make = placeholder #legacy

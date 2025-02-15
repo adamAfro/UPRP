@@ -96,10 +96,13 @@ import pandas, yaml, numpy
 import altair as Pt
 from util import A4
 
-@lib.flow.make()
-def Nameclsf(asnstores:dict[lib.storage.Storage, str],
-             assignements = ['names', 'firstnames', 'lastnames', 'ambignames'],
-             typeassign='type-name'):
+@lib.flow.map('cache/names.pkl')
+@lib.flow.init({D['UPRP']+'/assignement.yaml':   prfl.repos['UPRP'],
+                D['Lens']+'/assignement.yaml':   prfl.repos['Lens'],
+                D['Google']+'/assignement.yaml': prfl.repos['Google'] })
+def names(asnstores:dict[lib.storage.Storage, str],
+          assignements = ['names', 'firstnames', 'lastnames', 'ambignames'],
+          typeassign='type-name'):
 
   r"""
   \subsection{Oznaczanie nazw}
@@ -153,8 +156,9 @@ def Nameclsf(asnstores:dict[lib.storage.Storage, str],
                                             'UNIWERSYTET UNIVERSITY AKADEMIA ACADEMY',
                                             'POLITECHNIKA'] for x in X.split()])
 
-@lib.flow.make()
-def Pull( storage:lib.storage.Storage, assignpath:str,
+@lib.flow.map('cache/pulled.pkl')
+@lib.flow.init(prfl.UPRP, assignpath=D['UPRP']+'/assignement.yaml')
+def pulled( storage:lib.storage.Storage, assignpath:str,
           assignements = ['firstnames', 'lastnames'],
           assignentities = ['names', 'ambignames'],
           cityassign='city'):
@@ -234,8 +238,9 @@ def Pull( storage:lib.storage.Storage, assignpath:str,
 
   return Y
 
-@lib.flow.make()
-def Textual(pulled:pandas.DataFrame, nameset:pandas.DataFrame):
+@lib.flow.map('cache/textual.pkl')
+@lib.flow.init(pulled, nameset=names)
+def named(pulled:pandas.DataFrame, nameset:pandas.DataFrame):
 
   r"""
   \subsection{Wyciąganie danych osobowych}
@@ -316,11 +321,9 @@ def Textual(pulled:pandas.DataFrame, nameset:pandas.DataFrame):
 
   return Y
 
-@lib.flow.make()
-def Spacetime(textual:pandas.DataFrame, 
-              geoloc:pandas.DataFrame, 
-              event:pandas.DataFrame, 
-              clsf:pandas.DataFrame):
+@lib.flow.map('cache/spacetime.pkl')
+@lib.flow.init(named, patt.UPRP['geoloc'], patt.UPRP['event'], patt.UPRP['classify'])
+def placed(textual:pandas.DataFrame, geoloc:pandas.DataFrame, event:pandas.DataFrame, clsf:pandas.DataFrame):
 
   r"""
   \subsection{Umieszczenie osób w czasie i przestrzeni}
@@ -397,49 +400,44 @@ def Spacetime(textual:pandas.DataFrame,
   assert any([ c.startswith('clsf-') for c in X.columns ])
   assert { 'id' }.issubset(X.index.names)
 
-  def evalplot(X:pandas.DataFrame):
+  return X
 
-    X = X.copy()
-    X['year'] = X['application'].dt.year
-    X['loceval'] = X['loceval'].fillna(~X['city'].isna())
-    X['loceval'] = X['loceval'].replace({ True: 'nie znaleziono',
-                                          False: 'nie podano',
-                                          'unique': 'jednoznaczna',
-                                          'proximity': 'najlbiższa innym' })
+@lib.flow.map('fig/rgst/F-loceval.pdf')
+@lib.flow.init(placed)
+def evalplot(X:pandas.DataFrame):
 
-    N = X.value_counts(['year', 'loceval']).reset_index()
-    F = Pt.Chart(N).mark_bar()
-    F = F.encode( Pt.X('year:O').title(None)\
-                    .axis(labelAngle=0, values=[1984, 1989, 2000, 2004, 2013, 2023]))
-    F = F.encode( Pt.Y('count:Q').title('Z aplikacjami')\
-                    .axis(values=[1000, 10000, 20000, 40000]))
-    F = F.encode( Pt.Color('loceval:N')\
-                    .title('Geolokalizacja'))
+  X = X.copy()
+  X['year'] = X['application'].dt.year
+  X['loceval'] = X['loceval'].fillna(~X['city'].isna())
+  X['loceval'] = X['loceval'].replace({ True: 'nie znaleziono',
+                                        False: 'nie podano',
+                                        'unique': 'jednoznaczna',
+                                        'proximity': 'najlbiższa innym' })
 
-    Xg = X.dropna(subset=['grant'])
-    Ng = Xg.value_counts(['year', 'loceval']).reset_index()
-    Fg = Pt.Chart(Ng).mark_bar()
-    Fg = Fg.encode( Pt.X('year:O').title('Rok')\
-                    .axis(labelAngle=0, values=[1984, 1989, 2000, 2004, 2013, 2023]))
-    Fg = Fg.encode( Pt.Y('count:Q').title('Z grantem')\
-                    .axis(values=[1000, 10000, 20000, 40000]))
-    Fg = Fg.encode( Pt.Color('loceval:N')\
-                    .title('Geolokalizacja'))
+  N = X.value_counts(['year', 'loceval']).reset_index()
+  F = Pt.Chart(N).mark_bar()
+  F = F.encode( Pt.X('year:O').title(None)\
+                  .axis(labelAngle=0, values=[1984, 1989, 2000, 2004, 2013, 2023]))
+  F = F.encode( Pt.Y('count:Q').title('Z aplikacjami')\
+                  .axis(values=[1000, 10000, 20000, 40000]))
+  F = F.encode( Pt.Color('loceval:N')\
+                  .title('Geolokalizacja'))
 
-    F = F.properties(width=0.8*A4.W, height=0.1*A4.H)
-    Fg = Fg.properties(width=0.8*A4.W, height=0.1*A4.H)
+  Xg = X.dropna(subset=['grant'])
+  Ng = Xg.value_counts(['year', 'loceval']).reset_index()
+  Fg = Pt.Chart(Ng).mark_bar()
+  Fg = Fg.encode( Pt.X('year:O').title('Rok')\
+                  .axis(labelAngle=0, values=[1984, 1989, 2000, 2004, 2013, 2023]))
+  Fg = Fg.encode( Pt.Y('count:Q').title('Z grantem')\
+                  .axis(values=[1000, 10000, 20000, 40000]))
+  Fg = Fg.encode( Pt.Color('loceval:N')\
+                  .title('Geolokalizacja'))
 
-    return F & Fg
+  F = F.properties(width=0.8*A4.W, height=0.1*A4.H)
+  Fg = Fg.properties(width=0.8*A4.W, height=0.1*A4.H)
 
-  return X, evalplot(X)
+  return F & Fg
 
-names = Nameclsf({ D['UPRP']+'/assignement.yaml':   prfl.flow['UPRP']['profiling'],
-                   D['Lens']+'/assignement.yaml':   prfl.flow['Lens']['profiling'],
-                   D['Google']+'/assignement.yaml': prfl.flow['Google']['profiling'] }).map('cache/names.pkl')
-
-pulled = Pull(prfl.flow['UPRP']['profiling'], assignpath=D['UPRP']+'/assignement.yaml').map('cache/pulled.pkl')
-named = Textual(pulled, nameset=names).map('cache/textual.pkl')
-placed = Spacetime(named, patt.UPRP['geoloc'], patt.UPRP['event'], 
-                   patt.UPRP['classify']).map(('cache/spacetime.pkl', 'fig/rgst/F-loceval.pdf'))
-
-FLOW = dict(placed = placed)
+@lib.flow.init(placed)
+def selected(X:pandas.DataFrame):
+  return X[ (X['grant'] >= '2013-01-01') & (X['grant'] <= '2022-12-31') ]
