@@ -1,3 +1,5 @@
+#DEPRECATED
+
 r"""
 \subsection{Obszary peryferyjne}
 

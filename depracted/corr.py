@@ -1,3 +1,5 @@
+#DEPRECATED
+
 """
 \subsection{Autokorelacja przestrzenna}
 

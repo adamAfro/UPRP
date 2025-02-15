@@ -1,5 +1,5 @@
 #lib
-import lib.flow, gloc, endo, rprt as rprt
+import lib.flow, gloc, rprt, subj
 
 #calc
 import pandas, altair as Pt, networkx as nx
@@ -209,7 +209,7 @@ def network(docrefs:pandas.DataFrame,
 
   return E, N, cartplot(), ddplot(), compplot()
 
-web = network(rprt.valid, endo.data, gloc.dist,
+web = network(rprt.valid, subj.mapped, gloc.dist,
               spatial=['lat', 'lon'], temporal=['grant', 'application'],
               Jsim=[f'clsf-{l}' for l in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']],
               feats=['entity', 'pgid', 'wgid'], borders=gloc.region[0])

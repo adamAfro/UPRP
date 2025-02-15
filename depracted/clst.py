@@ -1,3 +1,5 @@
+#DEPRECATED
+
 import pandas, numpy, geopandas as gpd, altair as Plot
 import lib.flow, endo, gloc as gloc
 
