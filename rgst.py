@@ -1,43 +1,120 @@
 r"""
-\section{Identyfikacja osób}
+\section{Dane dotyczące osób i organizacji}
 
-Głownym problemen danych jest niejednoznaczność w kontekście identyfikacji osób.
-W danych patentowych, osoby rozróżnia się za pomocą imienia, nazwiska
-oraz nazwy miejscowości. Jak wiadomo wiele osób może mieć te same imię i nazwisko,
-także w jednym miejscu. Jest to duże ograniczenie wynikające z samego zbioru danych.
+Oprócz zbieranie informacji o samych patentach, 
+urząd zbiera także informacje o osobach związanych z patentami
+i organizacjach.
+Wyżej wspomniane są nazwy miejscowości zameldowania,
+oprócz nich urząd zbiera także imię i nazwisko
+albo nazwę organizacji.
+Pozyskiwanie tych informacji dotyczy 
+osób zaangażowanych w proces patentowy 
+z różnych pobudek:
+prawnych, organizacyjnych, finansowych i innych.
+
+  \begin{multicols}{2}
+
+Można wyróżnić 5 ról w procesie patentowym:
+wynalazca, właściciel, aplikant, pełnomocnik oraz urzędnik.
+Wynalazca jest (współ)autorem wynalazku, właściciel posiada
+prawa do patentu, aplikant składa wniosek patentowy, pełnomocnik
+reprezentuje właściciela w sprawach urzędowych, 
+a wskazany na rysunku \ref{struktura-patentowa} obok urzędnik
+przygotowuje raport o stanie techniki dla danego patentu.
+
+\columnbreak
+
+\begin{figure}[H]
+\centering\footnotesize
+\begin{tikzpicture}[scale=0.5]
+	\draw[draw=black, fill=lightgray, thin, solid] (-2.00,2.00) rectangle (-1.00,0.50);
+	\node[black, anchor=south west] at (-3.06,2.25) {patent};
+	\draw[draw=black, thin, solid] (-1.00,1.50) -- (1.00,4.00);
+	\draw[draw=black, thin, solid] (-1.00,1.00) -- (1.00,-2.00);
+	\node[black, anchor=south west] at (1.94,-2.25) {wynalazek};
+	\node[black, anchor=south west] at (1.94,-0.25) {wynalazca};
+	\draw[draw=black, thin, solid] (-1.00,1.50) -- (1.00,2.00);
+	\draw[draw=black, thin, solid] (-1.00,1.50) -- (1.00,0.00);
+	\node[black, anchor=south west] at (1.94,1.75) {aplikant};
+	\node[black, anchor=south west] at (1.94,3.75) {właściciel};
+	\draw[draw=black, thin, solid] (1.50,4.00) ellipse (0.50 and 0.50);
+	\draw[draw=black, thin, solid] (1.50,2.00) ellipse (0.50 and 0.50);
+	\draw[draw=black, thin, solid] (1.50,0.00) ellipse (0.50 and 0.50);
+	\draw[draw=black, fill=black, thin, solid] (-1.00,1.50) circle (0.1);
+	\draw[draw=black, fill=black, thin, solid] (-1.00,1.00) circle (0.1);
+	\draw[draw=black, fill=black, thin, solid] (1.00,-1.50) rectangle (2.00,-2.50);
+	\node[black, anchor=south west] at (-5.06,3.25) {biuro};
+	\draw[draw=black, thin, solid] (-1.50,4.00) ellipse (0.50 and -0.50);
+	\draw[draw=black, thin, solid] (-5.00,3.00) rectangle (-4.00,2.00);
+	\node[black, anchor=south west] at (-2.2,4.5) {pełnomocnik};
+	\draw[draw=black, thin, solid] (-1.50,2.00) -- (-1.50,3.50);
+	\draw[draw=black, fill=black, thin, solid] (-1.50,2.00) circle (0.1);
+	\draw[draw=black, fill=black, thin, solid] (-2.00,1.50) circle (0.1);
+	\draw[draw=black, thin, solid] (-2.00,1.50) -- (-4.00,2.50);
+	\draw[draw=black, thin, solid] (-4.50,0.00) ellipse (0.50 and -0.50);
+	\node[black, anchor=south west] at (-6.06,0.55) {urzędnik};
+	\node[black, anchor=south west] at (-3.06,-3.25) {raport};
+	\draw[draw=black, fill=gray, thin, solid] (-4.00,-2.00) rectangle (-3.00,-3.50);
+	\draw[draw=black, thin, solid] ([shift=(90:0.50 and -1.25)]-5.00,1.25) arc (90:270:0.50 and -1.25);
+	\draw[draw=black, thin, solid] (-4.50,-0.50) -- (-4.00,-2.00);
+	\draw[draw=black, fill=black, thin, solid] (-4.00,-2.00) circle (0.1);
+	\draw[draw=black, thin, dotted] (-4.00,0.00) -- (-2.00,1.50);
+	\draw[draw=black, thin, solid] (-3.00,-2.00) -- (-2.00,1.00);
+	\draw[draw=black, fill=black, thin, solid] (-2.00,1.00) circle (0.1);
+	\draw[draw=black, fill=black, thin, solid] (-3.00,-2.00) circle (0.1);
+\end{tikzpicture}
+\caption{Struktura powiązań patentu}
+\label{struktura-patentowa}
+\end{figure}
+\end{multicols}
+
+Głownym problemen danych jest 
+niejednoznaczność w kontekście identyfikacji osób i organizacji.
+W danych patentowych,
+osoby rozróżnia się za pomocą imienia, nazwiska oraz nazwy miejscowości. 
+Jak wiadomo wiele osób może mieć te same imię i nazwisko, także w jednym miejscu.
 Należy także wspomnieć o drobnych niespójnościach danych w zapisie imion i nazwisk
-(\cref{def:drobne-niespójności}) --- występowanie diaktryk i akcentów w zapisie
-nie jest gwarantowane, a jednocześnie nie jest wykluczone.
-
-Kolejną niejednoznacznością jest podobne zjawisko dla nazw miejscowości.
-W Polsce jest wiele miejscowości o identycznych nazwach, a rejestry nie oferują
-nic po za samą nazwą. Tutaj także występuje problem z diaktrykami i akcentami.
-
-Ponadto występują też 2 inne problemy. Pierwszym jest 
-niespójność fragmentacji danych (\cref{def:niespójność-fragmentacji}).
-W przypadku tabeli z danymi osobowymi wynalazców są do dyspozycji ich
-imiona i nazwiska. W przypadku pozostałych osób związanych z patentem
-są to najczęściej ciągi imion i nazwisk. Nie jest jednak gwarantowane,
-że dotyczą one osób fizycznych. Drugim problemem jest niespójność 
-typów danych (\cref{def:niespójność-typów}). Część danych oznaczonych
-jako imiona dotyczy nazw firm lub instytucji. Oznaczenie tego faktu
-istnieje tylko w niektórych przypadkach, dużo częściej jest to pominięte.
+--- występowanie diaktryk i akcentów w zapisie
+nie jest gwarantowane, 
+a jednocześnie nie jest wykluczone;
+niektóre podpisy zawierają pierwsze litery imion, inne są całościowe 
+mimo że dotyczą potencjalnie tej samej osoby.
+Nie ma także pełnego podziału na osoby i organizacje. 
+W wielu przypadkach organizacja rzeczywiście 
+jest oznaczona jako taki podmiot,
+jednak nie jest to regułą.
 """
 
 #lib
-import lib.storage, lib.name, lib.flow
-from util import strnorm
+import lib.storage, lib.name, lib.flow, patt, prfl
+from util import strnorm, data as D
 
 #calc
 import pandas, yaml, numpy
 
 #plot
-import altair as Plot
+import altair as Pt
+from util import A4
 
 @lib.flow.make()
 def Nameclsf(asnstores:dict[lib.storage.Storage, str],
              assignements = ['names', 'firstnames', 'lastnames', 'ambignames'],
              typeassign='type-name'):
+
+  r"""
+  \subsection{Oznaczanie nazw}
+
+  Wykorzystując fakt, że niektóre nazwy są oznaczone jako organizacje,
+  a inne zawierają podział na imię i nazwisko można ustalić zbiór słów
+  kluczowych oraz pełnych nazw, które są charakterystyczne dla danego typu.
+  Dodatkową informacją jest to, że
+  o ile aplikanci i właściciele patentów mogą dotyczyć zarówno osób
+  fizycznych jak i organizacji, to wynalazcy są zawsze osobami fizycznymi.
+  Do zbioru wprowadzone są także słowa charakterystyczne dla nazw organizacji,
+  takie jak \textit{spółka}, \textit{fundacja}, \textit{instytut}, 
+  \textit{INC.}, \textit{SP. Z O. O.} itp. Zbiór ten wykorzystany jest dalej
+  do oceny czy dany wpis dotyczy osoby fizycznej czy organizacji.
+  """
 
   Y = pandas.DataFrame()
 
@@ -83,12 +160,22 @@ def Pull( storage:lib.storage.Storage, assignpath:str,
           cityassign='city'):
 
   r"""
-  \begin{defi}
-  Wpis osobowy $w_i$ --- pojedynczy obiekt przypisany danemu patentowi. Zawiera
-  informacje o osobie powiązanej z patentem. Jeden paten może zawierać
-  wiele wpisów osobowych. Każdy składa się z: imienia i nazwiska albo
-  ciągu imienniczego (\cref{def:ciąg-imienniczy}); nazwy miejscowości zameldowania.
-  \end{defi}
+  \subsection{Wyciąganie danych o osobach i organizacjach}
+
+  Dane dotyczące osób wyciągane są ze zbioru danych z pewnymi zastrzeżeniami:
+
+  \begin{itemize}
+  \item każda informacja o osobie/organizacji istnieje w ramach jakiegoś patentu;
+  \item jedna osoba/organizacja może pełnić wiele ról patentowych;
+  \item nazwy organizacji nie są w pełni znormalizowane;
+  \item imiona i nazwiska są znormalizowane;
+  \item nazwy miejscości są znormalizowane;
+  \item osoby o identycznych imionach i nazwiskach są traktowane jako różne
+        jeśli inna jest ich miejscowość;
+  \end{itemize}
+
+  Normalizacja w tym przypadku to usuwanie znaków interpunkcyjnych
+  oraz zastąpienie znaków diaktrycznych ich odpowiednikami bez diaktryków.
   """
 
   S = storage
@@ -151,41 +238,23 @@ def Pull( storage:lib.storage.Storage, assignpath:str,
 def Textual(pulled:pandas.DataFrame, nameset:pandas.DataFrame):
 
   r"""
-  \subsection{Niespójność typów}
+  \subsection{Wyciąganie danych osobowych}
 
-  Rozwiązaniem problemu pomieszania nazw organizacji oraz imion osób
-  jest wykorzystanie danych o odpowiednim typowaniu i fragmentacji.
-  Wyróżniamy w nich pojedyncze słowa albo ciągi i przyjmujemy, 
-  że są charakterystyczne dla danego typu. W przypadku nazw organizacji
-  są to ciągi, a w przypadku imion i nazwisk --- pojedyncze słowa.
-  Dodatkowo testujemy podpisy na zawartość ustalonego zbioru słów
-  kluczowych, które są charakterystyczne dla nazw organizacji.
-  Po utworzeniu zbiorów słów i ciągów kluczowych imiona i nazwy
-  są klasyfikowane na podstawie ich zawartości. W ten sposób
-  możemy zidentyfikować, czy dany wpis dotyczy osoby fizycznej
-  czy organizacji.
+  Na podstawie wcześniej określonych nazw charakterystycznych
+  dla organizacji i tych dla imion, dane dotyczące podmiotów
+  są dzielone na dane osobowe i dotyczące organizacji.
+  Część nazw i imion nie ulega klasyfikacji w wyniku algorytmu. 
+  Dla uproszczenia zakładamy, że dotyczą one osób fizycznych.
 
-  \begin{uwaga}
-  Duża część nazw i imion nie ulega klasyfikacji w wyniku powyższego
-  algorytmu. Dla uproszczenia zakładamy, że dotyczą one wtedy imion
-  osób fizycznych.
-  \end{uwaga}
+  Definiujemy przy tym ciąg imienniczy, który wykorzystany jest
+  później przy identyfikacji tych samych osób jako autorów
+  różnych patentów.
 
-  \begin{defi}\label{def:ciąg-imienniczy}
-  Ciąg imienniczy $N_k$ --- ciąg imion oraz nazwisk przypisany danej osobie.
-  Nazwy podwójne rozdzielone znakami interpunkcyjnymi są traktowane jako
-  oddzielne imiona.
-  \end{defi}
+  \D{ciąg-imienniczy}{Ciąg imienniczy $N_k$}
+  { ciąg imion oraz nazwisk przypisany danej osobie. }
 
-  Każdy element ciągu imienniczego podlega normalizacji. Wszystkie jego 
-  znaki są traktowane jako wielkie litery, a znaki diaktryczne oraz akcenty 
-  są zastępowane ich odpowiednikami tych wyróżnień piśmienniczych.
-  Wynika to z faktu, że ich obecność nie jest pewna w danych.
-
-  \begin{uwaga}
-  To czy dany element $n,\ n\in N_k$ jest imieniem, czy nazwiskiem nie zawsze
-  jest jednoznaczne.
-  \end{uwaga}
+  To czy dany element $n,\ n\in N_k$ jest imieniem, czy nazwiskiem 
+  nie zawsze jest jednoznaczne.
   """
 
   X = pulled
@@ -253,6 +322,43 @@ def Spacetime(textual:pandas.DataFrame,
               event:pandas.DataFrame, 
               clsf:pandas.DataFrame):
 
+  r"""
+  \subsection{Umieszczenie osób w czasie i przestrzeni}
+
+  Biorąc pod uwagę dane pozyskane na temat patentów oraz 
+  osób z nimi związanych można zdefiniować przestrzeń
+  oraz czas w jakim te osoby działają.
+  Każdej osobie przyporządkowany jest odpowiedni punkt, 
+  wcześniej określony przy ustalaniu lokalizacji patentów.
+  Czas działania osoby jest wyznaczony jako czas złożenia
+  aplikacji patentowej --- to w trakcie składania aplikacji
+  osoby podają swoje dane w urzędzie.
+  Osobę charakteryzują również klasyfikacje \ac{IPC},
+  do których przypisany był patent.
+  Każda sekcja klasyfikacji, do której przypisany był patent
+  jest zliczana w ramach danej osoby.
+
+  \chart{fig/rgst/F-loceval.pdf}
+  { Wykres uzupełnienia danych na temat położenia osób pełniących role patentowe }
+  Powyższe wykresy prezentują stan uzupełnienia danych na temat położenia osób
+  pełniących role patentowe w czasie. Pierwszy wykres od góry prezentuje
+  liczności osób, które składały aplikacje patentowe w danym roku.
+  Drugi ogranicza się wyłącznie do osób, które składały patenty uzyskujące ochronę.
+  Na rysnuku widać, że w dużej części przypadków nie udało się ustalić położenia
+  danej osoby, szczególnie przed rokiem 2004. 
+
+  W badanym okresie 2013-2022 także
+  widać istotną frakcję osób, 
+  co do których nie udało się ustalić położenia.
+  Jest to około 28\% wszystkich patentów,
+  biorąc pod uwagę tylko patenty z ochroną: 26\%.
+  Należy zaznaczyć ich równomierne rozłożenie w czasie,
+  co sugeruje, że nie jest to związane z określonymi
+  okresami, a raczej z błędem systematycznym, 
+  jakim może być wcześniej wspomniane wykluczenie
+  pomniejszych miejscowości.
+  """
+
   X = textual
 
   T = event
@@ -291,96 +397,49 @@ def Spacetime(textual:pandas.DataFrame,
   assert any([ c.startswith('clsf-') for c in X.columns ])
   assert { 'id' }.issubset(X.index.names)
 
-  return X
+  def evalplot(X:pandas.DataFrame):
 
-from util import data as D
-from prfl import flow as f0
-from patt import flow as fP
+    X = X.copy()
+    X['year'] = X['application'].dt.year
+    X['loceval'] = X['loceval'].fillna(~X['city'].isna())
+    X['loceval'] = X['loceval'].replace({ True: 'nie znaleziono',
+                                          False: 'nie podano',
+                                          'unique': 'jednoznaczna',
+                                          'proximity': 'najlbiższa innym' })
 
-FN0 = Nameclsf({ D['UPRP']+'/assignement.yaml':   f0['UPRP']['profiling'],
-                D['Lens']+'/assignement.yaml':   f0['Lens']['profiling'],
-                D['Google']+'/assignement.yaml': f0['Google']['profiling'] }).map('cache/names.pkl')
+    N = X.value_counts(['year', 'loceval']).reset_index()
+    F = Pt.Chart(N).mark_bar()
+    F = F.encode( Pt.X('year:O').title(None)\
+                    .axis(labelAngle=0, values=[1984, 1989, 2000, 2004, 2013, 2023]))
+    F = F.encode( Pt.Y('count:Q').title('Z aplikacjami')\
+                    .axis(values=[1000, 10000, 20000, 40000]))
+    F = F.encode( Pt.Color('loceval:N')\
+                    .title('Geolokalizacja'))
 
-F0 = Pull(f0['UPRP']['profiling'], assignpath=D['UPRP']+'/assignement.yaml').map('cache/pulled.pkl')
+    Xg = X.dropna(subset=['grant'])
+    Ng = Xg.value_counts(['year', 'loceval']).reset_index()
+    Fg = Pt.Chart(Ng).mark_bar()
+    Fg = Fg.encode( Pt.X('year:O').title('Rok')\
+                    .axis(labelAngle=0, values=[1984, 1989, 2000, 2004, 2013, 2023]))
+    Fg = Fg.encode( Pt.Y('count:Q').title('Z grantem')\
+                    .axis(values=[1000, 10000, 20000, 40000]))
+    Fg = Fg.encode( Pt.Color('loceval:N')\
+                    .title('Geolokalizacja'))
 
-FN = Textual(F0, nameset=FN0).map('cache/textual.pkl')
+    F = F.properties(width=0.8*A4.W, height=0.1*A4.H)
+    Fg = Fg.properties(width=0.8*A4.W, height=0.1*A4.H)
 
-FGT = Spacetime(FN, fP['UPRP']['geoloc'], fP['UPRP']['event'], 
-                  fP['UPRP']['classify']).map('cache/spacetime.pkl')
+    return F & Fg
 
-sel2013 = lambda X: ((X['grant'] >= '2013-01-01') & (X['grant'] <= '2022-12-31'))
-F2013 = lib.flow.Flow(callback=lambda *X: X[0][sel2013(X[0])], args=[FGT])
-flow = { 'registry': {'2013': F2013,
-                      'pull': F0, 
-                      'spacetime':FGT } }
+  return X, evalplot(X)
 
-plots = dict()
+names = Nameclsf({ D['UPRP']+'/assignement.yaml':   prfl.flow['UPRP']['profiling'],
+                   D['Lens']+'/assignement.yaml':   prfl.flow['Lens']['profiling'],
+                   D['Google']+'/assignement.yaml': prfl.flow['Google']['profiling'] }).map('cache/names.pkl')
 
-plots[f'F-geoloc-eval-appl'] = lib.flow.Flow(args=[FGT], callback=lambda X:
+pulled = Pull(prfl.flow['UPRP']['profiling'], assignpath=D['UPRP']+'/assignement.yaml').map('cache/pulled.pkl')
+named = Textual(pulled, nameset=names).map('cache/textual.pkl')
+placed = Spacetime(named, patt.UPRP['geoloc'], patt.UPRP['event'], 
+                   patt.UPRP['classify']).map(('cache/spacetime.pkl', 'fig/rgst/F-loceval.pdf'))
 
-  Plot.Chart(X.assign(year=X['application'].dropna().dt.year.astype(int))\
-              .assign(loceval=X['loceval'].fillna(~X['city'].isna())\
-                                          .replace({ True: 'nie znaleziono',
-                                                    False: 'nie podano' }))\
-
-              .replace({'unique': 'jednoznaczna',
-                        'proximity': 'najlbiższa innym' })\
-              .value_counts(['year', 'loceval']).reset_index())
-
-      .mark_bar().encode( Plot.X('year:O').title('Rok'),
-                          Plot.Y(f'count:Q').title(None),
-                          Plot.Color('loceval:N')\
-                              .title('Metoda geolokalizacji / rodzaj braku')\
-                              .legend(orient='bottom', columns=4)))
-
-plots[f'F-geoloc-eval-grant'] = lib.flow.Flow(args=[FGT], callback=lambda X:
-
-  Plot.Chart(X.assign(year=X['grant'].dropna().dt.year.astype(int))\
-              .assign(loceval=X['loceval'].fillna(~X['city'].isna())\
-                                          .replace({ True: 'nie znaleziono',
-                                                    False: 'nie podano' }))\
-
-              .replace({'unique': 'jednoznaczna',
-                        'proximity': 'najlbiższa innym' })\
-              .value_counts(['year', 'loceval']).reset_index())
-
-      .mark_bar().encode( Plot.X('year:O').title('Rok'),
-                          Plot.Y(f'count:Q').title(None),
-                          Plot.Color('loceval:N')\
-                              .title('Metoda geolokalizacji / rodzaj braku')\
-                              .legend(orient='bottom', columns=4)))
-
-plots['F-grant-delay'] = lib.flow.Flow(args=[FGT], callback=lambda X:(
-
-  lambda X:
-
-    Plot.Chart(X).mark_bar(color='black')\
-        .encode(Plot.Y('count()').title(None),
-                Plot.X('days').title('Ilość dni').bin(step=365)) + \
-
-    X['days'].describe().loc[['25%', '50%', '75%', 'mean', 'min', 'max']]\
-        .rename({ 'mean': 'średnia', 'max': 'maks.', 'min': 'min.' }).reset_index()\
-        .pipe(Plot.Chart).mark_rule()\
-        .encode(Plot.X('days:Q'),
-                Plot.Color('index:N').title('Statystyka')\
-                    .scale(scheme='category10'))
-
-)((X['grant'] - X['application']).dt.days.rename('days').reset_index()))
-
-plots['F-application-grant'] = lib.flow.Flow(args=[F2013], callback=lambda X:
-
-    X .assign(grant=X['grant'].dropna().dt.year.astype(int))\
-      .assign(application=X['application'].dt.year.astype(int))\
-      .value_counts(['grant', 'application']).reset_index()\
-      .pipe(Plot.Chart).mark_bar()\
-      .encode(Plot.Y('count:Q').title(None),
-              Plot.X('application:N').title('Rok złożenia aplikacji'), 
-              Plot.Color('grant:N')\
-                  .title('Rok przyznania ochrony')\
-                  .legend(orient='bottom')))
-
-plots['F-grant-delay-13-22'] = plots['F-grant-delay'].copy(args=[F2013])
-
-for k, F in plots.items():
-  F.name = k
-  F.map(f'fig/rgst/{k}.png')
+FLOW = dict(placed = placed)

@@ -138,8 +138,29 @@ i przetwarzania ich do postaci, która może być użyta
 w dalszym wnioskowaniu.
 
     \include{prfl}
+
   \include{prfl:Profiling}
 
+    \include{patt}
+
+  \include{patt:code}
+
+  \include{patt:event}
+
+  \include{patt:geolocate}
+
+  \include{patt:classify}
+
+
+    \include{rgst}
+
+  \include{rgst:Nameclsf}
+
+  \include{rgst:Pull}
+
+  \include{rgst:Textual}
+
+  \include{rgst:Spacetime}
 
 
 \bibliographystyle{plain}\bibliography{cit}
@@ -250,7 +271,7 @@ def main():
     y = include(y, root)
    #../workdir
     y = re.sub(r'(\\includegraphics\[.*?\]{)(.*?)(})', r'\1../\2\3', y)
-    y = y.replace(r'{fig/', r'{../fig/')
+    # y = y.replace(r'{fig/', r'{../fig/')
 
     with open('main.tex', 'w') as f: f.write(y)
 

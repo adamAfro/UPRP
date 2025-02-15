@@ -36,7 +36,7 @@ W odpowiedzi otrzymuje się dane w formacie \ac{XML}.
 
 
 
-  \subsection{Struktura pobranych danych}\begin{multicols}{2}
+  \subsection{Wstępna struktura}\begin{multicols}{2}
 
 Struktura pobranych plików \ac{XML} to formacja obiektów.
 Obiekt składa się z klucza, atrybutów oraz innych obiektów.
