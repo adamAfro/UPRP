@@ -1,5 +1,5 @@
 r"""
-\section{Raporty o stanie techniki jako informacja o dyfuzji}
+\section{Dane z raportów o stanie techniki}
 
 Na stronie \ac{UPRP} wyróżniono etapy w procesie patentowania.
 Etapem po spełnieniu formalności jest 
@@ -16,9 +16,7 @@ użytych w trakcie procesu oraz tabelę zawierającą odniesienia
 do innych prac. Wśród odniesień można wyróżnić odniesienia do
 patentów, artykułów naukowych, książek, stron internetowych,
 a także do innych zgłoszeń patentowych.
-Przykłady takich odniesień są przedstawione na następnej stronie.
 
-\newpage
 \begin{figure}[H]\centering
 \label{fig:raport-biblio-ex}
 \includegraphics[width=0.8\textwidth]{fig/img/rprt/bilblio-ex-1.jpg}
@@ -82,15 +80,18 @@ $\hat l_1, \hat l_2$, które nie są uwzględnione w poniższej analizie.
                raportów o stanie techniki}
 \label{sec:graf-raporty}
 
+
+  \begin{multicols}{2}
 Dane z raportów o stanie techniki tworzą graf skierowany
 patentów $G$. Krawędź w takim grafie istnieje jeśli patent
-$p_1$ zawiera w swoim raporcie wzmiankę o patencie~$p_2$.
-
-Wracając do przykładu \cref{fig:raport-ex}, zastosowanie algorytmu 
+$p_1$ zawiera w swoim raporcie wzmiankę o patencie $p_2$.
+Wracając do przykładu , zastosowanie algorytmu 
 tworzy graf o krawędziach $E = \{ (p_2, p_1), (p_3, p_1), (p_3, p_2) \}$ i
 wierzchołkach $V = { p_1, p_2, p_3 }$.
 
-\begin{figure}\centering
+\columnbreak
+
+\begin{figure}[H]\centering
 \begin{tikzpicture}
 	\draw[draw=black, thin, solid] (-1.50,1.50) ellipse (0.50 and -0.50);
 	\node[black, anchor=south west] at (-2.06,1.25) {$p_1$};
@@ -105,20 +106,7 @@ wierzchołkach $V = { p_1, p_2, p_3 }$.
 \caption{Graf dla przykładowego zestawu raportów \cref{fig:raport-ex}}
 \label{fig:raport-ex-G}
 \end{figure}
-
-Zakładając, że wpisy ekspertów zawierają wyłącznie kody publikacji 
-patentów, graf mógłby być stworzony przez bezpośrednie powiązanie
-ich z danymi. Istotnym problemem w takiej sytuacji jest jakość \ac{OCR},
-która jest dobra, ale nie pewna.
-Wpisy ekspertów nie są jednak jednorodne w taki sposób. Problem
-rozpoznania znaków nie jest jedyny, bo pojawiają się kolejne:
-
-\begin{itemize}
-\item wątpliwa jakość \ac{OCR}
-\item wpisy to nie tylko kody patentowe
-\item wspominane kody patentowe nie zawsze są publikacjami,
-      mogą to być np. kody złożenia aplikacji
-\end{itemize}
+\end{multicols}
 
 \begin{figure}[H]\centering
 \includegraphics[width=0.8\textwidth]{fig/img/rprt/pat-ex-P.jpg}
@@ -136,10 +124,9 @@ rozpoznania znaków nie jest jedyny, bo pojawiają się kolejne:
          jako jeden numer.}
 \end{figure}
 
-Sposobem na minimalizację zjawiska błędnych powiązań jest zastosowanie
-algorytmu wyszukiwania (\cref{sec:wyszukiwanie}).
-
-Ninejsze wyszukiwanie polega na wskazaniu sumy zbiorów
+Powiązywanie cytowań z cytowanymi patentami 
+opiera się o zastosowanie wyszukiwania.
+Polega ono na wskazaniu sumy zbiorów
 słów: numerów patentowych, słów języka naturalnego oraz dat. 
 Wskazanie tej sumy zachodzi dla każdej pary wszystkich słów zapytań
 ze wszystkimi słowami ze zbioru danych. Dodatkowo zachodzi łączenie
@@ -153,8 +140,6 @@ W trakcie wyszukiwania tworzona jest jego punktacja, aby odróżnić
 wartościowe wyniki. Oprócz punktacji jest też ustalanie poziomu
 wyszukiwania na podstawie tego jakie rzeczywiste dane są łącznikami.
 Wybierane są wyłącznie pojedyncze, najlepsze wyniki.
-
-
 
 Raporty \ac{PDF} nie posiadają adnotacji tekstowych. 
 Znaczy to tyle, że dane są zawarte w sposób czytelny
@@ -173,8 +158,6 @@ skanowania samych dokumentów - zniekształcenia, zaciemnienia, czy
 rotacje kartek sprawiają, że proces \ac{OCR} nie jest idealny.
 Dodatkowo samo formatowanie nierzadko jest wadliwe co wynika
 z wprowadzania danych jeszcze na etapie tworzenia dokumentów.
-
-
 
 \subsubsection{Zastosowanie dużego modelu językowego}
 
@@ -209,22 +192,14 @@ import altair as Plot
 def Indexing(storage:lib.storage.Storage, assignpath:str):
 
   """
+  \subsection{Optymalizacja przez indeksowanie}
+
   Indeksowanie danych z profili, jest wymagane do przeprowadzenia
   wyszukiwania w optymalny komputacyjnie sposób.
-
-  Indeksowanie to etap po profilowaniu, który fragmentuje dane na
+  Jest to etap po profilowaniu, który fragmentuje dane na
   ustalone typy: ciągy cyfrowe, daty, słowa kluczowe, n-gramy słów i ciągów.
   W zależności od typu, ilości powtórzeń w danych i ich długości posiadaja
   inne punktacje, które mogą być dalej wykorzystane w procesie wyszukiwania.
-
-  ***
-
-  Indeksowanie korzysta z wcześniej przypisanych ról do określenia tego
-  w jaki sposób przetwarzać dane.
-
-  Wartości danych to indeksy i są opisane przez ich źródło, tj.:
-  repozytorium, ramkę, kolumnę i rolę. Takie przypisanie zapewnia
-  klarowność wyszukiwania i możliwość określenia poziomu dopasowania.
   """
 
   from lib.index import Exact, Words, Digital, Ngrams, Date
@@ -260,7 +235,7 @@ def Indexing(storage:lib.storage.Storage, assignpath:str):
 def Qdentify(qpath:str, storage:lib.storage.Storage, docsframe:str):
 
   """
-  Dopasowanie zapytań do dokumentów na podstawie nazwy pliku.
+  \subsection{Identyfikacja zapytań}
 
   Rozpoznawanie zapytań odbywa się w zupełnie innym kontekście i
   nie zwraca dla zapytań informacji o tym skąd pochodzą.
@@ -290,9 +265,10 @@ def Qdentify(qpath:str, storage:lib.storage.Storage, docsframe:str):
 def Parsing(searches: pandas.Series):
 
   """
+  \subsection{Parsowanie zapytań}
+
   Parsowanie zapytań to proces wyciągania z tekstów
   ciągów przypominających daty i numery patentowe.
-
   Proces polega na wstępnym podzieleniu całego napisu na
   części spełniające określone wyrażenia regularne. Później,
   te są łączone na podstawie tego czy w ich pobliżu są oczekiwane
@@ -380,7 +356,7 @@ class Search:
 def Narrow(queries:pandas.Series, indexes:tuple, pbatch:int=2**14, ngram=True):
 
   """
-  Wyszukiwanie ograniczone do połączeń kodami patentowymi.
+  \subsection{Wąskie wyszukiwanie}
 
   Wyszukiwanie w zależności od parametrów korzysta z dopasowania
   kodami patentowymi albo ich częściami. Później w grafie takich
@@ -592,6 +568,12 @@ def result(R: dict[str, pandas.DataFrame]):
 
 @lib.flow.placeholder()
 def edges(X:pandas.DataFrame):
+
+  r"""
+  \subsection{Kryterium wyszukiwania}
+
+  \TODO{opisać}
+  """
 
   X = X[X[('', '', '', 'level')] >= "partial-dated-supported"]
   Y = pandas.DataFrame({'to': X.index.get_level_values('entrydoc'),

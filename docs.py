@@ -152,6 +152,18 @@ w dalszym wnioskowaniu.
   \include{patt:classify}
 
 
+    \include{rprt}
+
+  \include{rprt:Indexing}
+
+  \include{rprt:Parsing}
+
+  \include{rprt:Narrow}
+
+  \include{rprt:edges}
+
+
+
     \include{rgst}
 
   \include{rgst:Nameclsf}
@@ -161,7 +173,6 @@ w dalszym wnioskowaniu.
   \include{rgst:Textual}
 
   \include{rgst:Spacetime}
-
 
     \include{subj}
 
