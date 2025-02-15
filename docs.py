@@ -163,6 +163,19 @@ w dalszym wnioskowaniu.
   \include{rgst:Spacetime}
 
 
+    \include{subj}
+
+  \include{subj:affilgeo}
+
+  \include{subj:affilnames}
+
+  \include{subj:simcalc}
+
+  \include{subj:identify}
+
+  \include{subj:fillgeo}
+
+
 \bibliographystyle{plain}\bibliography{cit}
 
 \listoffigures
