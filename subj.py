@@ -327,7 +327,7 @@ def fillgeo(identified:pandas.DataFrame, group:str, loceval:str):
 geofilled0 = fillgeo(identified=identify, group='entity', loceval='identity')
 geofilled = fillgeo(identified=geofilled0, group='doc', loceval='document').map('cache/filled.pkl')
 
-@lib.flow.map('cache/mapped.pkl')
+@lib.flow.map('cache/subj/mapped.pkl')
 @lib.flow.init(geofilled)
 def geopandas(X:pandas.DataFrame):
 
@@ -347,5 +347,5 @@ geofilled0 = fillgeo(identified=identify, group='entity', loceval='identity')
 geofilled = fillgeo(identified=geofilled0, group='doc', loceval='document').map('cache/filled.pkl')
 
 mappedw = ptregion(geopandas, gloc.region[1], 'wgid')
-mappedp = ptregion(mappedw, gloc.region[2], 'pgid').map('cache/mapped.pkl')
+mappedp = ptregion(mappedw, gloc.region[2], 'pgid')
 mapped = mappedp
