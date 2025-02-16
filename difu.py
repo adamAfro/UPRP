@@ -139,6 +139,130 @@ def mxtransfer(edges:DF, nodes:DF, regions:DF):
 
   return M
 
+@lib.flow.map('fig/difu/F-mxyeartr.pdf')
+@lib.flow.init(grph.network[0], grph.network[1], gloc.region[1])
+def mxyeartr(edges:DF, nodes:DF, regions:DF):
+
+  r"""
+  \subsection{Cytowania w raportach o stanie techniki pomiędzy województwami}
+
+  \chart{fig/difu/F-mxyeartr.pdf}
+  { Macierz cytowań w raportach o stanie techniki z uwzględnieniem lat
+    w okresie 2013-2022. }
+
+  Rząd wykresu wskazuje
+  na województwo osoby cytowanej, 
+  a kolumna, województwo osoby cytującej.
+  Przykładowo: pierwszy rząd, 7 kolumna (d.3)
+  pokazuje osób w województwie dolnośląskim,
+  które cytują osoby z województwa opolskiego.
+
+  W dużej większości nie występuje zjawisko cytowań osób
+  z innych województw, jednak są liczne wyjątki, 
+  kolejno --- od góry:
+
+  \begin{itemize}
+  \item W woj. dolnośląskim w roku 2015 nastąpił wzrost zainteresowania
+        w stosunku do łódzkiego (d.1), jego szybkie zakończenie dało początek
+        jeszcze większemu zainteresowaniu woj. opolskim (d.3).
+        Także woj. śląskie wykazuje jednostajny zwiększający się 
+        wpływ na dolnośląskie w ograniczonym okresie 2013-15 (d.2).
+        Należy tutaj wspomnieć, że wszystkie te 3 województwa 
+        są relatywnie blisko.
+
+  \item Województwo mazowieckie jest jest w znaczącej relacji z małopolskim.
+        Wykres słupkowy pozakuje znaczący spadek zainteresowania tymi patentami 
+        w roku 2017 (mz.1), przy wzroście
+        szczególnie dla województwa dolnośląskiego (mz.2) 
+        Widać też sporadyczny ale znaczący wpływ patentów z woj. śląskiego i łódzkiego.
+  \item \TODO{mp.1, mp.2}
+  \item \TODO{o.1, o.2}
+  \item \TODO{ł.1, ł.2, ł.3, ł.4}
+  \item \TODO{ś.1, ś.2, ś.3, ś.4}
+  """
+
+  N = nodes
+  E = edges
+  R = regions
+
+  R = R[['gid', 'name']]
+  E = E.query('year >= 2013')
+
+  E = E.set_index('wgid').join(R.set_index('gid')).reset_index()
+  E = E.set_index('wgidY').join(R.set_index('gid').add_suffix('Y')).reset_index()
+  N = N.set_index('wgid').join(R.set_index('gid')).reset_index()
+
+  G = E.groupby(['name', 'nameY', 'yearY'])
+  C = G.size().rename('size').to_frame()
+  C = C.join(G.agg({'distance': 'mean'}))
+  C = C.reset_index()
+  C.loc[C['name'] == C['nameY'], 'size'] = 0
+
+  def bar(X):
+
+    if X.empty: return Pt.Chart().mark_bar(fill=None)
+
+    p = Pt.Chart(X).mark_bar()
+    p = p.properties(width=0.05*A4.W, height=0.04*A4.W)
+    p = p.encode(Pt.Color('distance', type='quantitative')
+                   .legend(orient='bottom')
+                   .title('Średnia odległość')
+                   .scale(range=['green', 'blue', 'red', 'black']))
+    p = p.encode(Pt.X('yearY', type='ordinal').axis(None))
+    p = p.encode(Pt.Y('size', type='quantitative')
+                   .title(None).axis(values=[0, 250], labels=False))
+
+    return p
+
+  Z = { k0: [C.query(f'(name == "{k0}") & (nameY == "{k}")') for k in C['nameY'].unique()] for k0 in C['name'].unique() }
+
+  L = [Pt.Chart().mark_text().encode(text=Pt.datum(k[:4]+'.')) for k in Z.keys()]
+  L = [l.properties(width=0.05*A4.W, height=0.04*A4.W) for l in L]
+
+  F = DF({ k0: [bar(z) for z in v] for k0, v in Z.items() }, index=Z.keys())
+  for i, x in enumerate(F.index): F.iloc[i,i] = L[i] 
+  F.iloc[1:, 0] = F.iloc[1:, 0].apply(lambda p: p.encode(Pt.Y('size', type='quantitative')
+                                                           .title(None).axis(values=[0, 250])))
+  F.iloc[-1,:-1] = F.iloc[-1,:-1].apply(lambda p: p.encode(Pt.X('yearY', type='nominal')
+                                                             .title(None).axis(values=[2013, 2022])))
+
+  def arrow(i, j, year, desc, dir='left'):
+    l = Pt.Chart().encode(x=Pt.datum(year, type='nominal'))
+    a = Pt.Chart().encode(x=Pt.datum(year, type='nominal'))
+    if dir == 'left':
+      a = a.mark_point(shape='arrow', y=0, angle=+135, color='black', xOffset=-4)
+      l = l.mark_text(text=desc, y=0, color='black', fontSize=8, xOffset=-10, yOffset=-1, align='right')
+    else:
+      a = a.mark_point(shape='arrow', y=0, angle=360-135, color='black', xOffset=+3)
+      l = l.mark_text(text=desc, y=0, color='black', fontSize=8, xOffset=+10, yOffset=-1, align='left')
+
+    F.iloc[i, j] = F.iloc[i, j] + a + l
+
+  arrow(0,13, 2016, '(d.1)')
+  arrow(0,14, 2016, '(d.2)')
+  arrow(0, 6, 2016, '(d.3)')
+  arrow(4, 5, 2016, '(mz.1)', 'right')
+  arrow(4, 0, 2017, '(mz.2)')
+  arrow(5, 4, 2016, '(mp.1)')
+  arrow(5, 9, 2017, '(mp.2)')
+  arrow(6,14, 2013, '(o.1)')
+  arrow(6,11, 2017, '(o.2)')
+
+  arrow(13,15, 2016, '(ł.4)')
+  arrow(13, 4, 2016, '(ł.1)')
+  arrow(13, 5, 2016, '(ł.2)')
+  arrow(13, 6, 2016, '(ł.3)')
+
+  arrow(14, 0, 2016, '(ś.1)')
+  arrow(14, 2, 2014, '(ś.2)')
+  arrow(14, 4, 2016, '(ś.3)')
+  arrow(14, 5, 2016, '(ś.4)')
+
+  P = Pt.concat(*[z for v in F.values.tolist() for z in v], columns=16, spacing=0)
+  P = P.resolve_scale(x='shared', y='shared')
+
+  return P
+
 ptPL=ncited(edges=grph.network[0], 
             by=['year'], coords=['lat', 'lon'], 
             region=gloc.region[0], width=0.33).map((None, 'fig/difu/M-ncited.pdf')),
