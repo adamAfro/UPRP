@@ -1,5 +1,18 @@
 r"""
 \section{Dyfuzja wiedzy innowacyjnej}
+
+Dyfuzja wiedzy jest procesem zachodzącym między osobami.
+Cytowania patentowe są symptomem tego procesu.
+Dla uproszczenia, nazywamy je
+\emph{przepływem}.
+Dotyczy on transferu wiedzy 
+między osobami pełniącymi rolę patentowe
+w jednym z patentów powiązanych cytowaniem.
+Każde cytowanie jest więc relacją 
+między dwoma osobami.
+Relacja ta nie jest symetrzyczna:
+jedna jest osobą cytująca, 
+a druga cytowaną.
 """
 
 #lib
@@ -139,14 +152,14 @@ def mxtransfer(edges:DF, nodes:DF, regions:DF):
 
   return M
 
-@lib.flow.map('fig/difu/F-mxyeartr.pdf')
+@lib.flow.map('fig/difu/F-mxtrwoj.pdf')
 @lib.flow.init(grph.network[0], grph.network[1], gloc.region[1])
-def mxyeartr(edges:DF, nodes:DF, regions:DF):
+def mxtrwoj(edges:DF, nodes:DF, regions:DF):
 
   r"""
   \subsection{Cytowania w raportach o stanie techniki pomiędzy województwami}
 
-  \chart{fig/difu/F-mxyeartr.pdf}
+  \chart{fig/difu/F-mxtrwoj.pdf}
   { Macierz cytowań w raportach o stanie techniki z uwzględnieniem lat
     w okresie 2013-2022. }
 
