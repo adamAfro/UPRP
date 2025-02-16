@@ -237,3 +237,41 @@ def placeholder():
   return decorator
 
 make = placeholder #legacy
+
+
+
+interactive = False
+try:
+  sh = get_ipython().__class__.__name__ # type: ignore
+  interactive = sh in ['ZMQInteractiveShell', 'TerminalInteractiveShell']
+except NameError: interactive = False
+
+class ipy:
+
+  @staticmethod
+  def globparams():
+
+    "Decorator for debuging, sets params as global variables for interactive session"
+
+    def decorator(F:Flow):
+
+      if not interactive: return F
+
+      import inspect, sys
+
+      S = inspect.signature(F.callback)
+
+      D = { h: p.default for h, p in S.parameters.items() if p.default != p.empty }
+
+      H = [k for k in S.parameters.keys()]
+      A = { h: Flow.lazyload(a) for a, h in zip( F.args, H[:len(F.args)] ) }
+      K = { k: Flow.lazyload(v) for k, v in F.kwargs.items() if k in H }
+
+      for k, v in { **D, **A, **K }.items():
+        print(f'globals()[{k}] = ...')
+        frame = sys._getframe(1)
+        frame.f_globals[k] = v
+
+      return F
+
+    return decorator
