@@ -156,6 +156,27 @@ def names(asnstores:dict[lib.storage.Storage, str],
                                             'UNIWERSYTET UNIVERSITY AKADEMIA ACADEMY',
                                             'POLITECHNIKA'] for x in X.split()])
 
+@lib.flow.map('fig/rgst/F-names.pdf')
+@lib.flow.init(names)
+def namesplot(names:pandas.DataFrame):
+
+ #dane
+  N = names.value_counts('role')
+  N = N.rename({'orgname': 'nazwa organizacji', 'firstname': 'imiona', 
+                'lastname': 'nazwiska', 'ambigname': 'imię/nazwisko'})
+  N = N.reset_index()
+  pN = Pt.Chart(N)
+
+ #osie
+  xF = Pt.X('proportion:Q').title(None)
+  cF = Pt.Color('role:N').scale(scheme='category10').title(None)
+
+ #wykres
+  F = pN.mark_bar().encode(xF, cF)
+  F = F.properties(width=0.3*A4.W, height=0.05*A4.H)
+
+  return F
+
 @lib.flow.map('cache/pulled.pkl')
 @lib.flow.init(prfl.UPRP, assignpath=D['UPRP']+'/assignement.yaml')
 def pulled( storage:lib.storage.Storage, assignpath:str,
