@@ -64,7 +64,8 @@ def network(docrefs:pandas.DataFrame,
   D = dist
 
   K = spatial + temporal + Jsim + feats
-  N = N[['id', 'doc']+K]
+  N = N[['id', 'doc']+K].copy()
+  N['year'] = N['application'].dt.year.astype(int)
 
  #graf
   R['edge'] = range(len(R))

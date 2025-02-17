@@ -8,6 +8,8 @@ import lib.flow, gloc, rgst
 
 #calc
 import pandas, geopandas as gpd
+from pandas import DataFrame as DF
+from geopandas import GeoDataFrame as GDF
 
 #plot
 import altair as Plot
@@ -328,21 +330,19 @@ geofilled0 = fillgeo(identified=identify, group='entity', loceval='identity')
 geofilled = fillgeo(identified=geofilled0, group='doc', loceval='document').map('cache/subj/filled.pkl')
 
 @lib.flow.map('cache/subj/mapped.pkl')
-@lib.flow.init(geofilled)
-def geopandas(X:pandas.DataFrame):
+@lib.flow.init(geofilled, gloc.region[1], gloc.region[2])
+def mapped(filled:DF, woj:GDF, pow:GDF):
 
-  return gpd.GeoDataFrame(X.reset_index().assign(year=X['grant'].dt.year), 
-                          geometry=gpd.points_from_xy(X.lon, X.lat, crs='EPSG:4326'))
+  X = filled
 
-@lib.flow.placeholder()
-def ptregion(X:gpd.GeoDataFrame, R:gpd.GeoDataFrame, idname:str):
+  G = GDF(X.reset_index(), geometry=gpd.points_from_xy(X.lon, X.lat, crs='EPSG:4326'))
 
-  Y = gpd.sjoin(X, R[['geometry', 'gid']], how='left', predicate='within')
-  Y = gpd.GeoDataFrame(Y, geometry='geometry').drop(columns=['index_right'])
-  Y = Y.rename(columns={ 'gid': idname })
+  G = gpd.sjoin(G, woj[['geometry', 'gid']], how='left', predicate='within')
+  G = GDF(G, geometry='geometry').drop(columns=['index_right'])
+  G = G.rename(columns={ 'gid': 'wgid' })
 
-  return Y
+  G = gpd.sjoin(G, pow[['geometry', 'gid']], how='left', predicate='within')
+  G = GDF(G, geometry='geometry').drop(columns=['index_right'])
+  G = G.rename(columns={ 'gid': 'pgid' })
 
-mappedw = ptregion(geopandas, gloc.region[1], 'wgid')
-mappedp = ptregion(mappedw, gloc.region[2], 'pgid')
-mapped = mappedp
+  return G
