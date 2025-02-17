@@ -449,3 +449,62 @@ def selected(X:pandas.DataFrame):
   G = (X['grant'] >= '2013-01-01') & (X['grant'] <= '2022-12-31')
 
   return X[A & G]
+
+@lib.flow.map('fig/rgst/F-data.pdf')
+@lib.flow.init(selected)
+def dataplot(registers:pandas.DataFrame):
+
+  r"""
+  \begin{multicols}{2}
+
+  \chart{fig/rgst/F-data.pdf}
+  { Wykres liczności wpisów osobowych 
+    w zależności od roku aplikacji i ochrony }
+  \columnbreak
+  Na wykresie obok kolory są oznaczone zgodnie
+  z podpisem wykresu, są półprzeźroczyste i 
+  nakładają się na siebie, aby pokazać równocześnie
+  liczebność wpisów w 2 kryteriach.
+  \end{multicols}
+
+  Ograniczenia czasowe narzucają fakt, że
+  w trakcie analizy
+  nie wszystkie patenty
+  mają zakończony proces weryfikacji patentu 
+  w celu nadania ochrony.
+  Widać to na wykresie jako mała liczność
+  wpisów z dotyczących aplikacji
+  na końcu okresu.
+  Podobnie w drugą stronę --- 
+  część patentów jest wykluczona
+  przez to, że ich apllikacje zostały złożone przed
+  2013 rokiem, a zatem nie są brane pod uwagę.
+  Równowagę między tymi dwoma grupami
+  widać w roku 2017.
+  Jest to zgodne ze wcześnieszym przypuszczeniem,
+  że okres patentowy wynosi około 5 lat.
+  """
+
+  X = registers
+
+ #dane
+  X['yearA'] = X['application'].dt.year
+  X['yearG'] = X['grant'].dt.year
+  pX = Pt.Chart(X)
+
+ #osie
+  xFA = Pt.X('yearA:N').title('Rok: aplikacje - czer.')
+  yFA = Pt.Y('count(yearA)').title(None)
+
+  xFG = Pt.X('yearG:N').title('ochrona - ziel.')
+  yFG = Pt.Y('count(yearG)').title(None)
+
+ #wykresy
+  FA = pX.mark_bar(color='red', opacity=.5).encode(xFA, yFA)
+  FG = pX.mark_bar(color='green', opacity=.5).encode(xFG, yFG)
+
+ #układ
+  FA = FA.properties(width=0.4*A4.W, height=0.05*A4.H)
+  FG = FG.properties(width=0.4*A4.W, height=0.05*A4.H)
+
+  return FA + FG
