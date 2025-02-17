@@ -43,7 +43,6 @@ def ncited(edges:DF, by:list[str], coords:list[str], region:GDF, width:float, ex
   """
 
   E = edges
-  E = E.query('year >= 2013')#TODO rm
 
   assert all( c in E.columns for c in by ), f'all( c in {E.columns} for c in {by} )'
   assert all( c in E.columns for c in coords ), f'all( c in {E.columns} for c in {coords} )'
@@ -199,7 +198,6 @@ def mxtrwoj(edges:DF, nodes:DF, regions:DF):
   R = regions
 
   R = R[['gid', 'name']]
-  E = E.query('year >= 2013')
 
   E = E.set_index('wgid').join(R.set_index('gid')).reset_index()
   E = E.set_index('wgidY').join(R.set_index('gid').add_suffix('Y')).reset_index()

@@ -50,6 +50,11 @@ def network(docrefs:pandas.DataFrame,
   między 2 wierzchołkami reprezentującymi osoby. Zgodnie z kierunkiem
   grafu, te krawędzie są skierowane, a ich zwrot reprezentuje kierunek
   przepływu wiedzy.
+
+  Zakres patentów, 
+  zarówno tych które zawierają cytowania,
+  jak i tych które są cytowane,
+  ograniczone jest do lat 2013-2022.
   """
 
   assert { 'application' }.issubset(docsign.columns), docsign['application']
@@ -81,6 +86,7 @@ def network(docrefs:pandas.DataFrame,
   E = E.join(D).reset_index()
 
  #czas
+  N['year'] = N['application'].dt.year.astype(int)
   E['year'] = E['application'].dt.year.astype(int)
   E['yearY'] = E['applicationY'].dt.year.astype(int)
   for k in temporal:
@@ -94,6 +100,9 @@ def network(docrefs:pandas.DataFrame,
   JY = E.apply(lambda x: frozenset([k[:-1] for k in [f'{k0}Y' for k0 in Jsim] if x[k] > 0]), axis=1)
   E['Jaccard'] = JX.to_frame().join(JY.rename(1)).apply(lambda x: len(x[0] & x[1]) / len(x[0] | x[1]), axis=1)
   E = E.drop(columns=Jsim+[f'{k}Y' for k in Jsim])
+
+  E = E.query('year >= 2013')
+  N = N.query('year >= 2013')
 
   return E, N
 
