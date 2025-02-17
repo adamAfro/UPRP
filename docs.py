@@ -187,6 +187,30 @@ w dalszym wnioskowaniu.
   \include{subj:fillgeo}
 
 
+  \chapter{Analiza}
+
+    \include{grph}
+
+  \include{grph:network}
+
+  \include{grph:distcart}
+
+  \include{grph:distplot}
+
+  \include{grph:distplotyear}
+
+
+    \include{difu}
+
+  \include{grph:ncited}
+
+  \include{grph:mxtrwoj}
+
+  \include{grph:distplot}
+
+  \include{grph:distplotyear}
+
+
 \bibliographystyle{plain}\bibliography{cit}
 
 \listoffigures
