@@ -521,67 +521,6 @@ def Drop(queries:pandas.Series, matches:list[pandas.DataFrame]):
 
   return Q[ ~ Q.index.isin(q)], P[ ~ P.index.isin(p) ]
 
-@lib.flow.placeholder()
-def Preview(path:str,
-            profile:dict[str, pandas.DataFrame],
-            matches:pandas.DataFrame,
-            queries:pandas.Series, n0=24, n=16):
-
-  """
-  Podgląd wyników przetwarzania jako plik tekstowy zawartych tabel,
-  gdy podane są wyniki `matches` i `queries` to wyświetla również
-  wyniki zapytań i ich dopasowania; jeśli nie to przykładowe obserwacje.
-  """
-
-  with pandas.option_context('display.max_columns', None,
-                              'display.max_rows', n0,
-                              'display.expand_frame_repr', False):
-
-    H = profile
-    Y = H.str()
-
-    M = matches.sample(n)
-    Q, _ = queries
-
-    M = M[M.index.get_level_values('entry').isin(Q.index.values)]
-    M = M.sample(min(M.shape[0], n))
-
-    for i, m in M.iterrows():
-      Y += str(Q.loc[ i[M.index.names.index('entry')] ].T) + \
-      '\n\n' + str(m.to_frame().T) + '\n\n' + \
-      H.strdocs([ i[M.index.names.index('doc')] ])
-
-    with open(path, 'w') as f: f.write(Y)
-
-
-@lib.flow.placeholder()
-def result(R: dict[str, pandas.DataFrame]):
-
-  for k in R.keys():
-    R[k] = R[k][[('', '', '', 'level'), ('', '', '', 'score')]]
-    R[k].columns = ['level', 'score']
-    R[k]['source'] = k
-
-  Y = pandas.concat(R.values(), axis=0)
-
-  return Y
-
-@lib.flow.placeholder()
-def edges(X:pandas.DataFrame):
-
-  r"""
-  \subsection{Kryterium wyszukiwania}
-
-  \TODO{opisać}
-  """
-
-  X = X[X[('', '', '', 'level')] >= "partial-dated-supported"]
-  Y = pandas.DataFrame({'to': X.index.get_level_values('entrydoc'),
-                        'from': X.index.get_level_values('doc')})
-  return Y
-
-
-
 flow = { k: dict() for k in D.keys() }
 
 linkback = Qdentify(qpath='raport.uprp.gov.pl.csv', 
@@ -609,8 +548,6 @@ drop0 = Drop(queries, [flow['UPRP']['narrow'], flow['Lens']['narrow']]).map('ali
 for k, p in D.items():
 
   flow[k]['drop'] = Drop(queries, [flow[k]['narrow']]).map(p+'/alien.pkl')
-
-  flow[k]['preview'] = Preview(f"{p}/profile.txt", prfl.repos[k], flow[k]['narrow'], queries)
 
 flow['Google']['narrow'] = Narrow(drop0, flow['Google']['index'], pbatch=2**10).map(D["Google"]+'/narrow.pkl')
 
