@@ -219,13 +219,13 @@ Niniejszy rozdział opisuje
 
     \include{difu}
 
-  \include{grph:ncited}
+  \include{difu:ncited}
 
-  \include{grph:mxtrwoj}
+  \include{difu:mxtrwoj}
 
-  \include{grph:distplot}
+  \include{difu:distplot}
 
-  \include{grph:distplotyear}
+  \include{difu:distplotyear}
 
 
 \bibliographystyle{plain}\bibliography{cit}
