@@ -1,6 +1,8 @@
 r"""
 \section{Wprowadzenie do tematu dyfuzji wiedzy}
 
+\label{rozdział-literatura}
+
 Dyfuzja wiedzy innowacyjnej jest przedmiotem zainteresowania
 wielu badaczy. Przegląd dzieł związanych z tematem od różnych
 autorów pozwala na zrozumienie tego jakie są kluczowe elementy
