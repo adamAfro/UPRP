@@ -259,6 +259,49 @@ def pulled( storage:lib.storage.Storage, assignpath:str,
 
   return Y
 
+@lib.flow.map('fig/rgst/pulled-city.pdf')
+@lib.flow.init(pulled, nameset=names)
+def cityplot(data:pandas.DataFrame):
+
+  r"""
+  \chart{fig/rgst/pulled-city.pdf}
+  { Wykres liczności rejestrów z miast }
+  """
+
+ #dane
+  X = data
+  X = X.copy().fillna('b.d.').replace('BD', 'b.d.')
+
+  N = X.value_counts('city').rename('size').reset_index()
+  NA = pandas.Series({ 'b.d.': (X['city'] == 'b.d.').sum(),
+                         'd.': (X['city'] != 'b.d.').sum() })
+
+  NA = NA.rename('size').reset_index()
+  N2k = N.query('(size >= 2000)&(city!="b.d.")')
+  N0 = N.query('(size < 2000)')
+
+ #osie
+  xN2k = Pt.X('city').title(None)
+  yN2k = Pt.Y('size').title('≥2000')
+
+  xN0 = Pt.Y('size').bin(step=500).title(None)
+  yN0 = Pt.X('count(size)').scale(type='log').title('Ilość miast')
+
+  xNA = Pt.X('index').title(None)
+  yNA = Pt.Y('size').title(None)
+
+ #wykres
+  FN0 = Pt.Chart(N0).mark_bar().encode(xN0, yN0)
+  FN2k = Pt.Chart(N2k).mark_bar().encode(xN2k, yN2k)
+  FNA = Pt.Chart(NA).mark_bar().encode(xNA, yNA)
+
+ #układ
+  FN2k = FN2k.properties(width=0.7*A4.W, height=0.1*A4.H)
+  FN0 = FN0.properties(width=0.2*A4.W, height=0.1*A4.H)
+  FNA = FNA.properties(width=0.05*A4.W, height=0.1*A4.H)
+
+  return FNA | FN2k | FN0
+
 @lib.flow.map('cache/textual.pkl')
 @lib.flow.init(pulled, nameset=names)
 def named(pulled:pandas.DataFrame, nameset:pandas.DataFrame):
