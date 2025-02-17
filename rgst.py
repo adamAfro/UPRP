@@ -440,4 +440,12 @@ def evalplot(X:pandas.DataFrame):
 
 @lib.flow.init(placed)
 def selected(X:pandas.DataFrame):
-  return X[ (X['grant'] >= '2013-01-01') & (X['grant'] <= '2022-12-31') ]
+
+  r"""
+  \subsubsection{Kryterium czasowe wyboru danych}
+  """
+
+  A = (X['application'] >= '2013-01-01') & (X['application'] <= '2022-12-31') 
+  G = (X['grant'] >= '2013-01-01') & (X['grant'] <= '2022-12-31')
+
+  return X[A & G]
