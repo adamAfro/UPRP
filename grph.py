@@ -281,7 +281,41 @@ def distplot(edges:pandas.DataFrame):
 
 @lib.flow.map(('fig/grph/F-dist-yearly.pdf'))
 @lib.flow.init(network[0])
-def distplotyear(): raise NotImplementedError()
+def distplotyear(edges:pandas.DataFrame):
+
+  r"""
+  \subsection{Zasięg w latach 2013-2022}
+
+  \chart{fig/grph/F-dist-yearly.pdf}
+  { Rozkład odległości między osobami cytującymi, a cytowanymi w latach 2013-2022 }
+  """
+
+  E = edges
+
+  pC = Pt.Chart(E)
+  pD = Pt.Chart(E)
+
+  xC = Pt.X('yearY:O').title(None)
+  yC = Pt.Y('count(yearY):Q').title(None)
+  C = pC.mark_bar().encode(xC, yC)
+
+  xD = Pt.X('distance:Q').title(None)
+  yD = Pt.Y('density:Q').title(None)
+  fD = Pt.Row('yearY:O').title(None)
+
+  yC = yC.title('Liczność')
+  xC = xC.title('Rok')
+  xD = xD.title('Gęstość odległości między osobami cytującymi, a cytowanymi')
+
+  D = pD.encode(xD, yD, fD).mark_area()
+  D = D.transform_density('distance', as_=['distance', 'density'], groupby=['yearY'])
+
+  C = C.properties(width=0.8*A4.W, height=0.05*A4.W)
+  D = D.properties(width=0.8*A4.W, height=0.03*A4.W)
+  D = D.resolve_axis(x='shared', y='shared')
+  p = D & C
+
+  return p
 
 @lib.flow.map(('fig/grph/F-delay.pdf'))
 @lib.flow.init(network[0])
