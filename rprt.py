@@ -185,7 +185,8 @@ from util import data as D
 import pandas, yaml, tqdm
 
 #plot
-import altair as Plot
+import altair as Pt
+from util import A4
 
 
 @lib.flow.placeholder()
@@ -581,3 +582,54 @@ def edges(results:pandas.DataFrame):
                         'level': X[('', '', '', 'level')],
                         'score': X[('', '', '', 'score')]})
   return Y
+
+@lib.flow.map('fig/rprt/UPRP-score.pdf')
+@lib.flow.init(edges)
+def UPRPscoreplot(results=pandas.DataFrame):
+
+  r"""
+  \subsection{Wyniki wyszukiwania}
+
+  \chart{fig/rprt/UPRP-score.pdf}
+  { Wykres punktacji wyszukiwania patentów 
+    z cytowań w raportach o stanie techniki. }
+  """
+
+ #dane
+  R = results
+
+  R = R.reset_index()
+  R['large'] = R['score'].apply(lambda x: '>200' if x > 200 else '≤200')
+
+  R.level = R.level.str.replace('partial', 'częśc.')
+  R.level = R.level.str.replace('supported', 'popart.')
+  R.level = R.level.str.replace('dated', 'zgodne')
+  R.level = R.level.str.replace('exact', 'dokł.')
+
+  pR = Pt.Chart(R)
+
+ #osie
+  xD = Pt.X('score:Q').title('Rozkład gęstości punktacji')
+  yD = Pt.Y('density:Q').title(None)
+
+  xF200 = Pt.X('large').title(None)
+  yF200 = Pt.Y('count(large)').title(None)
+
+  xL = Pt.X('level').title(None)
+  yL = Pt.Y('count(level)').title(None)
+
+ #wykresy
+  D = pR.mark_area().encode(xD, yD)
+  D = D.transform_filter(Pt.datum.large == '≤200')
+  D = D.transform_density('score', as_=['score', 'density'])
+
+  F200 = pR.mark_bar().encode(xF200, yF200)
+
+  L = pR.mark_bar().encode(xL, yL)
+
+ #układ
+  D = D.properties(width=0.4*A4.W, height=0.05*A4.H)
+  F200 = F200.properties(width=0.04*A4.W, height=0.05*A4.H)
+  L = L.properties(width=0.5*A4.W, height=0.05*A4.H)
+
+  return (F200|D)&L
