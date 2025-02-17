@@ -434,7 +434,7 @@ def placed(textual:pandas.DataFrame, geoloc:pandas.DataFrame, event:pandas.DataF
   Na rysnuku widać, że w dużej części przypadków nie udało się ustalić położenia
   danej osoby, szczególnie przed rokiem 2004. 
 
-  W badanym okresie 2013-2022 także
+  W badanym okresie 2011-2020 także
   widać istotną frakcję osób, 
   co do których nie udało się ustalić położenia.
   Jest to około 28\% wszystkich patentów,
@@ -527,46 +527,43 @@ def selected(X:pandas.DataFrame):
 
   r"""
   \subsubsection{Kryterium czasowe wyboru danych}
+
+  Okres badawczy patentów to 10 lat 
+  od 2011 do 2020 roku.
+  Brane pod uwagę są wyłącznie patenty,
+  które uzyskały ochronę po 2011 roku,
+  a złożenie aplikacji patentowej
+  nastąpiło przed końcem 2020 roku.
+  Dane 2024 nie były obecne w zbiorze w trakcie analizy.
+  Z kolei 
+  patenty z lat 2021-2023 
+  w dużej części nie otrzymały jeszcze statusu
+  ochrony bądź odrzucenia.
   """
 
-  A = (X['application'] >= '2013-01-01') & (X['application'] <= '2022-12-31') 
-  G = (X['grant'] >= '2013-01-01') & (X['grant'] <= '2022-12-31')
+  G = (X['grant'] >= '2011-01-01') & (X['application'] <= '2020-12-31')
+  Y = X[G]
 
-  return X[A & G]
+  return Y
 
 @lib.flow.map('fig/rgst/F-data.pdf')
 @lib.flow.init(selected)
 def dataplot(registers:pandas.DataFrame):
 
   r"""
+  \TODO{sprawdz. popr. po zmianach}
   \begin{multicols}{2}
 
   \chart{fig/rgst/F-data.pdf}
   { Wykres liczności wpisów osobowych 
     w zależności od roku aplikacji i ochrony }
   \columnbreak
+
   Na wykresie obok kolory są oznaczone zgodnie
   z podpisem wykresu, są półprzeźroczyste i 
   nakładają się na siebie, aby pokazać równocześnie
   liczebność wpisów w 2 kryteriach.
   \end{multicols}
-
-  Ograniczenia czasowe narzucają fakt, że
-  w trakcie analizy
-  nie wszystkie patenty
-  mają zakończony proces weryfikacji patentu 
-  w celu nadania ochrony.
-  Widać to na wykresie jako mała liczność
-  wpisów z dotyczących aplikacji
-  na końcu okresu.
-  Podobnie w drugą stronę --- 
-  część patentów jest wykluczona
-  przez to, że ich apllikacje zostały złożone przed
-  2013 rokiem, a zatem nie są brane pod uwagę.
-  Równowagę między tymi dwoma grupami
-  widać w roku 2017.
-  Jest to zgodne ze wcześnieszym przypuszczeniem,
-  że okres patentowy wynosi około 5 lat.
   """
 
   X = registers

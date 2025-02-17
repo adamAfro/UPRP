@@ -159,8 +159,7 @@ def mxtrwoj(edges:DF, nodes:DF, regions:DF):
   \subsection{Cytowania w raportach o stanie techniki pomiędzy województwami}
 
   \chart{fig/difu/F-mxtrwoj.pdf}
-  { Macierz cytowań w raportach o stanie techniki z uwzględnieniem lat
-    w okresie 2013-2022. }
+  { Macierz cytowań w raportach o stanie techniki z uwzględnieniem lat. }
 
   Rząd wykresu wskazuje
   na województwo osoby cytowanej, 
@@ -173,6 +172,7 @@ def mxtrwoj(edges:DF, nodes:DF, regions:DF):
   z innych województw, jednak są liczne wyjątki, 
   kolejno --- od góry:
 
+  \TODO{sprawdz. popr. po zmianach}
   \begin{itemize}
   \item W woj. dolnośląskim w roku 2015 nastąpił wzrost zainteresowania
         w stosunku do łódzkiego (d.1), jego szybkie zakończenie dało początek
@@ -221,7 +221,7 @@ def mxtrwoj(edges:DF, nodes:DF, regions:DF):
                    .scale(range=['green', 'blue', 'red', 'black']))
     p = p.encode(Pt.X('yearY', type='ordinal').axis(None))
     p = p.encode(Pt.Y('size', type='quantitative')
-                   .title(None).axis(values=[0, 250], labels=False))
+                   .title(None).axis(values=[0, 500], labels=False))
 
     return p
 
@@ -233,9 +233,9 @@ def mxtrwoj(edges:DF, nodes:DF, regions:DF):
   F = DF({ k0: [bar(z) for z in v] for k0, v in Z.items() }, index=Z.keys())
   for i, x in enumerate(F.index): F.iloc[i,i] = L[i] 
   F.iloc[1:, 0] = F.iloc[1:, 0].apply(lambda p: p.encode(Pt.Y('size', type='quantitative')
-                                                           .title(None).axis(values=[0, 250])))
+                                                           .title(None).axis(values=[0, 500])))
   F.iloc[-1,:-1] = F.iloc[-1,:-1].apply(lambda p: p.encode(Pt.X('yearY', type='nominal')
-                                                             .title(None).axis(values=[2013, 2022])))
+                                                             .title(None).axis(values=[2011, 2022])))
 
   def arrow(i, j, year, desc, dir='left'):
     l = Pt.Chart().encode(x=Pt.datum(year, type='nominal'))

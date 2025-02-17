@@ -50,11 +50,6 @@ def network(docrefs:pandas.DataFrame,
   między 2 wierzchołkami reprezentującymi osoby. Zgodnie z kierunkiem
   grafu, te krawędzie są skierowane, a ich zwrot reprezentuje kierunek
   przepływu wiedzy.
-
-  Zakres patentów, 
-  zarówno tych które zawierają cytowania,
-  jak i tych które są cytowane,
-  ograniczone jest do lat 2013-2022.
   """
 
   assert { 'application' }.issubset(docsign.columns), docsign['application']
@@ -102,8 +97,7 @@ def network(docrefs:pandas.DataFrame,
   E['Jaccard'] = JX.to_frame().join(JY.rename(1)).apply(lambda x: len(x[0] & x[1]) / len(x[0] | x[1]), axis=1)
   E = E.drop(columns=Jsim+[f'{k}Y' for k in Jsim])
 
-  E = E.query('year >= 2013')
-  N = N.query('year >= 2013')
+  E = E.query('yearY >= 2011')
 
   return E, N
 
@@ -212,7 +206,7 @@ def distplot(edges:pandas.DataFrame):
   histogram wartości niezerowych po prawej, 
   oraz porównanie wartości zerowych i niezerowych po lewej.
   Obserwujemy znaczącą frakcję wartości zerowych, 
-  które stanowią niemal połowę wszystkich odległości.
+  które stanowią ponad 1/3 wszystkich odległości.
   Należy z tego wnosić, że znaczna część cytowań
   zachodzi między osobami z tej samej lokalizacji.
   Histogram zawiera także zaznaczone wartości statystyk pozycyjnych
@@ -227,12 +221,13 @@ def distplot(edges:pandas.DataFrame):
   """
 
   E = edges
+  E.distance = E.distance.astype(float)
+  E = E[['distance']].copy()
 
  #obliczenia
   is0 = lambda d: '= 0' if d == 0 else '> 0'
   E['distzero'] = E.distance.apply(is0)
 
-  E.distance = E.distance.astype(float)
   S = E.distance.describe().drop('count')
   S = S.rename(util.Translation.describe).reset_index()
   S['label'] = S['index'] + ': ' + S.distance.round(2).astype(str)
@@ -285,13 +280,16 @@ def distplot(edges:pandas.DataFrame):
 def distplotyear(edges:pandas.DataFrame):
 
   r"""
-  \subsection{Zasięg w latach 2013-2022}
+  \subsection{Zasięg}
 
+  \begin{multicols}{2}
   \chart{fig/grph/F-dist-yearly.pdf}
-  { Rozkład odległości między osobami cytującymi, a cytowanymi w latach 2013-2022 }
+  { Rozkład odległości między osobami cytującymi, a cytowanymi }
+  \end{multicols}
   """
 
-  E = edges
+  E = edges[[ 'yearY', 'distance' ]]
+  E = E.query('yearY >= 2011')
 
   pC = Pt.Chart(E)
   pD = Pt.Chart(E)
@@ -306,15 +304,15 @@ def distplotyear(edges:pandas.DataFrame):
 
   yC = yC.title('Liczność')
   xC = xC.title('Rok')
-  xD = xD.title('Gęstość odległości między osobami cytującymi, a cytowanymi')
+  xD = xD.title('Gęstość odległości między osobami~cytującymi, a cytowanymi'.split('~'))
 
   D = pD.encode(xD, yD, fD).mark_area()
   D = D.transform_density('distance', as_=['distance', 'density'], groupby=['yearY'])
 
-  C = C.properties(width=0.8*A4.W, height=0.05*A4.W)
-  D = D.properties(width=0.8*A4.W, height=0.03*A4.W)
+  C = C.properties(width=0.4*A4.W, height=0.05*A4.H)
+  D = D.properties(width=0.4*A4.W, height=0.05*A4.H)
   D = D.resolve_axis(x='shared', y='shared')
-  p = D & C
+  p = (C & D).resolve_scale(y='independent')
 
   return p
 
