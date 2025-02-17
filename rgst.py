@@ -385,6 +385,26 @@ def named(pulled:pandas.DataFrame, nameset:pandas.DataFrame):
 
   return Y
 
+@lib.flow.map('fig/rgst/F-named.pdf')
+@lib.flow.init(named)
+def namedplot(data:pandas.DataFrame):
+
+  r"""
+  \chart{fig/rgst/F-named.pdf}{Wykres klasyfikacji imion}
+  """
+
+
+  R = data['organisation']
+  R = R.replace({ True: 'organizacja', False: 'osoba' }).fillna('nie rozpoznano')
+  N = R.value_counts().rename('size').reset_index()
+
+  x = Pt.X('size:Q').title(None)
+  c = Pt.Color('organisation:N').title('Klasyfikacja')
+  p = Pt.Chart(N).mark_bar().encode(x, c)
+  p = p.properties(width=0.3*A4.W, height=0.05*A4.H)
+
+  return p
+
 @lib.flow.map('cache/spacetime.pkl')
 @lib.flow.init(named, patt.UPRP['geoloc'], patt.UPRP['event'], patt.UPRP['classify'])
 def placed(textual:pandas.DataFrame, geoloc:pandas.DataFrame, event:pandas.DataFrame, clsf:pandas.DataFrame):
