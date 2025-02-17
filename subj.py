@@ -343,9 +343,6 @@ def ptregion(X:gpd.GeoDataFrame, R:gpd.GeoDataFrame, idname:str):
 
   return Y
 
-geofilled0 = fillgeo(identified=identify, group='entity', loceval='identity')
-geofilled = fillgeo(identified=geofilled0, group='doc', loceval='document').map('cache/filled.pkl')
-
 mappedw = ptregion(geopandas, gloc.region[1], 'wgid')
 mappedp = ptregion(mappedw, gloc.region[2], 'pgid')
 mapped = mappedp
