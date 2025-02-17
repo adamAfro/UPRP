@@ -119,38 +119,6 @@ def ncited(edges:DF, by:list[str], coords:list[str], region:GDF, width:float, ex
 
   return N, M
 
-@lib.flow.map('fig/difu/F-wmx.pdf')
-@lib.flow.init(grph.network[0], grph.network[1], gloc.region[1])
-def mxtransfer(edges:DF, nodes:DF, regions:DF):
-
-  N = nodes
-  E = edges
-  R = regions
-
-  R = R[['gid', 'name']]
-
-  E = E.set_index('wgid').join(R.set_index('gid')).reset_index()
-  E = E.set_index('wgidY').join(R.set_index('gid').add_suffix('Y')).reset_index()
-  N = N.set_index('wgid').join(R.set_index('gid')).reset_index()
-
-  B = N.groupby('name').size().rename('base').to_frame()
-
-  G = E.groupby(['name', 'nameY'])
-  C = G.size().rename('size').to_frame().reset_index()
-  C = C.set_index('name').join(B).reset_index()
-  C = C.query('name != nameY')
-  C['ratio'] = C['size'] / C['base']
-
-  M = Pt.Chart(C).mark_circle()
-  M = M.encode(Pt.X('name', type='nominal').title('Województwo źródłowe'))
-  M = M.encode(Pt.Y('nameY', type='nominal').title('Województwo docelowe'))
-  M = M.encode(Pt.Size('size', type='quantitative').title('Ilość relacji'))
-  M = M.encode(Pt.Color('ratio', type='quantitative')
-                 .title('Stosunek~do liczby~patentów'.split('~'))
-                 .scale(range=['red', 'green', 'black']))
-
-  return M
-
 @lib.flow.map('fig/difu/F-mxtrwoj.pdf')
 @lib.flow.init(grph.network[0], grph.network[1], gloc.region[1])
 def mxtrwoj(edges:DF, nodes:DF, regions:DF):
