@@ -12,7 +12,7 @@ import pandas, geopandas as gpd
 #plot
 import altair as Plot
 
-@lib.flow.map('cache/affilate-geo.pkl')
+@lib.flow.map('cache/subj/affilate-geo.pkl')
 @lib.flow.init(rgst.selected)
 def affilgeo(registers:pandas.DataFrame):
 
@@ -43,7 +43,7 @@ def affilgeo(registers:pandas.DataFrame):
   assert { 'id' }.issubset(Y.index.names) and  Y.index.is_unique
   return Y
 
-@lib.flow.map('cache/affilate.pkl')
+@lib.flow.map('cache/subj/affilate.pkl')
 @lib.flow.init(affilgeo)
 def affilnames(registry:pandas.DataFrame):
 
@@ -101,7 +101,7 @@ def affilnames(registry:pandas.DataFrame):
   assert Y.index.is_unique
   return Y
 
-@lib.flow.map('cache/sim.pkl')
+@lib.flow.map('cache/subj/sim.pkl')
 @lib.flow.init(affilnames)
 def simcalc(affilated:pandas.DataFrame):
 
@@ -227,7 +227,7 @@ def simcalc(affilated:pandas.DataFrame):
   assert { i+'L', i+'R' }.issubset(S.index.names)
   return S
 
-@lib.flow.map('cache/entity.pkl')
+@lib.flow.map('cache/subj/entity.pkl')
 @lib.flow.init(simcalc, rgst.selected)
 def identify(sim:pandas.DataFrame, all:pandas.DataFrame):
 
@@ -325,7 +325,7 @@ def fillgeo(identified:pandas.DataFrame, group:str, loceval:str):
   return E
 
 geofilled0 = fillgeo(identified=identify, group='entity', loceval='identity')
-geofilled = fillgeo(identified=geofilled0, group='doc', loceval='document').map('cache/filled.pkl')
+geofilled = fillgeo(identified=geofilled0, group='doc', loceval='document').map('cache/subj/filled.pkl')
 
 @lib.flow.map('cache/subj/mapped.pkl')
 @lib.flow.init(geofilled)

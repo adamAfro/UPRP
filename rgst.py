@@ -96,7 +96,7 @@ import pandas, yaml, numpy
 import altair as Pt
 from util import A4
 
-@lib.flow.map('cache/names.pkl')
+@lib.flow.map('cache/rgst/names.pkl')
 @lib.flow.init({D['UPRP']+'/assignement.yaml':   prfl.repos['UPRP'],
                 D['Lens']+'/assignement.yaml':   prfl.repos['Lens'],
                 D['Google']+'/assignement.yaml': prfl.repos['Google'] })
@@ -177,7 +177,7 @@ def namesplot(names:pandas.DataFrame):
 
   return F
 
-@lib.flow.map('cache/pulled.pkl')
+@lib.flow.map('cache/rgst/pulled.pkl')
 @lib.flow.init(prfl.UPRP, assignpath=D['UPRP']+'/assignement.yaml')
 def pulled( storage:lib.storage.Storage, assignpath:str,
           assignements = ['firstnames', 'lastnames'],
@@ -302,7 +302,7 @@ def cityplot(data:pandas.DataFrame):
 
   return FNA | FN2k | FN0
 
-@lib.flow.map('cache/textual.pkl')
+@lib.flow.map('cache/rgst/textual.pkl')
 @lib.flow.init(pulled, nameset=names)
 def named(pulled:pandas.DataFrame, nameset:pandas.DataFrame):
 
@@ -405,7 +405,7 @@ def namedplot(data:pandas.DataFrame):
 
   return p
 
-@lib.flow.map('cache/spacetime.pkl')
+@lib.flow.map('cache/rgst/spacetime.pkl')
 @lib.flow.init(named, patt.UPRP['geoloc'], patt.UPRP['event'], patt.UPRP['classify'])
 def placed(textual:pandas.DataFrame, geoloc:pandas.DataFrame, event:pandas.DataFrame, clsf:pandas.DataFrame):
 
