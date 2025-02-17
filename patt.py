@@ -1,9 +1,9 @@
 r"""
-\section{Dane dotyczące patentów}
+\section{Tabele dotyczące patentów}
 
-Dane zbierane przez \ac{UPRP} można podzielić na kilka kategorii.
-W ramach przemiotu badania można z nich wyróżnić 4 rejestry:
-metadanych, wydarzeń, klasyfikacji oraz lokalizacji.
+W bazie danych istnieją 
+  4 tabele
+    istotne dla analizy patentów.
 """
 
 #lib
@@ -21,17 +21,21 @@ def Code(storage:lib.storage.Storage, assignpath:str):
 
   r"""
   \subsection{Metadane}
+  \label{metadane}
 
-  Metadane to informacje o patentach, których zbieranie jest
-  realizowane na potrzeby wewnętrznych systemów \ac{UPRP}.
-  Wśród metadanych można wyróżnić informacje o numerze patentu,
-  kraju, w którym został złożony, a także o dokumencie, który
-  jest podstawą prawną dla ochrony patentowej.
-  Niniejsza analiza wykorzystuje wyłącznie numery patentowe
-  do ich identyfikacji.
-  Każdy patent ma przydzielony numer złożenia aplikacji.
-  W razie otrzymania ochrony, dostaje również 
-  numer przyznania patentu.
+  Metadane to informacje o patentach, 
+    których zbieranie jest realizowane 
+      na potrzeby wewnętrznych systemów \ac{UPRP}.
+  Wśród metadanych można wyróżnić 
+    informacje o numerze złożonej aplikacji patentowej oraz
+    kraju, w którym został złożony.
+  Niniejsza analiza 
+    wykorzystuje numery patentowe 
+      do ich identyfikacji.
+  Każdy patent ma przydzielony 
+    numer złożenia aplikacji.
+    W razie otrzymania ochrony, 
+      dostaje również numer przyznania patentu.
   """
 
   S = storage
@@ -61,12 +65,17 @@ def Event(storage:lib.storage.Storage, assignpath:str, codes:pandas.DataFrame):
 
   r"""
   \subsection{Wydarzenia związane z patentami}
+  \label{wydarzenia}
 
-  Poszczególne czynności związane z ochroną patentów są rejestrowane.
-  Każde wydarzenie jest powiązane z konkretną datą kalendarzową.
-  W bazie jest kilka typów wydarzeń związanych z patentami.
-  Analiza obejmuje wyłącznie momenty złożenia aplikacji oraz
-  uzyskania ochrony patentowej.
+  Poszczególne czynności związane z ochroną patentów 
+    są rejestrowane.
+  Każde wydarzenie jest powiązane 
+    z konkretną datą kalendarzową.
+  W bazie jest kilka typów wydarzeń 
+    związanych z patentami.
+  Analiza obejmuje 
+    wyłącznie momenty złożenia aplikacji oraz
+    uzyskania ochrony patentowej.
   """
 
   S = storage
@@ -111,30 +120,43 @@ def Classify(storage:lib.storage.Storage, assignpath:str, codes:pandas.DataFrame
   r"""
   \subsection{Klasyfikacje patentów}
 
-  Klasyfikacje patentowe to systemy, które pozwalają na przypisanie
-  patentów do odpowiednich dziedzin.
+  Klasyfikacje patentowe 
+    to systemy, 
+      które pozwalają na przypisanie patentów 
+        do odpowiednich dziedzin.
 
   \subsubsection
   {Międzynarodowa Klasyfikacja Patentów}
   \label{IPC}
 
   W Polsce funkcjonuje klasyfikacja
-  \ac{MKP}, czyli \ac{IPC}. Zapis klasyfikacji w tym systemie to ciąg
-  cyfrowo-literowy składający się z 4 części:
-  $\Lambda\ \theta_{1} \theta_{2}\ \beta\ \hat\vartheta_{1} \hat\vartheta_{2} \vartheta_{3}$,
-  gdzie $\Lambda$ to symbol dziedziny, 
-  $\theta_{1} \theta_{2}$ to cyfry klasy,
-  $\beta$ to litera podklasy,
-  a $\hat\vartheta_{1} \hat\vartheta_{2} \vartheta_{3}$ to cyfry grupy.
-  Podgrupa jest symbolizowana za pomocą 1 do 3 cyfr, 
-  $\hat\vartheta_{1} \hat\vartheta_{2}$ są opcjonalne.
+    \ac{MKP}, 
+      czyli \ac{IPC}. 
+
+  Zapis klasyfikacji w tym systemie 
+    to ciąg
+      cyfrowo-literowy 
+      składający się z 4 części:
+      $\Lambda\ \theta_{1} \theta_{2}\ \beta\ \hat\vartheta_{1} \hat\vartheta_{2} \vartheta_{3}$,
+        gdzie 
+          $\Lambda$ to symbol dziedziny, 
+          $\theta_{1} \theta_{2}$ to cyfry klasy,
+          $\beta$ to litera podklasy,
+          a $\hat\vartheta_{1} \hat\vartheta_{2} \vartheta_{3}$ to cyfry grupy.
+            Grupa jest symbolizowana za pomocą 1 do 3 cyfr, 
+            $\hat\vartheta_{1} \hat\vartheta_{2}$ są opcjonalne.
 
   Analize są poddane wyłącznie sekcje klasyfikacji A-H.
   Grupowanie ze względu na bardziej szczegółową klasyfikację
-  jest problematyczne ze względu na różnorodność tych szczegółów.
-  Istnieje również sekcja X, która jest zarezerwowana dla
-  przyszłych zastosowań technicznych --- ona także nie jest analizowana,
-  ponieważ występowanie patentów w tej sekcji jest sporadyczne.
+    jest problematyczne 
+      ze względu na różnorodność 
+        tych szczegółów.
+  Istnieje również sekcja X, 
+    która jest zarezerwowana dla
+      przyszłych zastosowań technicznych --- 
+    ona także nie jest analizowana,
+      ponieważ występowanie patentów w tej sekcji 
+        jest sporadyczne.
 
   \begin{table}[H]
     \begin{tabular}{|l|c|l|c|}
@@ -218,35 +240,43 @@ def Geolocate(storage:lib.storage.Storage,
   r"""
   \subsection{Dane lokalizacyjne}
 
-  Urząd zbiera informacje dotyczące lokalizacji osób związanych
-  z patentami. Są to informacje ograniczone wyłącznie do nazwy
-  miejscowości jaką zadeklarowała dana osoba. 
-  Jest to duże obciążenie dla analizy, ponieważ nazwy miejscowości
-  nie są unikalne. 
+  Urząd zbiera informacje dotyczące lokalizacji 
+    osób 
+      związanych z patentami. 
+  Są to informacje 
+    ograniczone 
+      wyłącznie do nazwy miejscowości 
+        jaką zadeklarowała dana osoba. 
+  Jest to duże obciążenie dla analizy, 
+    ponieważ nazwy miejscowości 
+      nie są unikalne. 
   Nie ma także pewności co do 
-  formatowania ich nazw. 
+    formatowania ich nazw. 
   Dla uproszczenia, 
-  wszystkie nazwy miejscowości zostały 
-  znormalizowane poprzez zamianę znaków diaktrycznych
-  na ich odpowiedniki bez diaktryków oraz 
-  usunięcie znaków interpunkcyjnych.
+    wszystkie nazwy miejscowości zostały 
+      znormalizowane 
+        poprzez zamianę znaków diaktrycznych
+          na ich odpowiedniki bez diaktryków 
+        oraz usunięcie znaków interpunkcyjnych.
   Dużym uproszczeniem jest 
-  wykluczenie wszystkich nazw, 
-  które nie dotyczą miejscowości o prawach miejskich ---
-  wsie nie charakteryzyją się unikalnością 
-  w zbyt dużej części, 
-  dodatkowo nierzadko ich nazwy pokrywają się z nazwami miast.
-  W Polsce współczynnik urbanizacji to niemal 60\%;
-  miejscowości bez praw miejskich mają dużo niższe populacje ---
-  można założyć, że większość osób działających przy patentach
-  melduje się w miastach.
+    wykluczenie wszystkich nazw, 
+      które nie dotyczą miejscowości o prawach miejskich ---
+        wsie nie charakteryzyją się unikalnością 
+          w zbyt dużej części, 
+        dodatkowo nierzadko ich nazwy pokrywają się z nazwami miast.
+      W Polsce współczynnik urbanizacji to niemal 60\%;
+      miejscowości bez praw miejskich mają dużo niższe populacje ---
+        można założyć, 
+          że większość osób działających przy patentach
+            melduje się w miastach.
   Problem zduplikowanych nazw miejscowości 
-  (przykładowo Opole)
-  został rozwiązany
-  przez zastosowanie algorytmu wybierającego najbliższe
-  współrzędne geograficzne dla danej grupy:
-  rozważane są wszystkie kombinacje nazw miejscowości,
-  kombinacja o najmniejszej sumie odległości jest wybierana.
+    (przykładowo Opole)
+    został rozwiązany
+      sprzez zastosowanie algorytmu wybierającego 
+        najbliższe współrzędne geograficzne 
+          dla danej grupy:
+        rozważane są wszystkie kombinacje nazw miejscowości,
+          kombinacja o najmniejszej sumie odległości jest wybierana.
   """
 
   S = storage

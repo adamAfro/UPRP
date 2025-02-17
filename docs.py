@@ -83,21 +83,33 @@ Lublin 2025
 \tableofcontents
 \chapter*{Wstęp}
 
-Dyfuzja wiedzy innowacyjnej w czasie i przestrzeni to proces
-rozprzestrzeniania się nowych technologii pomiędzy podmiotami
-w lokalnym otoczeniu.
-
-Wiedza innowacyjna jest kluczowym elementem rozwoju gospodarczego.
-To jej przypisuje się siłę napędową dla wzrostu gospodarczego
-w nowoczesnych gospodarkach. Zrozumienie procesów dyfuzji 
-wiedzy innowacyjnej może pozwolić na budowanie lepszych 
-warunków dla rozwoju gospodarczego.
+Dyfuzja wiedzy innowacyjnej w czasie i przestrzeni 
+  to proces przepływu informacji 
+    o nowych 
+      technologiach, 
+      produktach,
+      usługach, czy 
+      procesach 
+    pomiędzy różnymi podmiotami.
+  Jest kluczowym elementem rozwoju gospodarczego.
+  To jej przypisuje się siłę napędową dla wzrostu gospodarczego
+    w nowoczesnych gospodarkach. 
+Zrozumienie procesów dyfuzji wiedzy innowacyjnej 
+  może pozwolić na budowanie lepszych warunków dla 
+    rozwoju gospodarczego.
 
 Patenty są dobrym wskaźnikiem tego zjawiska z 2 powodów:
-po pierwsze dotyczą wyłacznie innowacji --- takie jest ich zadanie,
-po drugie zawierają informacje na temat ich twórców, co pozwala
-na stwierdzenie o ich lokalizacji, która jest kluczowym elementem
-w procesie dyfuzji wiedzy.
+  po pierwsze dotyczą wyłącznie innowacji.
+  Po drugie zawierają kluczowe informacje w dyfuzji wiedzy innowacyjnej,
+    to jest:
+      innowacyjność (tylko patenty innowacyjne dostają ochronę),
+      czas powstania (data złożenia wniosku patentowego) oraz
+      miejsce położenia autorów.
+
+Praca ta jest wglądem w dane urzędu patentowego,
+  która przy użyciu technik opisowych
+  ma przybliżyć zjawisko dyfuzji wiedzy innowacyjnej
+  w Polsce.
 
 
 
@@ -125,17 +137,22 @@ w procesie dyfuzji wiedzy.
 
   \chapter{Dane}
 
-W Polsce centralnym organem odpowiedzialnym za przyznawanie 
-patentów jest \acf{UPRP}. Oprócz ochroną patentową oraz 
-publikowaniem informacji o patentach, urząd prowadzi bazę 
-danych patentów, która jest dostępna publicznie przy użyciu \ac{API}.
-Pozwala to na automatyczne pobieranie danych przy pomocy skryptów.
-Dane te są ograniczone w swojej szczegółowości, co jest powodem
-istotnego spadku ufności wobec prezentowanej później analizy.
-
-Niniejszy rozdział opisuje wyłącznie proces pozyskiwania danych 
-i przetwarzania ich do postaci, która może być użyta 
-w dalszym wnioskowaniu.
+W Polsce 
+  centralnym organem 
+    odpowiedzialnym za przyznawanie patentów 
+    jest \acf{UPRP}. 
+Oprócz 
+  ochroną patentową oraz 
+  publikowaniem informacji o patentach, 
+  urząd prowadzi bazę danych patentów, 
+    która jest dostępna publicznie 
+      przy użyciu \ac{API}.
+Pozwala to na automatyczne pobieranie danych 
+  przy pomocy skryptów.
+Niniejszy rozdział opisuje 
+  wyłącznie pozyskiwania danych 
+  i przetwarzania ich do postaci, 
+    która może być użyta w dalszym wnioskowaniu.
 
     \include{prfl}
 

@@ -2,15 +2,24 @@ r"""
 
 
 
-    \section{Pozyskiwanie danych}
-  \subsection{Pobieranie}\begin{multicols}{2}
-Identyfikacja patentów w wewnętrznym systemie \ac{URPR} to przyporządkowanie
-każdego patentu do 6-cyfrowego numeru, który jest unikalny dla
-każdego zgłoszenia. Pobieranie danych dotyczących wszystkich patentów 
-można więc przeprowadzić wysyłając zapytanie do interfejsu o każdy
-patent po kolei. Zaczynając od \textit{000-001} i kończąc na \textit{999-999}.
-W praktyce skuteczność kierowania zapytań kończy się na \textit{450-000}.
-W odpowiedzi otrzymuje się dane w formacie \ac{XML}.
+\section{Pozyskiwanie danych}
+\subsection{Pobieranie}\begin{multicols}{2}
+
+Identyfikacja patentów 
+  w wewnętrznym systemie \ac{UPRP} 
+  to przyporządkowanie
+    każdego patentu 
+      do 6-cyfrowego numeru, 
+        który jest unikalny dla każdego zgłoszenia. 
+Pobieranie danych dotyczących wszystkich patentów można więc 
+  przeprowadzić wysyłając zapytanie do interfejsu 
+    o każdy patent po kolei. 
+    Zaczynając od \textit{000-001} 
+    i kończąc na \textit{999-999}.
+W praktyce skuteczność kierowania zapytań kończy się 
+  na \textit{450-000}.
+W odpowiedzi otrzymuje się dane 
+  w formacie \ac{XML}.
 
 \columnbreak
 \begin{figure}[H]
@@ -36,15 +45,24 @@ W odpowiedzi otrzymuje się dane w formacie \ac{XML}.
 
 
 
-  \subsection{Wstępna struktura}\begin{multicols}{2}
+\subsection{Wstępna struktura}\begin{multicols}{2}
 
-Struktura pobranych plików \ac{XML} to formacja obiektów.
-Obiekt składa się z klucza, atrybutów oraz innych obiektów.
-Obok zaprezentowany jest przykładowy dokument $A_1$ o kluczu $A$,
-z obiektami $B1$, $B2$, $G$, atrybutami $a_1$ oraz $a_2$.
-Pozostałe symbole odnoszą się do zagnieżdżonych obiektów.
-Duże litery oznaczają obiekty a małe atrybuty. Symbole $x_i$
-odnoszą się do wartości skalarnych.
+Struktura pobranych plików \ac{XML} 
+  to formacja obiektów.
+Obiekt składa się z 
+  klucza, 
+  atrybutów oraz 
+  innych obiektów.
+Obok zaprezentowany jest przykładowy dokument 
+  $A_1$ o kluczu $A$,
+    z obiektami $B1$, $B2$, $G$, 
+    atrybutami $a_1$ oraz $a_2$.
+Pozostałe symbole odnoszą się 
+  do zagnieżdżonych obiektów.
+Duże litery oznaczają obiekty 
+a małe atrybuty. 
+Symbole $x_i$
+  odnoszą się do wartości skalarnych.
 
 \columnbreak
 \begin{figure}[H]
@@ -93,14 +111,13 @@ odnoszą się do wartości skalarnych.
                    atrybutów z ograniczonego zbioru kluczy oraz 
                    obiektów z ograniczonego zbioru typów.}
 
-Na powyższym przykładzie (\cref{przykład-danych}) 
-można zauważyć, 
-że obiekty mogą różnić się od siebie 
-pod względem obecności atrybutów oraz obiektów, 
-mimo posiadania identycznych ścieżek.
-W efekcie, 
-przy przyjętej poniżej metodzie wyróżniania typów obiektów,
-należy oczekiwać braków danych w niektórych obiektach.
+Na powyższym przykładzie (\cref{przykład-danych}) można zauważyć, 
+  że obiekty mogą różnić się od siebie 
+    pod względem obecności atrybutów oraz 
+    obiektów, 
+    mimo posiadania identycznych ścieżek.
+W efekcie, przy przyjętej poniżej metodzie wyróżniania typów obiektów,
+  należy oczekiwać braków danych w niektórych obiektach.
 """
 
 #lib
@@ -116,39 +133,62 @@ def Profiling(dir:str, kind:str, assignpath:str, aliaspath:str,  profargs:dict={
   r"""
     \subsubsection{Transformacja struktury}
 
-  Transformacja ma na celu przetworzenie danych 
-  z postaci zagnieżdżonych obiektów
-  na dane tabelaryczne.
-  Każdy obiekt jest przetwarzany 
-  na wartość albo ciąg wartości,
-  Atrybuty są wyłącznie pojedynczymi wartościami
-  i wchodzą w skład ciągów wartości 
-  utworzonych z obiektów.
+  Transformacja 
+    ma na celu przetworzenie danych 
+    z postaci zagnieżdżonych obiektów
+    na dane tabelaryczne.
+  Każdy obiekt 
+    jest przetwarzany 
+      na wartość albo 
+      ciąg wartości,
+  Atrybuty są 
+    wyłącznie 
+      pojedynczymi wartościami
+    i wchodzą 
+      w skład ciągów wartości 
+        utworzonych z obiektów.
   Obiekt jest ciągiem wartości o ile 
-  występuje wielokrotnie w danej ścieżce.
-  Jeśli tak nie jest to jego atrybuty
-  definiją wartości w pierwszym nadrzędnym obiekcie,
-  który jest ciągiem wartości.
-  W skrócie: obiekty o ścieżkach, 
-  które występują wielokrotnie
-  tworzą ciągi wartości,
-  a atrybuty i obiekty pojedyncze
-  są tymi wartościami.
+    występuje wielokrotnie 
+      w danej ścieżce.
+  Jeśli tak nie jest 
+    to jego atrybuty
+      definiją wartości 
+        w pierwszym 
+          nadrzędnym 
+            obiekcie,
+              który jest ciągiem wartości.
+  W skrócie: 
+    obiekty o ścieżkach, 
+      które występują wielokrotnie
+      tworzą ciągi wartości,
+    a atrybuty i 
+      wartości oraz 
+      atrybuty 
+        obiektów pojedynczych
+      są tymi wartościami.
 
-  Etapem pierwszym w implementacji
-  jest wyróżnienie tych obiektów,
-  które są ciągami wartości;
-  etap drugi to zbieranie danych
-  do tabel, gdzie każda tabela jest
-  zbiorem ciągów wartości
-  o identycznych ścieżkach.
+  Etapem pierwszym w implementacji jest 
+    wyróżnienie tych obiektów,
+      które są ciągami wartości;
+  etap drugi to 
+    zbieranie danych
+      do tabel, 
+        gdzie każda tabela jest
+          zbiorem ciągów wartości
+            o identycznych ścieżkach.
 
   Obserwacje w tych tabelach zawierają
-  unikalne identyfikatory przydzielane podczas procesu
-  oraz identyfikatory tych ciągów, które były
-  dla nich nadrzędne przed transformacją.
-  W efekcie otrzymujemy relacyjną bazę danych.
-  Dalsze sekcje zawierają opisy i przeglądy tych tabel.
+    unikalne identyfikatory 
+      przydzielane podczas procesu
+    oraz identyfikatory tych ciągów, 
+      które były dla nich nadrzędne 
+        przed transformacją.
+  W efekcie otrzymujemy 
+    relacyjną bazę danych.
+    Składaja się ona 
+      z $N$-tabel, 
+        gdzie każda $n$-ta tabela zawiera $k_i$-kolumn.
+  Poszczególne tabele opisane są w dalszych rozdziałach.
   """
 
   P = lib.profile.Profiler( **profargs )
