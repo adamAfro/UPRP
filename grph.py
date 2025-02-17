@@ -10,7 +10,7 @@ from util import A4
 
 
 @lib.flow.map(('cache/grph/edges.pkl', 'cache/grph/nodes.pkl'))
-@lib.flow.init(rprt.valid, subj.mapped, gloc.dist,
+@lib.flow.init(rprt.edges, subj.mapped, gloc.dist,
                spatial=['lat', 'lon'], temporal=['grant', 'application'],
                Jsim=[f'clsf-{l}' for l in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']],
                feats=['entity', 'pgid', 'wgid'])

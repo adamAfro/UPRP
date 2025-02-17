@@ -231,8 +231,9 @@ def Indexing(storage:lib.storage.Storage, assignpath:str):
 
   return P0, P, D0, W0, W
 
-@lib.flow.placeholder()
-def Qdentify(qpath:str, storage:lib.storage.Storage, docsframe:str):
+@lib.flow.map('cache/rprt/identified.pkl')
+@lib.flow.init(qpath='raport.uprp.gov.pl.csv', storage=prfl.repos['UPRP'], docsframe='raw')
+def identified(qpath:str, storage:lib.storage.Storage, docsframe:str):
 
   """
   \subsection{Identyfikacja zapytań}
@@ -261,8 +262,9 @@ def Qdentify(qpath:str, storage:lib.storage.Storage, docsframe:str):
 
   return Y
 
-@lib.flow.placeholder()
-def Parsing(searches: pandas.Series):
+@lib.flow.map('cache/rprt/queries.pkl')
+@lib.flow.init(identified)
+def queries(searches: pandas.Series):
 
   """
   \subsection{Parsowanie zapytań}
@@ -523,12 +525,6 @@ def Drop(queries:pandas.Series, matches:list[pandas.DataFrame]):
 
 flow = { k: dict() for k in D.keys() }
 
-linkback = Qdentify(qpath='raport.uprp.gov.pl.csv', 
-                    storage=prfl.repos['UPRP'], 
-                    docsframe='raw').map(D['UPRP']+'/identify.pkl')
-
-queries = Parsing(linkback).map('queries.pkl')
-
 for k, p in D.items():
 
   flow[k]['index'] = Indexing(prfl.repos[k], assignpath=p+'/assignement.yaml').map(p+'/indexes.pkl')
@@ -567,23 +563,21 @@ for k0 in ['Lens', 'Google']:
 drop = Drop(queries, [flow[k]['narrow'] for k in D.keys()]).map('alien.pkl')
 
 
-results = result({ h: F for h, S in flow.items() for k, F in S.items() if k == 'narrow' })
+@lib.flow.ipy.globparams()
+@lib.flow.map('cache/rprt/edges.pkl')
+@lib.flow.init(flow['UPRP']['narrow'])
+def edges(results:pandas.DataFrame):
 
-valid = edges(flow['UPRP']['narrow'])
+  r"""
+  \subsection{Kryterium wyszukiwania}
 
-plots = dict()
+  \TODO{opisać}
+  """
 
-plots['F-results'] = lib.flow.Flow(args=[linkback, results], callback=lambda Q, Y:
+  X = results
 
-  pandas.concat([pandas.DataFrame({'count': [Q.shape[0]], 'source': 'UPRP', 'kind': 'Cytowania' }),
-                 Y.value_counts('source').reset_index().assign(kind='Wyniki')])\
-
-    .pipe(Plot.Chart)\
-    .mark_bar()\
-    .encode(Plot.Y('kind:N').title(None),
-            Plot.X('sum(count)').title('Ilość wyników w poszczególnych źródłach'), 
-            Plot.Color('source:N').title('Źródło')))
-
-for k, F in plots.items():
-  F.name = k
-  F.map(f'fig/rprt/{k}.png')
+  Y = pandas.DataFrame({'to': X.index.get_level_values('entrydoc'),
+                        'from': X.index.get_level_values('doc'),
+                        'level': X[('', '', '', 'level')],
+                        'score': X[('', '', '', 'score')]})
+  return Y
