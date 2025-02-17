@@ -1,5 +1,5 @@
 #lib
-import lib.flow, gloc, rprt, subj
+import lib.flow, gloc, rprt, subj, util
 
 #calc
 import pandas, altair as Pt, networkx as nx
@@ -9,21 +9,17 @@ import altair as Pt
 from util import A4
 
 
-@lib.flow.map(('cache/grph/edges.pkl', 'cache/grph/nodes.pkl', 
-               'fig/grph/M.pdf',
-               'fig/grph/F-dist-delay.pdf', 
-               'fig/grph/F-components.pdf'))
+@lib.flow.map(('cache/grph/edges.pkl', 'cache/grph/nodes.pkl'))
 @lib.flow.init(rprt.valid, subj.mapped, gloc.dist,
                spatial=['lat', 'lon'], temporal=['grant', 'application'],
                Jsim=[f'clsf-{l}' for l in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']],
-               feats=['entity', 'pgid', 'wgid'], borders=gloc.region[0])
+               feats=['entity', 'pgid', 'wgid'])
 def network(docrefs:pandas.DataFrame, 
             docsign:pandas.DataFrame,
             dist:pandas.DataFrame,
             spatial:list[str],
             temporal:list[str],
-            Jsim=[], feats=[],
-            borders=None):
+            Jsim=[], feats=[]):
 
   r"""
   \subsubsection
@@ -54,16 +50,6 @@ def network(docrefs:pandas.DataFrame,
   między 2 wierzchołkami reprezentującymi osoby. Zgodnie z kierunkiem
   grafu, te krawędzie są skierowane, a ich zwrot reprezentuje kierunek
   przepływu wiedzy.
-
-  \newpage
-  \begin{multicols}{2}
-
-    \chart{fig/grph/M.pdf}{}
-
-    \chart{fig/grph/F-dist-delay.pdf}{}
-    \chart{fig/grph/F-components.pdf}{}
-
-  \end{multicols}
   """
 
   assert { 'application' }.issubset(docsign.columns), docsign['application']
@@ -109,110 +95,189 @@ def network(docrefs:pandas.DataFrame,
   E['Jaccard'] = JX.to_frame().join(JY.rename(1)).apply(lambda x: len(x[0] & x[1]) / len(x[0] | x[1]), axis=1)
   E = E.drop(columns=Jsim+[f'{k}Y' for k in Jsim])
 
- #komponenty
-  G = nx.Graph()
-  G.add_edges_from(E[['id', 'idY']].values)
-  C0 = list(nx.connected_components(G))
-  C = pandas.DataFrame([x for x in zip(range(len(C0)), C0)])[[1]]
-  C['len'] = C[1].apply(len)
-  C = C.sort_values('len').reset_index(drop=True).reset_index().explode(1)
-  C.columns = ['component', 'id', 'csize']
-  C['component'] = C['component'].map(lambda x: f'C{x}')
-  N = N.set_index('id').join(C.set_index('id')).reset_index()
+  return E, N
 
-  def cartplot():
+@lib.flow.map(('fig/grph/M-dist.pdf'))
+@lib.flow.init(network[0], borders=gloc.region[1])
+def distcart(edges, borders, spatial=['lat', 'lon']):
 
-    EGX = E.groupby(spatial).agg({ 'id': 'size', 'distance': 'mean' })
-    mX = Pt.Chart(EGX).mark_circle().project('mercator')
-    mX = mX.encode(Pt.Latitude(spatial[0], type='quantitative'))
-    mX = mX.encode(Pt.Longitude(spatial[1], type='quantitative'))
-    mX = mX.encode(Pt.Color('distance', type='quantitative')\
-                    .legend(orient='right')\
-                    .title('Śr. dys. do os.~referującej'.split('~'))\
-                    .scale(range=['yellow', 'red', 'blue']))
-    mX = mX.encode(Pt.Size('id:Q'))
+  r"""
+  \subsection{Lokalizacje osób cytujących i cytowanych}
 
-    EGY = E.groupby([f'{k}Y' for k in spatial]).agg({ 'id': 'size', 'distance': 'mean' })
-    EGY.index.names = spatial
-    mY = Pt.Chart(EGY).mark_circle().project('mercator')
-    mY = mY.encode(Pt.Latitude(spatial[0], type='quantitative'))
-    mY = mY.encode(Pt.Longitude(spatial[1], type='quantitative'))
-    mY = mY.encode(Pt.Color('distance', type='quantitative')\
-                    .legend(orient='right')\
-                    .title('Śr. dys. od os.~referowanej'.split('~'))\
-                    .scale(range=['yellow', 'red', 'blue']))
-    mY = mY.encode(Pt.Size('id:Q'))
+    \newpage
+  \begin{multicols}{2}
+  \chart{fig/grph/M-dist.pdf}
+  { Mapy z lokalizacjami osób cytujących i cytowanych }
+  \columnbreak
+  Na mapach obok zaprezentowane są lokalizacje osób cytujących
+  oraz cytowanych. Kolor punktów odpowiada średniej odległości
+  między osobą a osobą referującą (żółty --- bliskie, czerwony --- dalekie).
+  Rozmiar punktów odpowiada ilości referowanych osób:
+  na wykresie górnym dotyczy osób cytujących, a na dolnym --- cytowanych.
+  Ostatnia mapa przedstawia różnicę między ilością osób cytujących
+  i cytowanych w danej lokalizacji. Kolor punktów odpowiada dominującemu
+  kierunkowi przepływu wiedzy, gdzie \textit{odpływ} oraz \textit{dopływ}
+  rozumiemy jako, odpowiednio, przewagę osób cytujących albo cytowanych.
+  Należy wyróżnić lokalizacje dużych miast w Polsce, jako czołowe
+  w przepływie wiedzy --- mowa najczęściej o stolicach województwa.
+  \end{multicols}
 
-    ED = (EGX - EGY)[['id']].reset_index()
-    ED['minus'] = (ED['id'] < 0).replace({ True: 'odpływ', False: 'dopływ' })
-    ED['id'] = ED['id'].abs()
-    mD = Pt.Chart(ED).mark_circle().project('mercator')
-    mD = mD.encode(Pt.Latitude(spatial[0], type='quantitative'))
-    mD = mD.encode(Pt.Longitude(spatial[1], type='quantitative'))
-    mD = mD.encode(Pt.Color('minus', type='nominal')\
-                    .legend(orient='right')\
-                    .title('Dominujący kierunek przepływu'.split(' '))\
-                    .scale(range=['red', 'blue']))
-    mD = mD.encode(Pt.Size('id:Q')\
-                     .title('Ilość referowanych osób')\
-                     .legend(orient='bottom', columns=4,
-                             values=[50, 100, 200, 500,
-                                     1000, 2000, 3000, 5000,
-                                     10000, 15000]))
+  Mapy pokazują dużą dysproporcję między południem, a północą ---
+  południe jest znacząco bardziej aktywne w przepływie wiedzy.
+  Na północy istnieją jedynie 2 ośrodki: Trójmiasto oraz Szczecin.
+  Na południu charakterystycznie dużo osób referuje się wzajemnie,
+  a wyróżnić można miasta: Warszawa, Poznań, Kraków, 
+  Katowice, Kielce, Wrocław oraz Lublin.
+  """
 
-    mX = mX.properties(width=0.4*A4.W, height=0.25*A4.W)
-    mY = mY.properties(width=0.4*A4.W, height=0.25*A4.W)
-    mD = mD.properties(width=0.4*A4.W, height=0.25*A4.W)
-    if borders is not None:
-      mX = Pt.Chart(borders).mark_geoshape(fill='black') + mX
-      mY = Pt.Chart(borders).mark_geoshape(fill='black') + mY
-      mD = Pt.Chart(borders).mark_geoshape(fill='black') + mD
+  E = edges
 
-    return (mX & mY).resolve_scale(color='shared') & mD
+  X = E.groupby(spatial)
+  X = X.agg({ 'id': 'size', 'distance': 'mean' })
+  X = X.reset_index()
+  mX = Pt.Chart(X).mark_circle().project('mercator')
+  mX = mX.encode(Pt.Latitude(spatial[0], type='quantitative'))
+  mX = mX.encode(Pt.Longitude(spatial[1], type='quantitative'))
+  mX = mX.encode(Pt.Color('distance', type='quantitative')\
+                  .legend(orient='right')\
+                  .title('Śr. dys. do os.~referującej'.split('~'))\
+                  .scale(range=['yellow', 'red', 'blue']))
+  mX = mX.encode(Pt.Size('id:Q'))
 
-  def compplot():
+  Y = E.groupby([f'{k}Y' for k in spatial])
+  Y = Y.agg({ 'id': 'size', 'distance': 'mean' })
+  Y.index.names = spatial
+  Y = Y.reset_index()
+  mY = Pt.Chart(Y).mark_circle().project('mercator')
+  mY = mY.encode(Pt.Latitude(spatial[0], type='quantitative'))
+  mY = mY.encode(Pt.Longitude(spatial[1], type='quantitative'))
+  mY = mY.encode(Pt.Color('distance', type='quantitative')\
+                  .legend(orient='right')\
+                  .title('Śr. dys. od os.~referowanej'.split('~'))\
+                  .scale(range=['yellow', 'red', 'blue']))
+  mY = mY.encode(Pt.Size('id:Q'))
 
-    v0 = Pt.Chart(pandas.Series({ 'izolowane': N['component'].isna().sum(), 
-                                 'w składowych': (~N['component'].isna()).sum() }).rename('count').reset_index()).mark_bar()
-    v0 = v0.encode(Pt.X('index:N').title(None))
-    v0 = v0.encode(Pt.Y('count:Q').title(None))
+  X = X.set_index(spatial)
+  Y = Y.set_index(spatial)
+  D = (X - Y)[['id']].reset_index()
+  D['minus'] = (D['id'] < 0).replace({ True: 'odpływ', False: 'dopływ' })
+  D['id'] = D['id'].abs()
+  mD = Pt.Chart(D).mark_circle().project('mercator')
+  mD = mD.encode(Pt.Latitude(spatial[0], type='quantitative'))
+  mD = mD.encode(Pt.Longitude(spatial[1], type='quantitative'))
+  mD = mD.encode(Pt.Color('minus', type='nominal')\
+                  .legend(orient='right')\
+                  .title('Dominujący kierunek przepływu'.split(' '))\
+                  .scale(range=['red', 'blue']))
+  mD = mD.encode(Pt.Size('id:Q')\
+                    .title('Ilość referowanych osób')\
+                    .legend(orient='bottom', columns=4,
+                            values=[50, 100, 200, 500,
+                                    1000, 2000, 3000, 5000,
+                                    10000, 15000]))
 
-    v = Pt.Chart(N['component'].value_counts().reset_index())
-    v = v.mark_area()
-    v = v.transform_density('count', as_=['count', 'density'])
-    v = v.encode(Pt.X('count:Q').title('Ilość składowych'))
-    v = v.encode(Pt.Y('density:Q').title('Gęstość'))
+  mX = mX.properties(width=0.4*A4.W, height=0.25*A4.W)
+  mY = mY.properties(width=0.4*A4.W, height=0.25*A4.W)
+  mD = mD.properties(width=0.4*A4.W, height=0.25*A4.W)
+  if borders is not None:
+    mX = Pt.Chart(borders).mark_geoshape(fill='black') + mX
+    mY = Pt.Chart(borders).mark_geoshape(fill='black') + mY
+    mD = Pt.Chart(borders).mark_geoshape(fill='black') + mD
 
-    vj = Pt.Chart(N['component'].value_counts().reset_index())
-    vj = vj.mark_circle(size=1)
-    vj = vj.transform_calculate(jitter='sqrt(-2*log(random()))*cos(2*PI*random())')
-    vj = vj.encode(Pt.X('count:Q').title(None))
-    vj = vj.encode(Pt.Y('jitter:Q').axis(None).title(None))
-    vj = vj.encode(Pt.Opacity('count:Q').scale(range=[0.5, 1]).legend(None))
+  return (mX & mY).resolve_scale(color='shared') & mD
 
-    v0 = v0.properties(width=0.05*A4.W, height=0.15*A4.W)
-    v = v.properties(width=0.4*A4.W, height=0.15*A4.W)
-    vj = vj.properties(width=0.4*A4.W, height=0.05*A4.W)
+@lib.flow.map(('fig/grph/F-dist.pdf'))
+@lib.flow.init(network[0])
+def distplot(edges:pandas.DataFrame):
 
-    return v0 | (vj & v)
+  r"""
+  \subsection{Zasięg}
 
-  def ddplot():
+  \chart{fig/grph/F-dist.pdf}
+  { Wykresy rozkładu odległości między osobami cytującymi, a cytowanymi }
 
-    d = Pt.Chart(E).mark_circle()
-    d = d.encode(Pt.X('distance:Q').title('Dystans').bin(step=100))
-    d = d.encode(Pt.Y('tapplication:Q').title('Opóźnienie').bin(step=365))
-    d = d.encode(Pt.Size('count()'))
+  Powyższe wykresy przedstawiają rozkład odległości 
+  między osobami cytującymi, a cytowanymi. 
+  Wykresy słupkowe prezentują
+  histogram wartości niezerowych po prawej, 
+  oraz porównanie wartości zerowych i niezerowych po lewej.
+  Obserwujemy znaczącą frakcję wartości zerowych, 
+  które stanowią niemal połowę wszystkich odległości.
+  Należy z tego wnosić, że znaczna część cytowań
+  zachodzi między osobami z tej samej lokalizacji.
+  Histogram zawiera także zaznaczone wartości statystyk pozycyjnych
+  Średnia jest w dużej dysproporcji w stosunku do mediany
+  co wskazuje na skośność rozkładu.
+  Wartości w przedziale 260-280 są charakterystycznie częste.
+  Wykres gęstości poniżej wskazuje na dwie wyraźne grupy
+  odległości, jedną wokół 10, a drugą wokół 270.
+  Należy także zaznaczyć długi ogon rozkładu ---
+  większe wartości są coraz rzadsze 
+  w miarę zwiększania ich wartości.
+  """
 
-    dt = Pt.Chart(E.assign(year=E['application'].dt.year.astype(int))).mark_circle()
-    dt = dt.encode(Pt.X('year:O').title('Rok cytowanego').axis(values=[2006, 2013, 2018, 2022]))
-    dt = dt.encode(Pt.Y('tapplication:Q').title('Opóźnienie').bin(step=365))
-    dt = dt.encode(Pt.Size('count()')\
-                     .title('Ilość patentów')\
-                     .legend(orient='top'))
+  E = edges
 
-    d = d.properties(width=0.2*A4.W, height=0.2*A4.W)
-    dt = dt.properties(width=0.2*A4.W, height=0.2*A4.W)
+ #obliczenia
+  is0 = lambda d: '= 0' if d == 0 else '> 0'
+  E['distzero'] = E.distance.apply(is0)
 
-    return (d | dt).resolve_axis(y='shared')
+  E.distance = E.distance.astype(float)
+  S = E.distance.describe().drop('count')
+  S = S.rename(util.Translation.describe).reset_index()
+  S['label'] = S['index'] + ': ' + S.distance.round(2).astype(str)
 
-  return E, N, cartplot(), ddplot(), compplot()
+ #dane
+  pS = Pt.Chart(S)
+  pE = Pt.Chart(E)
+
+ #osie
+  xF0 = Pt.X('distzero:N')
+  yF0 = Pt.Y('count(distzero):Q')
+  cF0 = Pt.Color('distzero:N')
+  cF0 = cF0.scale(range=['black', '#4c78a8']).legend(None)
+
+  pF = pE.transform_filter((Pt.datum.distzero == '> 0'))
+  xF = Pt.X('distance').bin(Pt.Bin(maxbins=50))
+  xF = xF.axis(labelAngle=270)
+  yF = Pt.Y('count(distance)')
+
+  xD = Pt.X('value:Q')
+  yD = Pt.Y('density:Q')
+
+  xL = Pt.X('distance')
+  cL = Pt.Color('label').scale(scheme='category10')
+  cL = cL.legend(orient='top', columns=2)
+
+ #tytuły
+  for v in [xF0, yF0, cF0, xF, yF, xD, yD, xL, cL]: v.title = None
+  yF = yF.axis(orient='right').title('Liczność bez zerowych')
+  cL = cL.title('Statystyki (włączajac zerowe)')
+  xD = xD.title('Gęstość rozkładu odległości między osobą cytującą, a cytowaną')
+
+ #wykresy
+  F0 = pE.mark_bar().encode(xF0, yF0, cF0)
+  F = pF.mark_bar().encode(xF, yF)
+  D = pF.mark_area().encode(xD, yD)
+  D = D.transform_density(density='distance')
+  L = pS.mark_rule(size=0.005*A4.W, strokeDash=[4,4]).encode(xL, cL)
+
+ #układ
+  F0 = F0.properties(width=0.1*A4.W, height=0.25*A4.W)
+  F = F.properties(width=0.8*A4.W, height=0.25*A4.W)
+  D = D.properties(width=1.0*A4.W, height=0.05*A4.W)
+  p = (F0 | (L + F).resolve_scale(color='independent')) & D
+
+  return p
+
+@lib.flow.map(('fig/grph/F-dist-yearly.pdf'))
+@lib.flow.init(network[0])
+def distplotyear(): raise NotImplementedError()
+
+@lib.flow.map(('fig/grph/F-delay.pdf'))
+@lib.flow.init(network[0])
+def delayplot(): raise NotImplementedError()
+
+@lib.flow.map(('fig/grph/M-delay.pdf'))
+@lib.flow.init(network[0])
+def delaycart(): raise NotImplementedError()

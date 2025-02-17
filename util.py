@@ -31,3 +31,16 @@ def strnorm(x, dropinter:bool, dropdigit:bool):
     y = re.sub(r'[\s\W]+', ' ', y).strip()
 
   return y
+
+class Translation:
+
+  describe = {
+    'count': 'liczba',
+    'mean': 'średnia',
+    'std': 'odchylenie standardowe',
+    'min': 'minimum',
+    '25%': 'pierwszy kwartyl',
+    '50%': 'mediana',
+    '75%': 'trzeci kwartyl',
+    'max': 'maksimum'
+  }
