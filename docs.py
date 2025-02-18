@@ -415,6 +415,7 @@ def main():
     """
 
     y = y.replace(r'{fig/', r'{../fig/')
+    y = y.replace(r'{tbl/', r'{../tbl/')
     with open('temp.tex', 'w') as f:
       f.write(include(y, root))
 
