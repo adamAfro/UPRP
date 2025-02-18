@@ -305,9 +305,9 @@ altair.data_transformers.enable('vegafusion')
 
 flow = dict()
 
-import prfl, patt, rgst, subj, grph, rprt, difu
+import prfl, patt, rgst, subj, grph, rprt, difp, difw
 
-for d in [prfl, patt, rgst, subj, grph, rprt, difu]:
+for d in [prfl, patt, rgst, subj, grph, rprt, difp, difw]:
 
   X = { k : getattr(d, k) for k in dir(d) }
   X = { k : x for k, x in X.items() if isinstance(x, lib.flow.Flow) }

@@ -206,6 +206,19 @@ Niniejszy rozdział opisuje
 
   \chapter{Analiza}
 
+Dyfuzja wiedzy jest procesem zachodzącym między osobami.
+Cytowania patentowe są symptomem tego procesu.
+Dla uproszczenia, nazywamy je
+\emph{przepływem}.
+Dotyczy on transferu wiedzy 
+między osobami pełniącymi rolę patentowe
+w jednym z patentów powiązanych cytowaniem.
+Każde cytowanie jest więc relacją 
+między dwoma osobami.
+Relacja ta nie jest symetrzyczna:
+jedna jest osobą cytująca, 
+a druga cytowaną.
+
     \include{grph}
 
   \include{grph:network}
@@ -216,16 +229,13 @@ Niniejszy rozdział opisuje
 
   \include{grph:distplotyear}
 
+    \include{difp}
 
-    \include{difu}
+  \TODO{dodać dok.}
 
-  \include{difu:ncited}
+    \include{difw}
 
-  \include{difu:mxtrwoj}
-
-  \include{difu:distplot}
-
-  \include{difu:distplotyear}
+  \TODO{dodać dok.}
 
 
     \chapter{Podsumowanie}
@@ -367,7 +377,7 @@ def include(x:str, root):
 
 def main():
 
-  D = readdocstr(['main', 'prfl', 'grph', 'patt', 'rgst', 'subj', 'rprt', 'difu'])
+  D = readdocstr(['main', 'prfl', 'grph', 'patt', 'rgst', 'subj', 'rprt', 'difp', 'difw'])
 
   root = os.path.dirname(os.path.abspath(__file__))
   wd = './workdir'
