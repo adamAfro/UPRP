@@ -119,9 +119,9 @@ def ncited(edges:DF, by:list[str], coords:list[str], region:GDF, width:float, ex
 
   return N, M
 
-@lib.flow.map('fig/difu/F-woj.pdf')
+@lib.flow.map(('fig/difu/F-woj.pdf', 'tbl/difu/F-woj.tex'))
 @lib.flow.init(grph.network[0], grph.network[1], gloc.region[1])
-def wojplot(edges:DF, nodes:DF, regions:DF):
+def viswoj(edges:DF, nodes:DF, regions:DF):
 
   r"""
   \newpage
@@ -129,12 +129,16 @@ def wojplot(edges:DF, nodes:DF, regions:DF):
   \chart{fig/difu/F-woj.pdf}
   { Wykres cytowań zawartych w patentach z uwzględnieniem
     rodzaju pochodzenia cytowanych i cytujących patentów }
+
   \columnbreak
 
   Wykresy po prawej prezetnują cytowania w województwach.
   \TODO{opis}
 
   \end{multicols}
+
+  \tbl{tbl/difu/F-woj.tex}
+  { Tabela korelacji ilości patentów cytowanych względem liczności }
   """
 
   N0 = nodes
@@ -198,7 +202,22 @@ def wojplot(edges:DF, nodes:DF, regions:DF):
   p = Pt.Chart(N.query('synthesis != "nie cytujące"')).mark_bar().encode(x, y, c, f, n)
   p = p.properties(width=0.1*A4.W, height=0.04*A4.H)
 
-  return p0 | p
+ #korelacja
+  n = N.groupby(['name', 'year'])['size'].sum()
+
+  X = N.pivot_table('size', ['name', 'year'], ['generator'], 'sum', fill_value=0)
+  X = X.drop(columns='nie cytowane').sum(axis=1)
+
+  Y = N.pivot_table('size', ['name', 'year'], ['synthesis'], 'sum', fill_value=0)
+  Y = Y.drop(columns='nie cytujące').sum(axis=1)
+
+  r = Se([X.corr(Y), X.corr(n), Y.corr(n)], index=['$v_x, v_y$', 
+                                                   '$v_x, v$',
+                                                   '$v_y, v$'])
+  r.index.name = '$a, b$'
+  r = r.rename('$corr(a, b)$ (Pearson)').to_frame()
+
+  return p0 | p, r.to_latex()
 
 @lib.flow.map('fig/difu/F-mxtrwoj.pdf')
 @lib.flow.init(grph.network[0], gloc.region[1])
