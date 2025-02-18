@@ -27,97 +27,124 @@ from geopandas import GeoDataFrame as GDF
 import altair as Pt
 from util import A4
 
-
-@lib.flow.placeholder()
-def ncited(edges:DF, by:list[str], coords:list[str], region:GDF, width:float, extent:dict|None=None, 
-           embed=False, compose=True):
+@lib.flow.map('fig/difu/M-x-points.pdf')
+@lib.flow.init(grph.network[0], gloc.region[2], gloc.region[0])
+def xpoints(edges:DF, regions:GDF, borders:GDF):
 
   r"""
-  \subsection{Regiony, z których pochodzi najwięcej cytowanych prac}
+  \newpage
+  \chart{fig/difu/M-x-points.pdf}
+  { Mapa powiatów z zaznaczoną ilością osób, które zostały cytowane }
 
-  \chart{fig/difu/M-ncited.pdf}{Polska \TODO{opisać}}
-
-  \chart{fig/difu/M-ncited-lesser.pdf}{Małopolska \TODO{opisać}}
-
-  \todo{pozostałe wykresy}
+  Lokalne generatory wiedzy 
+    można wskazać 
+    szczególnie 
+      w powiecie Warszawskim oraz 
+      Wrocławskim. 
+  Patenty z tych regionów 
+    są szczególnie licznie cytowane
+      w stosunku do patentów z pozostałych regionów.
+  Jest to zjasiwko 
+    relatywnie 
+    stałe w czasie.
+  Można zaznaczyć, że rok 2012 
+    był szczególny --- 
+      patenty z tych regionów
+        są najczęściej cytowane
+          w badanym okresie.
+  Co ciekawe 
+    nawet bardziej niż w 2011.
   """
 
-  E = edges
+  E0 = edges
+  R = regions
+  B = borders
 
-  assert all( c in E.columns for c in by ), f'all( c in {E.columns} for c in {by} )'
-  assert all( c in E.columns for c in coords ), f'all( c in {E.columns} for c in {coords} )'
-  if embed: assert len(by) == 1, by
+ #ograniczenie danych
+  E0 = E0.query('(year >= 2011) & (year < 2020)')
+  R.geometry = R.geometry.simplify(0.02, preserve_topology=True)
+  B.geometry = B.geometry.simplify(0.02, preserve_topology=True)
 
-  G = E.groupby(by+coords)
-  N = G.size().rename('size').reset_index()
-  N0 = N.drop(columns=by).groupby(coords).sum().reset_index()
-  B = N[by].value_counts().index
+ #grupowanie krawędzi
+  gE = E0.groupby(['year', 'pgid'])
+  E = gE.size().rename('size').reset_index()
+  E = E.set_index('pgid').join(R.set_index('gid')).reset_index()
+  E = GDF(E, geometry='geometry')
+  E = E.sort_values(['size'], ascending=False)
+  E['large'] = E['size'] > 1000
 
-  if embed:
+ #segregowanie
+  K = E['year'].unique()
+  S = Se([E.query(f'year == {k}').drop(columns='year') for k in K], index=K)
 
-    N = N.pivot_table(index=coords, columns=by, values='size', fill_value=0).reset_index()
-    N = N.melt(id_vars=coords, var_name=by[0], value_name='size')
-    N = N.merge(region.set_index('gid'), left_on=coords, right_index=True)
-                     #^ TODO indeks już powinien taki być
-    N = GDF(N, geometry='geometry')
+ #wymiary
+  c = Pt.Color('size', type='quantitative')
+  c = c.scale(range=['white', 'grey', 'red', 'blue'], domainMin=0)
+  c = c.title('Ilość osób').legend(orient='bottom')
 
-    N0 = N0.merge(region.set_index('gid'), left_on=coords, right_index=True)
-    N0 = GDF(N0, geometry='geometry')
+  xL = Pt.Latitude('lat', type='quantitative')
+  yL = Pt.Longitude('lon', type='quantitative')
+  tL = Pt.Text('name', type='nominal')
 
-  d = (0, N0['size'].max())
+ #wykresy
+  m0 = Pt.Chart(B).mark_geoshape(fill=None, stroke='black', strokeWidth=0.001*A4.W).project('mercator')
+  M = S.map(lambda m: Pt.Chart(m).mark_geoshape().encode(c).project('mercator')).sort_index()
+  M = M.map(lambda m: (m0 + m).properties(width=0.5*A4.W, height=0.5*A4.W))
+  M = M.reset_index().apply(lambda m: m[0].properties(title=f'Rok {m["index"]}'), axis=1)
+  m = Pt.concat(*M.values.tolist(), columns=3, spacing=0)
 
-  def mapplot(X):
+  return m
 
-    f = Pt.Chart(X.sort_values(by=['size'], ascending=False))
+@lib.flow.map('fig/difu/M-y-points.pdf')
+@lib.flow.init(grph.network[0], gloc.region[2], gloc.region[0])
+def ypoints(edges:DF, regions:GDF, borders:GDF):
 
-    if embed:
+  r"""
+  \newpage
+  \chart{fig/difu/M-y-points.pdf}
+  { Mapa powiatów z zaznaczoną ilością osób, które cytowały }
 
-      if compose:
-        f = f.encode( Pt.Color('size', type='quantitative')\
-                        .legend(orient='bottom')\
-                        .title(None)\
-                        .scale(range=['black', 'red', 'green'], domain=d))
-      else:
-        f = f.encode( Pt.Color('size', type='quantitative')\
-                        .legend(orient='bottom')\
-                        .title(None)\
-                        .scale(range=['black', 'red', 'green']))
+  Synteza wiedzy innowacyjnej następuje,
+    tak jak ma to miejsce w przypadku generowania jej,
+      szczególnie w Warszawie oraz Wrocławiu.
+  Tutaj jednak taże Katowice i Kraków 
+    są okresowo bardziej aktywne
+      --- lata 2015/16.
+  """
 
-      return f.mark_geoshape(stroke=None)
+  E0 = edges
+  R = regions
+  B = borders
 
-    f = f.mark_circle(size=10, clip=True)
-    f = f.encode(Pt.Color('size', type='quantitative')\
-                   .legend(orient='bottom', values=[10, 100, 200, 500, 1000, 2000, 5000])\
-                   .title('Ilość patentów, które zostały cytowane')\
-                   .scale(range=['green', 'red', 'black'], domain=d))
-    f = f.encode(Pt.Latitude(coords[0], type='quantitative'))
-    f = f.encode(Pt.Longitude(coords[1], type='quantitative'))
-    f = f.encode(Pt.Size('size', type='quantitative'))
+ #ograniczenie danych
+  E0 = E0.query('(yearY > 2011) & (yearY <= 2020)')
+  R.geometry = R.geometry.simplify(0.02, preserve_topology=True)
+  B.geometry = B.geometry.simplify(0.02, preserve_topology=True)
 
-    return Pt.Chart(region).mark_geoshape(fill=None, stroke='black') + f
+ #grupowanie krawędzi
+  gE = E0.groupby(['yearY', 'pgidY'])
+  E = gE.size().rename('size').reset_index()
+  E = E.set_index('pgidY').join(R.set_index('gid')).reset_index()
+  E = GDF(E, geometry='geometry')
+  E = E.sort_values(['size'], ascending=False)
 
-  w = width
-  w0 = int(1/w)
-  M = [N[(N[by] == b).all(axis=1)] for b in B]
-  M = [mapplot(X) for X in M]
-  M = [m.properties(title=', '.join([str(k) for k in b])) for m, b in zip(M, B)]
-  M+= [mapplot(N0).properties(title='Łącznie')]
-  M = [m.properties(width=w*A4.W, height=w*A4.W) for m in M]
+ #segregowanie
+  K = E['yearY'].unique()
+  S = Se([E.query(f'yearY == {k}').drop(columns='yearY') for k in K], index=K)
 
-  if extent is not None:
-    M = [m.project(type='mercator', scale=extent['scale'], center=extent['center']) for m in M]
-  else:
-    M = [m.project('mercator') for m in M]
+ #wymiary
+  c = Pt.Color('size', type='quantitative')
+  c = c.scale(range=['white', 'grey', 'red', 'blue'], domainMin=0)
+  c = c.title('Ilość osób').legend(orient='bottom')
 
-  if not compose:
-    return tuple([N]+M)
+ #wykresy
+  m0 = Pt.Chart(B).mark_geoshape(fill=None, stroke='black', strokeWidth=0.001*A4.W).project('mercator')
+  M = S.map(lambda m: Pt.Chart(m).mark_geoshape().encode(c).project('mercator')).sort_index()
+  M = M.map(lambda m: (m0 + m).properties(width=0.5*A4.W, height=0.5*A4.W))
+  M = M.reset_index().apply(lambda m: m[0].properties(title=f'Rok {m["index"]}'), axis=1)
+  m = Pt.concat(*M.values.tolist(), columns=3, spacing=0)
 
-  M = [ [m for m in M[i*w0:(i+1)*w0]] for i in range(math.ceil(len(M)/w0)) ]
-  M = [Pt.hconcat(*m) for m in M]
-  M = Pt.vconcat(*M)
-  M = M.resolve_scale(color='shared')
-
-  return N, M
+  return m
 
 @lib.flow.map(('fig/difu/F-woj.pdf', 'tbl/difu/F-woj.tex'))
 @lib.flow.init(grph.network[0], grph.network[1], gloc.region[1])
@@ -301,24 +328,3 @@ def mxtrwoj(edges:DF, regions:DF):
   p = p.resolve_scale(x='shared', y='shared')
 
   return p
-
-ptPL=ncited(edges=grph.network[0], 
-            by=['year'], coords=['lat', 'lon'], 
-            region=gloc.region[0], width=0.33).map((None, 'fig/difu/M-ncited.pdf')),
-
-ptLsrPL=ncited(edges=grph.network[0], by=['year'], 
-              coords=['lat', 'lon'], region=gloc.region[1], width=0.33, 
-              extent=dict(scale=2500, center=[17.0, 51.0])).map((None, 'fig/difu/M-ncited-lesser.pdf')),
-
-wojPL=ncited(edges=grph.network[0], 
-             by=['year'], coords=['wgid'], embed=True,
-             region=gloc.region[1], width=0.33).map((None, 'fig/difu/M-ncited-woj.pdf')),
-
-powPL=ncited(edges=grph.network[0], compose=False,
-             by=['year'], coords=['pgid'], embed=True,
-             region=gloc.region[2], width=0.33).map((None, *[f'fig/difu/M-ncited-pow-{k}.pdf' for k in range(13,20+1)], f'fig/difu/M-ncited-pow.pdf')),
-
-powLsrPL=ncited(edges=grph.network[0], compose=False,
-                by=['year'], coords=['pgid'], embed=True,
-                region=gloc.region[2], width=0.33,
-                extent=dict(scale=2000, center=[18.0, 50.5])).map((None, *[f'fig/difu/M-ncited-lesser-pow-{k}.pdf' for k in range(13,20+1)], f'fig/difu/M-ncited-lesser-pow.pdf'))
