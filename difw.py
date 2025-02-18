@@ -6,7 +6,9 @@ r"""
 import lib.flow, grph, gloc
 
 #calc
+import pandas
 from pandas import DataFrame as DF, Series as Se
+from scipy.stats import pearsonr
 
 #plot
 import altair as Pt
@@ -194,3 +196,69 @@ def mx(edges:DF, regions:DF):
   p = p.resolve_scale(x='shared', y='shared')
 
   return p
+
+@lib.flow.map('tbl/difw/exogcorr.tex')
+@lib.flow.init(grph.network[0], gloc.BDLwoj)
+def exogcorr(edges:DF, variables:DF):
+
+  r"""
+  \subsection{Korelacja zmiennych egzogenicznych}
+
+  \tbl{tbl/difw/exogcorr.tex}
+  { Korelacja wybranych zmiennych z liczbą cytowań 
+    pomiędzy województwami. }
+  """
+
+ #dane
+  E0 = edges
+  V = variables
+
+  E0 = E0.query('wgid != wgidY')
+
+  E0 = E0.assign(delay=(E0.application - E0.applicationY).dt.days)
+  E0['distance'] = E0['distance'].astype(float)#WTF
+
+ #grupowanie (...) regionalne
+  gE = E0.groupby(['wgid', 'year', 'wgidY', 'yearY'])
+  E = gE.size().rename('size')
+  E = E.to_frame().join(gE.agg({'distance': 'mean', 'delay': 'mean'}))
+  E = E.rename(columns={ 'distance': '-;;śr. odl.', 'delay': '-;;śr. opóźnienie' })
+  E = E.reset_index()
+
+ #dodanie zmiennych
+  E = E.set_index(['year', 'wgid']).join(V).reset_index()
+  V = V.add_suffix('Y'); V.index.names = ['yearY', 'wgidY']
+  E = E.set_index(['yearY', 'wgidY']).join(V).reset_index()
+  E = E.set_index(['yearY', 'wgidY', 'year', 'wgid'])
+  Y = E['size']; E = E.drop(columns=['size'])
+
+ #korelacja i jej ograniczenia
+
+  R = E.apply(lambda x: (*pearsonr(x.dropna(), Y[x.dropna().index]), x.dropna().shape[0]), axis=0).T
+  R = R.rename(columns={0: 'R', 1: 'p', 2: 'size'})
+  R = R.query('size > 3000')
+  R = R.dropna(subset='R')
+  R['abscorr'] = R['R'].abs()
+  R.index = R.index.map(lambda x: 'X;'+x if not x.endswith('Y') else 'Y;'+x[:-1])
+  R.index = pandas.MultiIndex.from_tuples([tuple(k for k in x.split(';')) for x in R.index.values])
+
+  Ry = R.copy()
+  Ry = Ry.reset_index().drop(columns=['level_2', 'level_1'])
+  Ry = Ry.rename(columns={ 'level_0': 'woj.', 'level_1': 'sekcja', 'level_3': 'zmienna' })
+  Ry = Ry.rename(columns={ 'level_4': 'wyszczególnienie (1)', 'level_5': 'wyszczególnienie (2)' })
+  Ry = Ry.query('(abscorr >= 0.095) | (zmienna == "śr. odl.") | (zmienna == "śr. opóźnienie")')
+  Ry['R'] = Ry['R'].round(2)
+  Ry['p'] = Ry['p'].round(3)
+  Ry = Ry.fillna('-').sort_values('abscorr', ascending=False)
+  Ry = Ry.drop(columns='abscorr')
+  Ry = Ry.rename(columns={ 'size': 'n' })
+  Ry['n'] = Ry['n'].astype(int)
+  Ry = Ry.reset_index(drop=True)
+  Ry.loc[Ry.query('(zmienna == "śr. odl.") | (zmienna == "śr. opóźnienie")').index, 'woj.'] = ''
+  Ry = Ry.set_index(['woj.'])
+  Ry = Ry.astype(str)
+
+  TeX = Ry.to_latex().replace('lllllll', 'p{0.3cm}|p{2.8cm}|p{2.2cm}|p{2.2cm}|r|r|r')
+  TeX = TeX.replace(r'\begin{tabular}', r'\footnotesize\begin{tabular}')
+
+  return TeX

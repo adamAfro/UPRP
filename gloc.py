@@ -87,3 +87,25 @@ dist = distcalc(geodata, coords=['lat', 'lon']).map('prom/dists.pkl')
 region = [gisload(path='map/powiaty.shp').map('map/polska.pkl'),
           gisload(path='map/wojewodztwa.shp').map('map/wojewodztwa.pkl'),
           gisload(path='map/polska.shp').map('map/powiaty.pkl')]
+
+@lib.flow.ipy.globparams()
+@lib.flow.init('GUS/BDL/data.csv', region[1])
+def BDLwoj(path:str, regions:pandas.DataFrame):
+
+  R = regions[['geometry', 'name', 'gid']].copy()
+  R['name'] = R['name'].str.upper()
+  R = R.set_index('name')
+
+  X = pandas.read_csv(path).drop(columns=['gid'])
+  X = X.set_index('region').join(R).reset_index().dropna(subset=['gid'])
+  X['key'] = X['subject'] + '; ' + X['section'] + '; ' + X['name'] + '; ' + X['var']
+
+ #table
+  T = X.pivot_table(index=['year'], columns=['key', 'gid'], values='value')
+  T = T.loc[:, T.loc[2013:2022].notna().all()]
+
+  Y = T.melt(ignore_index=False).reset_index().dropna()
+  Y = Y.rename(columns={'gid': 'wgid'})
+  Y = Y.pivot_table(index=['year', 'wgid'], columns='key', values='value')
+
+  return Y
