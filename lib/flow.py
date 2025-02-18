@@ -126,6 +126,12 @@ class Flow():
 
     os.makedirs(os.path.dirname(f0), exist_ok=True)
 
+    if f0.endswith('.tex'):
+      with open(f0, 'w') as f:
+        f.write(x)
+        self.info(f'saved {f0}')
+        return
+
     if f0.endswith('.pkl'):
       with open(f0, 'wb') as f:
         pkl.dump(x, f)
