@@ -119,9 +119,90 @@ def ncited(edges:DF, by:list[str], coords:list[str], region:GDF, width:float, ex
 
   return N, M
 
-@lib.flow.map('fig/difu/F-mxtrwoj.pdf')
+@lib.flow.map('fig/difu/F-woj.pdf')
 @lib.flow.init(grph.network[0], grph.network[1], gloc.region[1])
-def mxtrwoj(edges:DF, nodes:DF, regions:DF):
+def wojplot(edges:DF, nodes:DF, regions:DF):
+
+  r"""
+  \newpage
+  \begin{multicols}{2}
+  \chart{fig/difu/F-woj.pdf}
+  { Wykres cytowań zawartych w patentach z uwzględnieniem
+    rodzaju pochodzenia cytowanych i cytujących patentów }
+  \columnbreak
+
+  Wykresy po prawej prezetnują cytowania w województwach.
+  \TODO{opis}
+
+  \end{multicols}
+  """
+
+  N0 = nodes
+  E0 = edges
+  R0 = regions
+
+ #zakres dyfuzji
+  E0['internal'] = E0['wgid'] == E0['wgidY']
+  EI = E0.query('  internal')
+  EE = E0.query('~ internal')
+
+ #wpływ patentów
+  N0['cytowany wewn.'] = N0['doc'].isin(EI['to'])
+  N0['cytowany zewn.'] = N0['doc'].isin(EE['to'])
+  N0['generator'] = N0.apply(lambda x: ' i '.join([k for k in ['cytowany wewn.', 'cytowany zewn.'] if x[k]]), axis=1)
+  N0['generator'] = N0['generator'].replace({'cytowany wewn. i cytowany zewn.': 'cytowany w.&z.'})
+  N0['generator'] = N0['generator'].replace({'': 'nie cytowane'})
+
+  N0['cytujący wewn.'] = N0['doc'].isin(EI['from'])
+  N0['cytujący zewn.'] = N0['doc'].isin(EE['from'])
+  N0['synthesis'] = N0.apply(lambda x: ' i '.join([k for k in ['cytujący wewn.', 'cytujący zewn.'] if x[k]]), axis=1)
+  N0['synthesis'] = N0['synthesis'].replace({'cytujący wewn. i cytujący zewn.': 'cytujący w.&z.'})
+  N0['synthesis'] = N0['synthesis'].replace({'': 'nie cytujące'})
+
+ #ograniczenie danych
+  E0 = E0[['wgid', 'year', 'wgidY', 'yearY', 'to', 'from', 'internal']].copy()
+  N0 = N0[['wgid', 'year', 'doc', 'generator', 'synthesis']].copy()
+  N0 = N0.query('year >= 2011')
+
+ #regionalizacja
+  R0 = R0[['gid', 'name']]
+  E0 = E0.set_index('wgid').join(R0.set_index('gid')).reset_index()
+  E0 = E0.set_index('wgidY').join(R0.set_index('gid').add_suffix('Y')).reset_index()
+  N0 = N0.set_index('wgid').join(R0.set_index('gid')).reset_index()
+
+ #grupowanie (...) regionalne
+  gN = N0.groupby(['name', 'year', 'generator', 'synthesis'])
+  N = gN.size().rename('size').reset_index()
+
+ #wymiary
+  x = Pt.X('year', type='ordinal')
+  x = x.axis(values=[2011, 2020])
+  y = Pt.Y('size', type='quantitative')
+  y = y.axis(values=[0,1, 5, 10, 20, 50, 100, 200, 500, 1000, 2000])
+  f = Pt.Column('synthesis', type='nominal')
+  c = Pt.Color('generator', type='nominal')
+  c = c.legend(orient='bottom')
+  c = c.scale(range=['black', 'red', 'blue', 'grey'])
+  n = Pt.Row('name', type='nominal')
+
+ #etykiety
+  N['name'] = N['name'].str[:4]+'.'
+  for a in [x, y, f, c, n]: a.title=None 
+
+  c = c.title('Pochodzenie cytowanych patentów')
+
+ #wykres
+  p0 = Pt.Chart(N.query('synthesis == "nie cytujące"')).mark_bar().encode(x, y, c, f, n)
+  p0 = p0.properties(width=0.1*A4.W, height=0.04*A4.H)
+
+  p = Pt.Chart(N.query('synthesis != "nie cytujące"')).mark_bar().encode(x, y, c, f, n)
+  p = p.properties(width=0.1*A4.W, height=0.04*A4.H)
+
+  return p0 | p
+
+@lib.flow.map('fig/difu/F-mxtrwoj.pdf')
+@lib.flow.init(grph.network[0], gloc.region[1])
+def mxtrwoj(edges:DF, regions:DF):
 
   r"""
   \subsection{Cytowania w raportach o stanie techniki pomiędzy województwami}
@@ -142,7 +223,6 @@ def mxtrwoj(edges:DF, nodes:DF, regions:DF):
   """
 
  #dane
-  N0 = nodes
   E0 = edges
   R0 = regions
 
@@ -150,7 +230,6 @@ def mxtrwoj(edges:DF, nodes:DF, regions:DF):
   R0 = R0[['gid', 'name']]
   E0 = E0.set_index('wgid').join(R0.set_index('gid')).reset_index()
   E0 = E0.set_index('wgidY').join(R0.set_index('gid').add_suffix('Y')).reset_index()
-  N0 = N0.set_index('wgid').join(R0.set_index('gid')).reset_index()
 
  #grupowanie (...) regionalne
   gE = E0.groupby(['name', 'nameY', 'yearY'])
