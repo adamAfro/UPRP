@@ -3,6 +3,7 @@ import lib.flow, gloc, rprt, subj, util
 
 #calc
 import pandas, altair as Pt, networkx as nx
+from pandas import DataFrame as DF, Series as Se
 
 #plot
 import altair as Pt
@@ -316,9 +317,36 @@ def distplotyear(edges:pandas.DataFrame):
 
   return p
 
+@lib.flow.ipy.globparams()
 @lib.flow.map(('fig/grph/F-delay.pdf'))
 @lib.flow.init(network[0])
-def delayplot(): raise NotImplementedError()
+def delayplot(edges:DF): 
+
+  E0 = edges
+
+ #wybór danych
+  E0['delay'] = (E0.applicationY - E0.application).dt.days
+  E0['yearY'] = E0.applicationY.dt.year
+  E = E0[['yearY', 'delay', 'distance']]
+
+ #wymiary
+  y = Pt.Y('size:Q').title(None).stack('zero')
+  x = Pt.X('delay:Q').title('Opóźnienie')
+  c = Pt.Color('distance:Q')
+  c = c.legend(orient='bottom').title('Śr. odległość')
+  f = Pt.Row('yearY:O').title(None)
+
+  x = x.axis(values=[r for r in range(0, E.delay.max(), 365)])
+
+ #wykres
+  p = Pt.Chart(E).mark_area().encode(x, y, c, f)
+  p = p.properties(width=0.5*A4.W, height=0.1*A4.W)
+  p = p.transform_bin('distance', field='distance')
+  p = p.transform_density('delay', as_=['delay', 'size'], 
+                          groupby=['yearY', 'distance'], 
+                          bandwidth=250)
+
+  return p
 
 @lib.flow.map(('fig/grph/M-delay.pdf'))
 @lib.flow.init(network[0])
