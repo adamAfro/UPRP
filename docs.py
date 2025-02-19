@@ -206,18 +206,24 @@ Niniejszy rozdział opisuje
 
   \chapter{Analiza}
 
-Dyfuzja wiedzy jest procesem zachodzącym między osobami.
-Cytowania patentowe są symptomem tego procesu.
-Dla uproszczenia, nazywamy je
-\emph{przepływem}.
-Dotyczy on transferu wiedzy 
-między osobami pełniącymi rolę patentowe
-w jednym z patentów powiązanych cytowaniem.
+Dyfuzja wiedzy 
+  jest procesem 
+    zachodzącym między osobami.
+  Cytowania patentowe 
+    są symptomem 
+      tego procesu.
+  Dla uproszczenia, 
+    nazywamy je \emph{przepływem}.
+      Dotyczy on transferu wiedzy 
+        między osobami 
+          pełniącymi rolę patentowe
+            w jednym z patentów 
+              powiązanych cytowaniem.
 Każde cytowanie jest więc relacją 
-między dwoma osobami.
-Relacja ta nie jest symetrzyczna:
-jedna jest osobą cytująca, 
-a druga cytowaną.
+  między dwoma osobami.
+  Relacja ta nie jest symetrzyczna:
+    jedna jest osobą cytująca, 
+    a druga cytowaną.
 
     \include{grph}
 
