@@ -154,54 +154,15 @@ Niniejszy rozdział opisuje
   i przetwarzania ich do postaci, 
     która może być użyta w dalszym wnioskowaniu.
 
-    \include{prfl}
+  \include{prfl}
 
-  \include{prfl:Profiling}
+  \include{patt}
 
-    \include{patt}
+  \include{rprt}
 
-  \include{patt:code}
+  \include{rgst}
 
-  \include{patt:event}
-
-  \include{patt:geolocate}
-
-  \include{patt:classify}
-
-
-    \include{rprt}
-
-  \include{rprt:Indexing}
-
-  \include{rprt:Parsing}
-
-  \include{rprt:Narrow}
-
-  \include{rprt:edges}
-
-
-
-    \include{rgst}
-
-  \include{rgst:Nameclsf}
-
-  \include{rgst:Pull}
-
-  \include{rgst:Textual}
-
-  \include{rgst:Spacetime}
-
-    \include{subj}
-
-  \include{subj:affilgeo}
-
-  \include{subj:affilnames}
-
-  \include{subj:simcalc}
-
-  \include{subj:identify}
-
-  \include{subj:fillgeo}
+  \include{subj}
 
 
   \chapter{Analiza}
@@ -225,23 +186,11 @@ Każde cytowanie jest więc relacją
     jedna jest osobą cytująca, 
     a druga cytowaną.
 
-    \include{grph}
+  \include{grph}
 
-  \include{grph:network}
+  \include{difp}
 
-  \include{grph:distcart}
-
-  \include{grph:distplot}
-
-  \include{grph:distplotyear}
-
-    \include{difp}
-
-  \TODO{dodać dok.}
-
-    \include{difw}
-
-  \TODO{dodać dok.}
+  \include{difw}
 
 
     \chapter{Podsumowanie}
@@ -364,7 +313,7 @@ def readdocstr(files:list[str]):
         if isinstance(n, ast.FunctionDef):
           k = n.name
           d = ast.get_docstring(n)
-          Y = {**Y, f'{p}:{k}': d }
+          Y = {**Y, f'{p}': (Y.get(p, '') or '') + r'\n\n' + (d or '') }
 
   return Y
 
@@ -402,7 +351,7 @@ def main():
     y = include(y, root)
    #../workdir
     y = re.sub(r'(\\includegraphics\[.*?\]{)(.*?)(})', r'\1../\2\3', y)
-    # y = y.replace(r'{fig/', r'{../fig/')
+    y = re.sub(r'(\\input{)(.*?)(})', r'\1../\2\3', y)
 
     with open('main.tex', 'w') as f: f.write(y)
 
