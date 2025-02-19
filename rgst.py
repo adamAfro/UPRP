@@ -66,6 +66,12 @@ przygotowuje raport o stanie techniki dla danego patentu.
 \caption{Struktura powiązań patentu}
 \label{struktura-patentowa}
 \end{figure}
+
+\U{role-patentowe}
+{ W dalszej analizie 
+    brane pod uwagę 
+      są osoby pełniące role
+        wynalazcy, właściciela albo aplikanta. }
 \end{multicols}
 
 Głownym problemen danych jest 

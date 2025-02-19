@@ -1,5 +1,6 @@
 r"""
 \section{Dane z raportów o stanie techniki}
+\label{rprt}
 
 Na stronie \ac{UPRP} wyróżniono etapy w procesie patentowania.
 Etapem po spełnieniu formalności jest 
@@ -38,7 +39,7 @@ a także do innych zgłoszeń patentowych.
 \newpage
 
 Z danych zebranych z \ac{API} można wyodrębnić tabelę 
-\textit{other-documents}, która zawiera listę adresów internetowych
+zawierającą listę adresów internetowych
 z plikami związanymi z danym zgłoszeniem. Tabela składa się
 z kodów \ac{URI} oraz kodów rozróżniających typ dokumentu.
 Kody o typie \textit{RAPORT} albo \textit{RAPORT1} są kodami 
@@ -75,38 +76,6 @@ $\hat l_1, \hat l_2$, które nie są uwzględnione w poniższej analizie.
 \caption{Przykład raportów o stanie techniki}
 \label{fig:raport-ex}
 \end{figure}
-
-\subsubsection{Tworzenie grafu za pomocą danych z tabel
-               raportów o stanie techniki}
-\label{sec:graf-raporty}
-
-
-  \begin{multicols}{2}
-Dane z raportów o stanie techniki tworzą graf skierowany
-patentów $G$. Krawędź w takim grafie istnieje jeśli patent
-$p_1$ zawiera w swoim raporcie wzmiankę o patencie $p_2$.
-Wracając do przykładu , zastosowanie algorytmu 
-tworzy graf o krawędziach $E = \{ (p_2, p_1), (p_3, p_1), (p_3, p_2) \}$ i
-wierzchołkach $V = { p_1, p_2, p_3 }$.
-
-\columnbreak
-
-\begin{figure}[H]\centering
-\begin{tikzpicture}
-	\draw[draw=black, thin, solid] (-1.50,1.50) ellipse (0.50 and -0.50);
-	\node[black, anchor=south west] at (-2.06,1.25) {$p_1$};
-	\draw[draw=black, thin, solid] (1.50,2.50) ellipse (0.50 and -0.50);
-	\draw[draw=black, thin, solid] (0.50,-0.50) ellipse (0.50 and -0.50);
-	\node[black, anchor=south west] at (0.94,2.25) {$p_2$};
-	\node[black, anchor=south west] at (-0.06,-0.75) {$p_3$};
-	\draw[draw=black, -latex, thin, solid] (-0.14,0.04) -- (-0.92,0.96);
-	\draw[draw=black, -latex, thin, solid] (0.78,0.32) -- (1.14,1.67);
-	\draw[draw=black, -latex, thin, solid] (0.49,2.33) -- (-0.62,1.90);
-\end{tikzpicture}
-\caption{Graf dla przykładowego zestawu raportów \cref{fig:raport-ex}}
-\label{fig:raport-ex-G}
-\end{figure}
-\end{multicols}
 
 \begin{figure}[H]\centering
 \includegraphics[width=0.8\textwidth]{fig/img/rprt/pat-ex-P.jpg}

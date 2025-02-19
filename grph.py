@@ -1,3 +1,91 @@
+r"""
+\section{Graf skierowany na podstawie raportów o stanie techniki}
+
+  \label{grph}
+
+  Niniejsza praca
+    do analizy 
+      przepływu wiedzy
+        korzysta 
+          z grafu skierowanego
+            relacji między osobami.
+  Graf ten 
+    tworzony jest 
+      w 2 etapach:
+  pierwszym jest 
+    utworzenie 
+      grafu $G_P$ 
+        między dokumentami $P$,
+        z krawędziami $R$.
+  Drugim etapem jest
+    przetworzenie grafu $G_P$
+      na graf $G$,
+        gdzie wierzchołkami są osoby zbioru $O$.
+  Zbiór $P$
+    zawiera 
+      wszystkie patenty,
+        o których ochronę 
+          złożono aplikację.
+  Zbiór $R$ jest zbiorem
+    cytatów 
+      z raportów o stanie techniki.
+  Relacja $p_x\ \rho\ p_y$,
+    czytana jako \textit{patent $p_x$ cytowany jest w patencie $p_y$},
+    jest prawdziwa
+      jeśli
+        patent $p_y$
+          zawiera w swoim raporcie
+            wzmiankę o patencie $p_x$.
+
+  \begin{equation}
+    R = \{ (p_x, p_y)\in P \times P\ \vert\ p_x\ \rho\ p_y \}
+    \end{equation}
+
+  Kierunek tego grafu 
+    jest zgodny z przepływem informacji, 
+      co znaczy, że patent 
+        którego dotyczy raport 
+        jest węzłem końcowym,
+        a wszystkie patenty wymienione w raporcie 
+          są węzłami początkowymi.
+
+  \begin{multicols}{2}
+    Po prawej 
+      stronie zaprezentowany jest 
+        przykładowy zestaw
+          z sekcji \ref{rprt} 
+      jako graf 
+        o wierzchołkach 
+          $V = { p_1, p_2, p_3 }$
+        i krawędziach 
+          $E = \{ (p_2, p_1), (p_3, p_1), (p_3, p_2) \}$.
+    W raporcie 
+      patentu $p_1$ 
+        znajduje się odwołanie
+          do patentu $p_2$ i $p_3$;
+      dla $p_2$: $p_3$;
+      $p_3$ 
+        nie zawierał odniesienia
+          do żadnego patentu,
+            który znajdował by się w bazie.
+    \columnbreak
+
+    \begin{figure}[H]\centering\begin{tikzpicture}
+      \draw[draw=black, thin, solid] (-1.50,1.50) ellipse (0.50 and -0.50);
+      \node[black, anchor=south west] at (-2.06,1.25) {$p_1$};
+      \draw[draw=black, thin, solid] (1.50,2.50) ellipse (0.50 and -0.50);
+      \draw[draw=black, thin, solid] (0.50,-0.50) ellipse (0.50 and -0.50);
+      \node[black, anchor=south west] at (0.94,2.25) {$p_2$};
+      \node[black, anchor=south west] at (-0.06,-0.75) {$p_3$};
+      \draw[draw=black, -latex, thin, solid] (-0.14,0.04) -- (-0.92,0.96);
+      \draw[draw=black, -latex, thin, solid] (0.78,0.32) -- (1.14,1.67);
+      \draw[draw=black, -latex, thin, solid] (0.49,2.33) -- (-0.62,1.90);
+      \end{tikzpicture}
+      \caption{Graf dla przykładowego zestawu raportów \cref{fig:raport-ex}}
+      \label{fig:raport-ex-G}\end{figure}\end{multicols}
+
+"""
+
 #lib
 import lib.flow, gloc, rprt, subj, util
 
@@ -23,34 +111,41 @@ def network(docrefs:pandas.DataFrame,
             Jsim=[], feats=[]):
 
   r"""
-  \subsubsection
-  {Tworzenie grafu na podstawie raportów o stanie techniki}
+  \skip
 
-  Graf $G$ jest grafem skierowanym o krawędziach $E$ i węzłach
-  będących osobami pełniącymi role patentowe.
+  Każdy patent 
+    ma przyporządkowany 
+      pewien zbiór osób $O_{p_i} \subset O$.
+  Tymi osobami są osoby pełniące
+    jedną z 
+      analizowanych 
+      ról patentowych 
+      (patrz: \cref{role-patentowe}).
+  Pełnienie roli patentowej w patencie $p_i$
+    jest relacją $p_i\ \alpha\ o_j$,
+      gdzie 
+        $p_i$ jest patentem,
+        a $o_j$ osobą;
+  należy odczytywać:
+    \textit{patent $p_i$ jest związany z osobą $o_j$}.
+  Zbiór $A$ jest zbiorem par patentów i osób,
+    który zbiera wszystkie prawdziwe relacje $\alpha$:
+  \begin{equation}
+    A = \{ (p_i, o_j)\in P \times O\ \vert\ p_i\ \alpha\ o_j \}
+    \end{equation}
 
-  Jest stworzony na podstawie raportów o stanie techniki
-  składa się z 2 rodzajów węzłów: patentów i osób pełniących 
-  role patentowe.
+  Graf $G$ między osobami $O$, jako wierzchołkami, 
+    jest grafem 
+      skierowanym,
+      o krawędziach $E$:
 
-  Pierwszym etapem jest utworzenie krawędzi $E_r$ między dokumentami.
-  Każdy raport dotyczy jednego patentu, a może odwoływać się 
-  do wielu innych. Odwołanie umieszczone w raporcie do innego
-  patentu traktujemy jako krawędź w grafie skierowanym $G_r$.
-  Kierunek grafu jest zgodny z przepływem informacji, co znaczy,
-  że patent którego dotyczy raport jest węzłem końcowym,
-  a wszystkie patenty wymienione w raporcie są węzłami początkowymi.
+  \begin{equation}
+    E = \{ (o_i, o_j)\in O \times O\ \vert\ \exists p_x, p_y\in P\ \land\ (p_x, o_i), (p_y, o_j)\in A\ \land\ (p_i, p_j)\in R \}
+    \end{equation}
 
-  Drugim etapem jest utworzenie krawędzi $E_x$ między osobami,
-  a dokumentami. Najpierw krawędzie skierowane są tworzone 
-  w kierunku dokumentów, które były wymieniane w raportach.
-  Następnie krawędzie $E_y$ z patentów będących przedmiotami 
-  raportów są tworzone w kierunku osób, które są ich autorami.
-
-  Ostatecznie krawędzie $E$ grafu powstają jeśli istnieje ściezka
-  między 2 wierzchołkami reprezentującymi osoby. Zgodnie z kierunkiem
-  grafu, te krawędzie są skierowane, a ich zwrot reprezentuje kierunek
-  przepływu wiedzy.
+  Krawędzie tego grafu świadczą o 
+    przepływie wiedzy 
+      między osobami.
   """
 
   assert { 'application' }.issubset(docsign.columns), docsign['application']
@@ -107,9 +202,8 @@ def network(docrefs:pandas.DataFrame,
 def distcart(edges, borders, spatial=['lat', 'lon']):
 
   r"""
-  \subsection{Lokalizacje osób cytujących i cytowanych}
+  \subsection{Charakterystyka lokalizacji na podstawie ilości osób cytujących i cytowanych}
 
-    \newpage
   \begin{multicols}{2}
   \chart{fig/grph/M-dist.pdf}
   { Mapy z lokalizacjami osób cytujących i cytowanych }
