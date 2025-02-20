@@ -131,6 +131,7 @@ Praca ta jest wglądem w dane urzędu patentowego,
 \acro{URL}{Uniform Resource Locator}
 \acro{OCR}{Optical Character Recognition}
 \acro{XML}{Extensible Markup Language}
+\acro{PDF}{Portable Document Format}
 \end{acronym}
 
 
