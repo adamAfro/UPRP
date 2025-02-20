@@ -556,22 +556,6 @@ def selected(X:pandas.DataFrame):
 @lib.flow.init(selected)
 def dataplot(registers:pandas.DataFrame):
 
-  r"""
-  \TODO{sprawdz. popr. po zmianach}
-  \begin{multicols}{2}
-
-  \chart{fig/rgst/F-data.pdf}
-  { Wykres liczności wpisów osobowych 
-    w zależności od roku aplikacji i ochrony }
-  \columnbreak
-
-  Na wykresie obok kolory są oznaczone zgodnie
-  z podpisem wykresu, są półprzeźroczyste i 
-  nakładają się na siebie, aby pokazać równocześnie
-  liczebność wpisów w 2 kryteriach.
-  \end{multicols}
-  """
-
   X = registers
 
  #dane
