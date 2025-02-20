@@ -197,6 +197,167 @@ def network(docrefs:pandas.DataFrame,
 
   return E, N
 
+@lib.flow.ipy.globparams()
+@lib.flow.map(('fig/grph/F-delay.pdf'))
+@lib.flow.init(network[0])
+def delayplot(edges:DF): 
+
+  E0 = edges
+
+ #wybór danych
+  E0['delay'] = (E0.applicationY - E0.application).dt.days
+  E0['yearY'] = E0.applicationY.dt.year
+  E = E0[['yearY', 'delay', 'distance']]
+
+ #wymiary
+  y = Pt.Y('size:Q').title(None).stack('zero')
+  x = Pt.X('delay:Q').title('Opóźnienie')
+  c = Pt.Color('distance:Q')
+  c = c.legend(orient='bottom').title('Śr. odległość')
+  f = Pt.Row('yearY:O').title(None)
+
+  x = x.axis(values=[r for r in range(0, E.delay.max(), 365)])
+
+ #wykres
+  p = Pt.Chart(E).mark_area().encode(x, y, c, f)
+  p = p.properties(width=0.5*A4.W, height=0.1*A4.W)
+  p = p.transform_bin('distance', field='distance')
+  p = p.transform_density('delay', as_=['delay', 'size'], 
+                          groupby=['yearY', 'distance'], 
+                          bandwidth=250)
+
+  return p
+
+@lib.flow.map(('fig/grph/M-delay.pdf'))
+@lib.flow.init(network[0])
+def delaycart(): raise NotImplementedError()
+
+@lib.flow.map(('fig/grph/F-dist.pdf'))
+@lib.flow.init(network[0])
+def distplot(edges:pandas.DataFrame):
+
+  r"""
+  \subsection{Zasięg}
+
+  \chart{fig/grph/F-dist.pdf}
+  { Wykresy rozkładu odległości między osobami cytującymi, a cytowanymi }
+
+  Powyższe wykresy przedstawiają rozkład odległości 
+  między osobami cytującymi, a cytowanymi. 
+  Wykresy słupkowe prezentują
+  histogram wartości niezerowych po prawej, 
+  oraz porównanie wartości zerowych i niezerowych po lewej.
+  Obserwujemy znaczącą frakcję wartości zerowych, 
+  które stanowią ponad 1/3 wszystkich odległości.
+  Należy z tego wnosić, że znaczna część cytowań
+  zachodzi między osobami z tej samej lokalizacji.
+  Histogram zawiera także zaznaczone wartości statystyk pozycyjnych
+  Średnia jest w dużej dysproporcji w stosunku do mediany
+  co wskazuje na skośność rozkładu.
+  Wartości w przedziale 260-280 są charakterystycznie częste.
+  Wykres gęstości poniżej wskazuje na dwie wyraźne grupy
+  odległości, jedną wokół 10, a drugą wokół 270.
+  Należy także zaznaczyć długi ogon rozkładu ---
+  większe wartości są coraz rzadsze 
+  w miarę zwiększania ich wartości.
+  """
+
+  E = edges
+  E.distance = E.distance.astype(float)
+  E = E[['distance']].copy()
+
+ #obliczenia
+  is0 = lambda d: '= 0' if d == 0 else '> 0'
+  E['distzero'] = E.distance.apply(is0)
+
+  S = E.distance.describe().drop('count')
+  S = S.rename(util.Translation.describe).reset_index()
+  S['label'] = S['index'] + ': ' + S.distance.round(2).astype(str)
+
+ #dane
+  pS = Pt.Chart(S)
+  pE = Pt.Chart(E)
+
+ #osie
+  xF0 = Pt.X('distzero:N')
+  yF0 = Pt.Y('count(distzero):Q')
+  cF0 = Pt.Color('distzero:N')
+  cF0 = cF0.scale(range=['black', '#4c78a8']).legend(None)
+
+  pF = pE.transform_filter((Pt.datum.distzero == '> 0'))
+  xF = Pt.X('distance').bin(Pt.Bin(maxbins=50))
+  xF = xF.axis(labelAngle=270)
+  yF = Pt.Y('count(distance)')
+
+  xD = Pt.X('value:Q')
+  yD = Pt.Y('density:Q')
+
+  xL = Pt.X('distance')
+  cL = Pt.Color('label').scale(scheme='category10')
+  cL = cL.legend(orient='top', columns=2)
+
+ #tytuły
+  for v in [xF0, yF0, cF0, xF, yF, xD, yD, xL, cL]: v.title = None
+  yF = yF.axis(orient='right').title('Liczność bez zerowych')
+  cL = cL.title('Statystyki (włączajac zerowe)')
+  xD = xD.title('Gęstość rozkładu odległości między osobą cytującą, a cytowaną')
+
+ #wykresy
+  F0 = pE.mark_bar().encode(xF0, yF0, cF0)
+  F = pF.mark_bar().encode(xF, yF)
+  D = pF.mark_area().encode(xD, yD)
+  D = D.transform_density(density='distance')
+  L = pS.mark_rule(size=0.005*A4.W, strokeDash=[4,4]).encode(xL, cL)
+
+ #układ
+  F0 = F0.properties(width=0.1*A4.W, height=0.25*A4.W)
+  F = F.properties(width=0.8*A4.W, height=0.25*A4.W)
+  D = D.properties(width=1.0*A4.W, height=0.05*A4.W)
+  p = (F0 | (L + F).resolve_scale(color='independent')) & D
+
+  return p
+
+@lib.flow.map(('fig/grph/F-dist-yearly.pdf'))
+@lib.flow.init(network[0])
+def distplotyear(edges:pandas.DataFrame):
+
+  r"""
+  \subsection{Zasięg}
+
+  \begin{multicols}{2}
+  \chart{fig/grph/F-dist-yearly.pdf}
+  { Rozkład odległości między osobami cytującymi, a cytowanymi }
+  \end{multicols}
+  """
+
+  E = edges[[ 'yearY', 'distance' ]]
+  E = E.query('yearY >= 2011')
+
+  pC = Pt.Chart(E)
+  pD = Pt.Chart(E)
+
+  xC = Pt.X('yearY:O').title(None)
+  yC = Pt.Y('count(yearY):Q').title(None)
+  C = pC.mark_bar().encode(xC, yC)
+
+  xD = Pt.X('distance:Q').title(None)
+  yD = Pt.Y('density:Q').title(None)
+  fD = Pt.Row('yearY:O').title(None)
+
+  yC = yC.title('Liczność')
+  xC = xC.title('Rok')
+  xD = xD.title('Gęstość odległości między osobami~cytującymi, a cytowanymi'.split('~'))
+
+  D = pD.encode(xD, yD, fD).mark_area()
+  D = D.transform_density('distance', as_=['distance', 'density'], groupby=['yearY'])
+
+  C = C.properties(width=0.4*A4.W, height=0.05*A4.H)
+  D = D.properties(width=0.4*A4.W, height=0.05*A4.H)
+  D = D.resolve_axis(x='shared', y='shared')
+  p = (C & D).resolve_scale(y='independent')
+
+  return p
+
 @lib.flow.map(('fig/grph/M-dist.pdf'))
 @lib.flow.init(network[0], borders=gloc.region[1])
 def distcart(edges, borders, spatial=['lat', 'lon']):
@@ -373,164 +534,3 @@ def distcart(edges, borders, spatial=['lat', 'lon']):
   F.query('transfer > 1000').sort_values('frac', ascending=False)
 
   return (mX & mY).resolve_scale(color='shared') & mD
-
-@lib.flow.map(('fig/grph/F-dist.pdf'))
-@lib.flow.init(network[0])
-def distplot(edges:pandas.DataFrame):
-
-  r"""
-  \subsection{Zasięg}
-
-  \chart{fig/grph/F-dist.pdf}
-  { Wykresy rozkładu odległości między osobami cytującymi, a cytowanymi }
-
-  Powyższe wykresy przedstawiają rozkład odległości 
-  między osobami cytującymi, a cytowanymi. 
-  Wykresy słupkowe prezentują
-  histogram wartości niezerowych po prawej, 
-  oraz porównanie wartości zerowych i niezerowych po lewej.
-  Obserwujemy znaczącą frakcję wartości zerowych, 
-  które stanowią ponad 1/3 wszystkich odległości.
-  Należy z tego wnosić, że znaczna część cytowań
-  zachodzi między osobami z tej samej lokalizacji.
-  Histogram zawiera także zaznaczone wartości statystyk pozycyjnych
-  Średnia jest w dużej dysproporcji w stosunku do mediany
-  co wskazuje na skośność rozkładu.
-  Wartości w przedziale 260-280 są charakterystycznie częste.
-  Wykres gęstości poniżej wskazuje na dwie wyraźne grupy
-  odległości, jedną wokół 10, a drugą wokół 270.
-  Należy także zaznaczyć długi ogon rozkładu ---
-  większe wartości są coraz rzadsze 
-  w miarę zwiększania ich wartości.
-  """
-
-  E = edges
-  E.distance = E.distance.astype(float)
-  E = E[['distance']].copy()
-
- #obliczenia
-  is0 = lambda d: '= 0' if d == 0 else '> 0'
-  E['distzero'] = E.distance.apply(is0)
-
-  S = E.distance.describe().drop('count')
-  S = S.rename(util.Translation.describe).reset_index()
-  S['label'] = S['index'] + ': ' + S.distance.round(2).astype(str)
-
- #dane
-  pS = Pt.Chart(S)
-  pE = Pt.Chart(E)
-
- #osie
-  xF0 = Pt.X('distzero:N')
-  yF0 = Pt.Y('count(distzero):Q')
-  cF0 = Pt.Color('distzero:N')
-  cF0 = cF0.scale(range=['black', '#4c78a8']).legend(None)
-
-  pF = pE.transform_filter((Pt.datum.distzero == '> 0'))
-  xF = Pt.X('distance').bin(Pt.Bin(maxbins=50))
-  xF = xF.axis(labelAngle=270)
-  yF = Pt.Y('count(distance)')
-
-  xD = Pt.X('value:Q')
-  yD = Pt.Y('density:Q')
-
-  xL = Pt.X('distance')
-  cL = Pt.Color('label').scale(scheme='category10')
-  cL = cL.legend(orient='top', columns=2)
-
- #tytuły
-  for v in [xF0, yF0, cF0, xF, yF, xD, yD, xL, cL]: v.title = None
-  yF = yF.axis(orient='right').title('Liczność bez zerowych')
-  cL = cL.title('Statystyki (włączajac zerowe)')
-  xD = xD.title('Gęstość rozkładu odległości między osobą cytującą, a cytowaną')
-
- #wykresy
-  F0 = pE.mark_bar().encode(xF0, yF0, cF0)
-  F = pF.mark_bar().encode(xF, yF)
-  D = pF.mark_area().encode(xD, yD)
-  D = D.transform_density(density='distance')
-  L = pS.mark_rule(size=0.005*A4.W, strokeDash=[4,4]).encode(xL, cL)
-
- #układ
-  F0 = F0.properties(width=0.1*A4.W, height=0.25*A4.W)
-  F = F.properties(width=0.8*A4.W, height=0.25*A4.W)
-  D = D.properties(width=1.0*A4.W, height=0.05*A4.W)
-  p = (F0 | (L + F).resolve_scale(color='independent')) & D
-
-  return p
-
-@lib.flow.map(('fig/grph/F-dist-yearly.pdf'))
-@lib.flow.init(network[0])
-def distplotyear(edges:pandas.DataFrame):
-
-  r"""
-  \subsection{Zasięg}
-
-  \begin{multicols}{2}
-  \chart{fig/grph/F-dist-yearly.pdf}
-  { Rozkład odległości między osobami cytującymi, a cytowanymi }
-  \end{multicols}
-  """
-
-  E = edges[[ 'yearY', 'distance' ]]
-  E = E.query('yearY >= 2011')
-
-  pC = Pt.Chart(E)
-  pD = Pt.Chart(E)
-
-  xC = Pt.X('yearY:O').title(None)
-  yC = Pt.Y('count(yearY):Q').title(None)
-  C = pC.mark_bar().encode(xC, yC)
-
-  xD = Pt.X('distance:Q').title(None)
-  yD = Pt.Y('density:Q').title(None)
-  fD = Pt.Row('yearY:O').title(None)
-
-  yC = yC.title('Liczność')
-  xC = xC.title('Rok')
-  xD = xD.title('Gęstość odległości między osobami~cytującymi, a cytowanymi'.split('~'))
-
-  D = pD.encode(xD, yD, fD).mark_area()
-  D = D.transform_density('distance', as_=['distance', 'density'], groupby=['yearY'])
-
-  C = C.properties(width=0.4*A4.W, height=0.05*A4.H)
-  D = D.properties(width=0.4*A4.W, height=0.05*A4.H)
-  D = D.resolve_axis(x='shared', y='shared')
-  p = (C & D).resolve_scale(y='independent')
-
-  return p
-
-@lib.flow.ipy.globparams()
-@lib.flow.map(('fig/grph/F-delay.pdf'))
-@lib.flow.init(network[0])
-def delayplot(edges:DF): 
-
-  E0 = edges
-
- #wybór danych
-  E0['delay'] = (E0.applicationY - E0.application).dt.days
-  E0['yearY'] = E0.applicationY.dt.year
-  E = E0[['yearY', 'delay', 'distance']]
-
- #wymiary
-  y = Pt.Y('size:Q').title(None).stack('zero')
-  x = Pt.X('delay:Q').title('Opóźnienie')
-  c = Pt.Color('distance:Q')
-  c = c.legend(orient='bottom').title('Śr. odległość')
-  f = Pt.Row('yearY:O').title(None)
-
-  x = x.axis(values=[r for r in range(0, E.delay.max(), 365)])
-
- #wykres
-  p = Pt.Chart(E).mark_area().encode(x, y, c, f)
-  p = p.properties(width=0.5*A4.W, height=0.1*A4.W)
-  p = p.transform_bin('distance', field='distance')
-  p = p.transform_density('delay', as_=['delay', 'size'], 
-                          groupby=['yearY', 'distance'], 
-                          bandwidth=250)
-
-  return p
-
-@lib.flow.map(('fig/grph/M-delay.pdf'))
-@lib.flow.init(network[0])
-def delaycart(): raise NotImplementedError()
