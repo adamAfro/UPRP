@@ -65,8 +65,9 @@ def xmap(edges:DF, regions:GDF, borders:GDF):
   S = Se([E.query(f'year == {k}').drop(columns='year') for k in K], index=K)
 
  #wymiary
+  C = ['white']+[x for c in ['grey', 'yellow', 'orange', 'red', 'violet', 'blue', 'darkblue'] for x in [c,c]]
   c = Pt.Color('size', type='quantitative')
-  c = c.scale(range=['white', 'grey', 'red', 'blue'], domainMin=0)
+  c = c.scale(range=C, domainMin=0)
   c = c.title('Ilość osób').legend(orient='bottom')
 
   xL = Pt.Latitude('lat', type='quantitative')
@@ -120,8 +121,9 @@ def ymap(edges:DF, regions:GDF, borders:GDF):
   S = Se([E.query(f'yearY == {k}').drop(columns='yearY') for k in K], index=K)
 
  #wymiary
+  C = ['white']+[x for c in ['grey', 'yellow', 'orange', 'red', 'violet', 'blue', 'darkblue'] for x in [c,c]]
   c = Pt.Color('size', type='quantitative')
-  c = c.scale(range=['white', 'grey', 'red', 'blue'], domainMin=0)
+  c = c.scale(range=C, domainMin=0)
   c = c.title('Ilość osób').legend(orient='bottom')
 
  #wykresy
