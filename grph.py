@@ -207,26 +207,33 @@ def delayplot(edges:DF):
  #wybór danych
   E0['delay'] = (E0.applicationY - E0.application).dt.days
   E0['yearY'] = E0.applicationY.dt.year
-  E = E0[['yearY', 'delay', 'distance']]
+  E = E0[['yearY', 'delay', 'distance']].copy()
+  E['distbin'] = pandas.cut(E['distance'], bins=[0, 100, 200, 300, 500, 1000], 
+                             include_lowest=False)
+  C = ['{ 0 }'] + [c for c in E['distbin'].cat.categories]
+  E['distbin'] = E['distbin'].cat.set_categories(C, ordered=True).fillna('{ 0 }')
+  E = E.sort_values(['yearY','distance'])
 
  #wymiary
-  y = Pt.Y('size:Q').title(None).stack('zero')
-  x = Pt.X('delay:Q').title('Opóźnienie')
-  c = Pt.Color('distance:Q')
-  c = c.legend(orient='bottom').title('Śr. odległość')
+  y = Pt.Y('count(delay)').title(None)
+  x = Pt.X('delay:Q').bin(step=365).title('Opóźnienie')
+  c = Pt.Color('distbin:O').sort(['{ 0 }'])
+  c = c.legend(orient='bottom', columns=3)
+  c = c.title('Przedział odległości')
   f = Pt.Row('yearY:O').title(None)
 
-  x = x.axis(values=[r for r in range(0, E.delay.max(), 365)])
-
  #wykres
-  p = Pt.Chart(E).mark_area().encode(x, y, c, f)
-  p = p.properties(width=0.5*A4.W, height=0.1*A4.W)
-  p = p.transform_bin('distance', field='distance')
-  p = p.transform_density('delay', as_=['delay', 'size'], 
-                          groupby=['yearY', 'distance'], 
-                          bandwidth=250)
+  p = Pt.Chart(E).mark_bar().encode(x, y, c, f)
+  p = p.properties(width=0.5*A4.W, height=0.05*A4.H)
+  p
 
-  return p
+  xD = Pt.X('delay:Q').title('Opóźnienie')
+  yD = Pt.Y('density:Q').title(None)
+  D = Pt.Chart(E).mark_area().encode(xD, yD)
+  D = D.properties(width=0.5*A4.W, height=0.05*A4.H)
+  D = D.transform_density('delay', as_=['delay', 'density'])
+
+  return D&p
 
 @lib.flow.map(('fig/grph/M-delay.pdf'))
 @lib.flow.init(network[0])
