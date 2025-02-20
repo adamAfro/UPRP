@@ -162,8 +162,6 @@ from util import A4
 def Indexing(storage:lib.storage.Storage, assignpath:str):
 
   """
-  \subsection{Optymalizacja przez indeksowanie}
-
   Indeksowanie danych z profili, jest wymagane do przeprowadzenia
   wyszukiwania w optymalny komputacyjnie sposób.
   Jest to etap po profilowaniu, który fragmentuje dane na
@@ -206,8 +204,6 @@ def Indexing(storage:lib.storage.Storage, assignpath:str):
 def identified(qpath:str, storage:lib.storage.Storage, docsframe:str):
 
   """
-  \subsection{Identyfikacja zapytań}
-
   Rozpoznawanie zapytań odbywa się w zupełnie innym kontekście i
   nie zwraca dla zapytań informacji o tym skąd pochodzą.
   Identyfikacja korzysta z nazw plików i metadanych samych zapytań
@@ -237,8 +233,6 @@ def identified(qpath:str, storage:lib.storage.Storage, docsframe:str):
 def queries(searches: pandas.Series):
 
   """
-  \subsection{Parsowanie zapytań}
-
   Parsowanie zapytań to proces wyciągania z tekstów
   ciągów przypominających daty i numery patentowe.
   Proces polega na wstępnym podzieleniu całego napisu na
