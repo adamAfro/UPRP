@@ -240,6 +240,8 @@ def Geolocate(storage:lib.storage.Storage,
   r"""
   \subsection{Dane lokalizacyjne}
 
+  \label{geolokalizacja}
+
   Urząd zbiera informacje dotyczące lokalizacji 
     osób 
       związanych z patentami. 

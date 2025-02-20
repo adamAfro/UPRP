@@ -202,31 +202,119 @@ def network(docrefs:pandas.DataFrame,
 def distcart(edges, borders, spatial=['lat', 'lon']):
 
   r"""
-  \subsection{Charakterystyka lokalizacji na podstawie ilości osób cytujących i cytowanych}
+  \subsection{
+    Charakterystyka lokalizacji 
+      na podstawie ilości 
+        osób cytujących i 
+        cytowanych}
 
-  \begin{multicols}{2}
-  \chart{fig/grph/M-dist.pdf}
-  { Mapy z lokalizacjami osób cytujących i cytowanych }
-  \columnbreak
-  Na mapach obok zaprezentowane są lokalizacje osób cytujących
-  oraz cytowanych. Kolor punktów odpowiada średniej odległości
-  między osobą a osobą referującą (żółty --- bliskie, czerwony --- dalekie).
-  Rozmiar punktów odpowiada ilości referowanych osób:
-  na wykresie górnym dotyczy osób cytujących, a na dolnym --- cytowanych.
-  Ostatnia mapa przedstawia różnicę między ilością osób cytujących
-  i cytowanych w danej lokalizacji. Kolor punktów odpowiada dominującemu
-  kierunkowi przepływu wiedzy, gdzie \textit{odpływ} oraz \textit{dopływ}
-  rozumiemy jako, odpowiednio, przewagę osób cytujących albo cytowanych.
-  Należy wyróżnić lokalizacje dużych miast w Polsce, jako czołowe
-  w przepływie wiedzy --- mowa najczęściej o stolicach województwa.
-  \end{multicols}
+    Ze względu na naturę rozprzestrzeniania się wiedzy 
+      ---
+      sieć
+        jest tym słabsza 
+          im bardziej jest rozproszona w przestrzeni 
+        \cite{Kl-14} 
+      ---
+      jej głównym aspektem jest
+        położenie osób,
+          które jej ulegają.
+    Rozróżniając miejsca ze względu
+      na liczność osób
+        biorących udział w procesie
+      możemy wskazać 
+        lokalizacje mniej lub bardziej
+          sprzyjające zachodzeniu tego procesu.
+    Fakt, że sieć przepływu wiedzy
+      jest grafem skierowanym
+        pozwala na wskazanie
+          punktów generujących wiedzę
+          oraz tych, gdzie ulega syntezie
+            na wewnętrzny użytek
+              ich odbiorców.
 
-  Mapy pokazują dużą dysproporcję między południem, a północą ---
-  południe jest znacząco bardziej aktywne w przepływie wiedzy.
-  Na północy istnieją jedynie 2 ośrodki: Trójmiasto oraz Szczecin.
-  Na południu charakterystycznie dużo osób referuje się wzajemnie,
-  a wyróżnić można miasta: Warszawa, Poznań, Kraków, 
-  Katowice, Kielce, Wrocław oraz Lublin.
+    \begin{multicols}{2}
+
+      \chart{fig/grph/M-dist.pdf}
+        { Mapy z lokalizacjami 
+            osób
+              cytujących 
+              i cytowanych }
+
+        \columnbreak
+
+      Na mapach obok 
+        zaprezentowane są 
+          lokalizacje 
+            osób 
+              cytujących oraz 
+              cytowanych. 
+        Kolor punktów 
+          odpowiada 
+            średniej 
+              odległości między osobą a osobą referującą 
+            (żółty --- bliskie, czerwony --- dalekie).
+      Rozmiar punktów 
+        odpowiada 
+          ilości referowanych osób:
+        na wykresie górnym dotyczy 
+          osób cytujących, 
+        a na dolnym 
+          --- 
+          cytowanych.
+      Ostatnia mapa 
+        przedstawia
+          różnicę 
+            między ilością 
+              osób cytujących i cytowanych 
+                w danej lokalizacji.
+            Rozmiar punktów jest tożsamy
+              z wartością 
+                tej różnicy.
+        Kolor punktów odpowiada 
+          dominującemu kierunkowi przepływu wiedzy, 
+            gdzie 
+              \textit{odpływ} oraz 
+              \textit{dopływ}
+                rozumiemy jako, odpowiednio, 
+                  przewagę 
+                    osób cytujących 
+                    albo cytowanych.
+
+      \end{multicols}
+
+    Główną obserwacją jest 
+      dysproporcja ilościowa między
+        północą, 
+        a resztą kraju.
+      To na południu 
+        znajdują się
+          punkty o największej
+            liczbie osób 
+              cytujących i cytowanych.
+      Punkty na północy są
+        zarówno mniej liczne
+          jak i o mniejszym nominale.
+    \TODO{rozkład różnicy do rozmiaru punktów}
+    Rozróżnienie  na generatory wiedzy i odbiorców,
+      z uwzględnieniem samej skali przepływu,
+      nie pozwala na jednoznaczne wskazanie
+        na obszary o dominującej roli
+          generatorów wiedzy, lub odbiorców.
+      Po za wyjątkami 
+        o niewielkiej skali,
+          jedynie Dębica 
+            jest punktem o znaczącym 
+              potencjale do tworzenia wiedzy,
+                przy nikłym jej odbiorze
+                  z innych regionów Polski.
+      Można przypuszczać, 
+        że innowacje, 
+          w kontekście patentów, 
+          w tym mieście są albo
+          pochodzenia zewnętrznego 
+            (z patentów zagranicznych)
+          albo są wynikiem lokalnego 
+            rozwoju technologicznego.
   """
 
   E = edges
