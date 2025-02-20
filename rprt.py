@@ -318,12 +318,13 @@ class Search:
 def Narrow(queries:pandas.Series, indexes:tuple, pbatch:int=2**14, ngram=True):
 
   """
-  \subsection{Wąskie wyszukiwanie}
-
   Wyszukiwanie w zależności od parametrów korzysta z dopasowania
   kodami patentowymi albo ich częściami. Później w grafie takich
   połączeń szuka dodatkowych dowodów na istnienie połączenia:
   wspólnych kluczy (np. imion i nazw miast) oraz dat.
+  Zbieżność słów kluczowych jest znacząca, jeśli ich punktacja
+  jest przynajmniej równa 10, gdzie każdy punkt to jedno wspólne słowo,
+  albo wystąpienie zbieżnych słów w każdej z kategorii: imiona, nazwy miast, tytuły.
   """
 
   import cudf
