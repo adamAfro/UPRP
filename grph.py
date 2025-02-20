@@ -203,7 +203,7 @@ def delayplot(edges:DF):
 
   r"""
 
-  \subsection{Opóźnienie cytowania patentów}
+  \subsection{Rozkład opóźnienia cytowań patentowych}
 
     \begin{multicols}{2}
 
