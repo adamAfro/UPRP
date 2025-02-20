@@ -410,6 +410,8 @@ def Narrow(queries:pandas.Series, indexes:tuple, pbatch:int=2**14, ngram=True):
 
 @lib.flow.placeholder()
 def Family(queries:pandas.Series, matches:pandas.DataFrame, storage:lib.storage.Storage, assignpath:str):
+
+  Q, _ = queries
   M = matches
   S = storage
 
