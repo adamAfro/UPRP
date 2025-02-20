@@ -96,7 +96,7 @@ def citekind(edges:DF, nodes:DF, regions:DF):
   y = y.axis(values=[0,1, 5, 10, 20, 50, 100, 200, 500, 1000, 2000])
   f = Pt.Column('synthesis', type='nominal')
   c = Pt.Color('generator', type='nominal')
-  c = c.legend(orient='bottom')
+  c = c.legend(orient='bottom', columns=3)
   c = c.scale(range=['black', 'red', 'blue', 'grey'])
   n = Pt.Row('name', type='nominal')
 
@@ -104,7 +104,7 @@ def citekind(edges:DF, nodes:DF, regions:DF):
   N['name'] = N['name'].str[:4]+'.'
   for a in [x, y, f, c, n]: a.title=None 
 
-  c = c.title('Pochodzenie cytowanych patentów')
+  c = c.title('Pochodzenie')
 
  #wykres
   p0 = Pt.Chart(N.query('synthesis == "nie cytujące"')).mark_bar().encode(x, y, c, f, n)
