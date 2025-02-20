@@ -294,7 +294,6 @@ def distcart(edges, borders, spatial=['lat', 'lon']):
       Punkty na północy są
         zarówno mniej liczne
           jak i o mniejszym nominale.
-    \TODO{rozkład różnicy do rozmiaru punktów}
     Rozróżnienie  na generatory wiedzy i odbiorców,
       z uwzględnieniem samej skali przepływu,
       nie pozwala na jednoznaczne wskazanie
@@ -302,19 +301,12 @@ def distcart(edges, borders, spatial=['lat', 'lon']):
           generatorów wiedzy, lub odbiorców.
       Po za wyjątkami 
         o niewielkiej skali,
-          jedynie Dębica 
-            jest punktem o znaczącym 
-              potencjale do tworzenia wiedzy,
-                przy nikłym jej odbiorze
-                  z innych regionów Polski.
-      Można przypuszczać, 
-        że innowacje, 
-          w kontekście patentów, 
-          w tym mieście są albo
-          pochodzenia zewnętrznego 
-            (z patentów zagranicznych)
-          albo są wynikiem lokalnego 
-            rozwoju technologicznego.
+          Jeydnym wyjątkiem dużej (>6000 obs.) skali 
+            jest Dębica, 
+              obserwujemy stosunek
+              $\tfrac{\text{różnica}}{\text{cytujące} + \text{cytowane}}$ równy $0.4$,
+              klasyfikujące to miasto jako 
+                specyficzny punkt syntezy wiedzy.
   """
 
   E = edges
@@ -346,7 +338,8 @@ def distcart(edges, borders, spatial=['lat', 'lon']):
 
   X = X.set_index(spatial)
   Y = Y.set_index(spatial)
-  D = (X - Y)[['id']].reset_index()
+  I = set(X.index) | set(Y.index)
+  D = (Y.reindex(I, fill_value=0) - X.reindex(I, fill_value=0))[['id']].reset_index()
   D['minus'] = (D['id'] < 0).replace({ True: 'odpływ', False: 'dopływ' })
   D['id'] = D['id'].abs()
   mD = Pt.Chart(D).mark_circle().project('mercator')
