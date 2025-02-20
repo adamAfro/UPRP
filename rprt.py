@@ -540,9 +540,22 @@ def UPRPscoreplot(results=pandas.DataFrame):
   r"""
   \subsection{Wyniki wyszukiwania}
 
+  
+  \begin{multicols}{2}
   \chart{fig/rprt/UPRP-score.pdf}
   { Wykres punktacji wyszukiwania patentów 
     z cytowań w raportach o stanie techniki. }
+  \columnbreak
+
+  Po lewej widać punktację wyników wyszukiwania patentów.
+  Niemal wszystkie wyniki są w przedziale od 0 do 200,
+  przy czym wyniki mają najczęściej punktację w okolicach 0.
+  Świadczy to o słabym częstym słabym wskazaniu cytowań.
+  Większość wyników zawiera jednak dokładne przyporządkowanie
+  kodem złożenia aplikacji. Istnieje także frakcja, która
+  została przyporządkowana częsciowym kodem, na podstawie
+  wysokiej punktacji.
+  \end{multicols}
   """
 
  #dane
