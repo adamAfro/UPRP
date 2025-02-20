@@ -364,6 +364,14 @@ def distcart(edges, borders, spatial=['lat', 'lon']):
     mY = Pt.Chart(borders).mark_geoshape(fill='black') + mY
     mD = Pt.Chart(borders).mark_geoshape(fill='black') + mD
 
+ #tylko do eksploracji
+  x = X.drop(columns=['distance'])['id'].rename('generator')
+  y = Y.drop(columns=['distance'])['id'].rename('synthesis')
+  F = D.set_index(['lat', 'lon'])['id'].rename('diff').to_frame().join(x).join(y).fillna(0)
+  F['transfer'] = F['generator']+F['synthesis']
+  F['frac'] = F['diff'] / F['transfer']
+  F.query('transfer > 1000').sort_values('frac', ascending=False)
+
   return (mX & mY).resolve_scale(color='shared') & mD
 
 @lib.flow.map(('fig/grph/F-dist.pdf'))
