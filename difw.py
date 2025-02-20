@@ -19,7 +19,6 @@ from util import A4
 def citekind(edges:DF, nodes:DF, regions:DF):
 
   r"""
-  \newpage
   \begin{multicols}{2}
   \chart{fig/difw/F.pdf}
   { Wykres cytowań zawartych w patentach z uwzględnieniem
@@ -27,13 +26,30 @@ def citekind(edges:DF, nodes:DF, regions:DF):
 
   \columnbreak
 
-  Wykresy po prawej prezetnują cytowania w województwach.
-  \TODO{opis}
+  Wykresy obok przedstawiają zliczenie ilości
+  osób cytujących i cytowanych w patentach z uwzględnieniem
+  ich pochodzenia.
+  Widac znaczący fakt, że rozkład jest nierównomierny między
+  województwami. Małopolska i Mazowsze to główne
+  ośrodki, w których zamieszkują osoby pełniące role patentowe.
+  Wysokok plasuje się też woj. śląskie i dolnośląskie.
+  Warto zauważyć że duża większość osób jest autorami
+  patentów nie cytujących żadnego innego polskiego patentu.
+  Podobnie w przypadku bycia patentem cytowanym --- patenty
+  tych osób rzadko kiedy są cytowane zarówno wewnątrz
+  województwa jak i na zewnątrz.
+  Faktem jest jednak, że osoby cytujące korzystaja zarówno
+  z patentów wewnątrz jak i na zewnątrz województwa.
+  Podobnie w kwestii bycia cytowanym --- osoby te są
+  cytowane zarówno przez osoby wewnątrz jak i na zewnątrz
+  województwa najczęściej, jeśli się tak w ogóle dzieje.
+  Warto zaznaczyć stosukowo jednorodny rozkład.
+  Okresowe wahania w niektórych województwach są raczej 
+  mało znaczące, dotyczą raczej tego czy patenty są cytowane
+  i czy cytują, bardziej niż samego faktu powstawania patentów,
+  które później otrzymują ochronę.
 
   \end{multicols}
-
-  \tbl{tbl/difw/F.tex}
-  { Tabela korelacji ilości patentów cytowanych względem liczności }
   """
 
   N0 = nodes
