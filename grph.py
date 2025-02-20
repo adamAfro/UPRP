@@ -307,29 +307,54 @@ def delaycart(): raise NotImplementedError()
 def distplot(edges:pandas.DataFrame):
 
   r"""
-  \subsection{Zasięg}
+  \subsection{
+    Rozkład odległości 
+      między osobami 
+        cytującymi, a cytowanymi}
 
-  \chart{fig/grph/F-dist.pdf}
-  { Wykresy rozkładu odległości między osobami cytującymi, a cytowanymi }
+    \chart{fig/grph/F-dist.pdf}
+    { Wykresy rozkładu 
+        odległości między osobami 
+          cytującymi, a cytowanymi }
 
-  Powyższe wykresy przedstawiają rozkład odległości 
-  między osobami cytującymi, a cytowanymi. 
-  Wykresy słupkowe prezentują
-  histogram wartości niezerowych po prawej, 
-  oraz porównanie wartości zerowych i niezerowych po lewej.
-  Obserwujemy znaczącą frakcję wartości zerowych, 
-  które stanowią ponad 1/3 wszystkich odległości.
-  Należy z tego wnosić, że znaczna część cytowań
-  zachodzi między osobami z tej samej lokalizacji.
-  Histogram zawiera także zaznaczone wartości statystyk pozycyjnych
-  Średnia jest w dużej dysproporcji w stosunku do mediany
-  co wskazuje na skośność rozkładu.
-  Wartości w przedziale 260-280 są charakterystycznie częste.
-  Wykres gęstości poniżej wskazuje na dwie wyraźne grupy
-  odległości, jedną wokół 10, a drugą wokół 270.
-  Należy także zaznaczyć długi ogon rozkładu ---
-  większe wartości są coraz rzadsze 
-  w miarę zwiększania ich wartości.
+    Powyższe wykresy 
+      przedstawiają rozkład odległości 
+        między osobami 
+          cytującymi, a cytowanymi. 
+    Wykresy słupkowe prezentują
+      histogram wartości niezerowych po prawej, 
+      oraz 
+      porównanie 
+        wartości zerowych 
+        i 
+        niezerowych 
+          po lewej.
+    Obserwujemy 
+      znaczącą frakcję 
+        wartości zerowych, 
+          które stanowią 
+            ponad 1/3 wszystkich odległości.
+    Należy z tego wnosić, 
+      że znaczna część cytowań
+        zachodzi między osobami 
+          z tej samej lokalizacji.
+    Histogram zawiera także 
+      zaznaczone wartości statystyk pozycyjnych.
+    Średnia jest 
+      znacząco więszka 
+        od mediany
+      co wskazuje na skośność rozkładu.
+    Wartości w przedziale 260-280 
+      są charakterystycznie częste.
+    Wykres gęstości poniżej 
+      wskazuje na dwie wyraźne 
+        grupy odległości, 
+          jedną wokół 10, 
+          a drugą wokół 270.
+    Należy także zaznaczyć 
+      długi ogon rozkładu ---
+        większe wartości są coraz rzadsze 
+        w miarę zwiększania ich wartości.
   """
 
   E = edges
@@ -392,16 +417,52 @@ def distplot(edges:pandas.DataFrame):
 def distplotyear(edges:pandas.DataFrame):
 
   r"""
-  \subsection{Zasięg}
 
-  \begin{multicols}{2}
-  \chart{fig/grph/F-dist-yearly.pdf}
-  { Rozkład odległości między osobami cytującymi, a cytowanymi }
-  \end{multicols}
+  \newpage
+
+  \subsection
+  { Rozkład odległości 
+      między osobami 
+        w kolejnych latach }
+
+    \begin{multicols}{2}
+
+      \chart{fig/grph/F-dist-yearly.pdf}
+      { Rozkład odległości 
+          między osobami 
+            cytującymi, a cytowanymi 
+              w kolejnych latach }
+
+      \columnbreak
+
+      Obok przedstawiony jest 
+        rozkład dystansu
+          między osobami cytującymi i cytowanymi
+      Wykres pierwszy prezentuje
+        sumę liczności 
+          relacji cytowania 
+            w danym roku.
+      Widać na nim 
+        pewną wariancję w kolejnych latach.
+      Wykresy poniżej
+        to wykresy gęstości
+          dla kolejnych lat.
+      Gęstość zgromadzona jest
+        wokół wartości zerowych.
+      Pozostałe dystanse 
+        są równomiernie rozłożone
+          w kolejnych latach
+        sięgając 700 kilometrów
+          w skrajnych przypadkach.
+      Większość 
+        mieście się 
+          w przedziale do 300 kilometrów.
+
+
+      \end{multicols}
   """
 
   E = edges[[ 'yearY', 'distance' ]]
-  E = E.query('yearY >= 2011')
 
   pC = Pt.Chart(E)
   pD = Pt.Chart(E)
@@ -433,6 +494,8 @@ def distplotyear(edges:pandas.DataFrame):
 def distcart(edges, borders, spatial=['lat', 'lon']):
 
   r"""
+  \newpage
+
   \subsection{
     Charakterystyka lokalizacji 
       na podstawie ilości 
