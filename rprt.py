@@ -260,8 +260,6 @@ def queries(searches: pandas.Series):
 
 class Search:
 
-  "Klasa z metodami pomocniczymi dla wyszukiwania."
-
   Levels = pandas.CategoricalDtype([
     "weakest", "dated", "partial",
     "supported", "partial-supported",
@@ -272,8 +270,6 @@ class Search:
   ], ordered=True)
 
   def score(matches):
-
-    "Zwraca ramkę z kolumnami 'score' i 'level' i indeksem 'doc' i 'entry'."
 
     import cudf
 
@@ -414,10 +410,6 @@ def Narrow(queries:pandas.Series, indexes:tuple, pbatch:int=2**14, ngram=True):
 
 @lib.flow.placeholder()
 def Family(queries:pandas.Series, matches:pandas.DataFrame, storage:lib.storage.Storage, assignpath:str):
-
-  "Podmienia kody w zapytaniach na te znalezione w rodzinie patentowej."
-
-  Q, _ = queries
   M = matches
   S = storage
 
@@ -458,8 +450,6 @@ def Family(queries:pandas.Series, matches:pandas.DataFrame, storage:lib.storage.
 
 @lib.flow.placeholder()
 def Drop(queries:pandas.Series, matches:list[pandas.DataFrame]):
-
-  "Usuwa z wyników zapytań te, które już zostały dopasowane w zadowalający sposób."
 
   Q, P = queries
   M = matches
@@ -530,12 +520,6 @@ drop = Drop(queries, [flow[k]['narrow'] for k in D.keys()]).map('alien.pkl')
 @lib.flow.map('cache/rprt/edges.pkl')
 @lib.flow.init(flow['UPRP']['narrow'])
 def edges(results:pandas.DataFrame):
-
-  r"""
-  \subsection{Kryterium wyszukiwania}
-
-  \TODO{opisać}
-  """
 
   X = results
 
