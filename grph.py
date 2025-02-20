@@ -301,7 +301,7 @@ def distcart(edges, borders, spatial=['lat', 'lon']):
           generatorów wiedzy, lub odbiorców.
       Po za wyjątkami 
         o niewielkiej skali,
-          Jeydnym wyjątkiem dużej (>6000 obs.) skali 
+          Jeydnym wyjątkiem dużej (>5000 relacji) skali 
             jest Dębica, 
               obserwujemy stosunek
               $\tfrac{\text{różnica}}{\text{cytujące} + \text{cytowane}}$ równy $0.4$,
