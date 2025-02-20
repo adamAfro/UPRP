@@ -197,7 +197,6 @@ def network(docrefs:pandas.DataFrame,
 
   return E, N
 
-@lib.flow.ipy.globparams()
 @lib.flow.map(('fig/grph/F-delay.pdf'))
 @lib.flow.init(network[0])
 def delayplot(edges:DF): 
