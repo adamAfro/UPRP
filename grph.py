@@ -202,6 +202,70 @@ def network(docrefs:pandas.DataFrame,
 @lib.flow.init(network[0])
 def delayplot(edges:DF): 
 
+  r"""
+
+  \subsection{Opóźnienie cytowania patentów}
+
+    \begin{multicols}{2}
+
+      \chart{fig/grph/F-delay.pdf}{
+        Rozkład gęstości opóźnienia 
+          w kolejnych latach,
+          z uwzględnieniem średniej odległości}
+
+      \columnbreak
+
+      Po lewej stronie został 
+        przedstawiony rozkład 
+          długości okresu między 
+            składaniem aplikacji patentów,
+            będących w relacjach cytowania ($\rho$).
+          dla każdej krawędzi grafu $G$,
+            tj. po między osobami
+              pełniącymi role patentowe
+                we wspomnianych patentach.
+      U góry przedstawiony jest
+        wykres gęstości.
+      Pod nim wykresy słupkowe,
+        każdy przedstawiający 
+          sytuację dla danego roku,
+        z osią $x$ przedstawiającą
+          opóźnienie w dniach
+            zgrupowanych do okresów 365 dni.
+      Kolorystycznie przedstawiono
+        zakres odległości
+          między osobami 
+            w jaki wpada dany dystans.
+      Można zaobserwować
+        znaczące wzrost gęstosci
+          dla wartości w przedziale
+             od 500 do 1500 dni.
+      Wykresy słupkowe 
+        wykazują podobną dynamikę
+          do roku 2016.
+      Później widać 
+        spłaszczenie rozkładu.
+      Dominującą odległością
+        jest wartość $0$.
+        Po za nią,
+      wartości rozkładają się
+        bez wykazywania 
+          szczególnego trendu,
+            innego niż wcześniej wspomniana 
+              tendencja do występowania
+                we wskazanym przedziale.
+      Ogólnie, 
+        pierwszy okres roczny w opóźnieniu
+        jest rzadki,
+          jednak widać zauważalny wzrost
+            w roku 2013.
+      W latach 2016, 2017, 2018 obserwujemy
+        mały ale widoczny 
+          wzrost zainteresowania patentami starszymi.
+      Mowa tu o wartościach 9-11 lat.
+      \end{multicols}
+  """
+
   E0 = edges
 
  #wybór danych
