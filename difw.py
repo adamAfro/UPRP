@@ -140,16 +140,21 @@ def mx(edges:DF, regions:DF):
   \chart{fig/difw/F-mx.pdf}
   { Macierz cytowań w raportach o stanie techniki z uwzględnieniem lat. }
 
+  Wykres powyżej przedstawia macierz cytowań w raportach o stanie techniki
+  pomiędzy województwami. Przedstawia ilość osób cytujących
+  w raportach o stanie techniki z uwzględnieniem lat i województw pochodzenia.
   Rząd wykresu wskazuje
   na województwo osoby cytowanej, 
   a kolumna, województwo osoby cytującej.
-  \TODO{przykład}
-
-  W dużej większości nie występuje zjawisko cytowań osób
-  z innych województw, jednak są liczne wyjątki, 
-  kolejno --- od góry:
-
-  \TODO{opisać. popr. po zmianach}
+  Szczególny klaster cytowań widać wśród województw
+  mazoewskiego, małopolskiego i śląskiego, dolnośląskiego, łódzkiego oraz wielkopolskiego.
+  Po za tym zgrupowaniem taka międzywojewódzka wymiana wiedzy jest rzadka.
+  W samodzielnych relacjach widać zwiazek województwa śląskiego i podkarpackiego.
+  Osoby z województwa śląskiego często cytują patenty osób z województwa podkarpackiego.
+  Tutaj warto zaznaczyć duży dystans między tymi województwami.
+  Czasowo, wymiana między województwami zachowuje relatywnie jednorodny charakter. 
+  Występują częste wahania przedstawiające wzrost zainteresowania między województwami.
+  Są to jednak przypadki rzadkie w stosunku do wszystkich relacji w całym okresie.
   """
 
  #dane
