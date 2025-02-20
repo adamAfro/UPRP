@@ -135,7 +135,7 @@ def ymap(edges:DF, regions:GDF, borders:GDF):
 
   return m
 
-@lib.flow.map(('fig/difp/F.pdf', 'tbl/difp/F.tex'))
+@lib.flow.map('fig/difp/F.pdf')
 @lib.flow.init(grph.network[0], grph.network[1], gloc.region[2])
 def citekind(edges:DF, nodes:DF, regions:DF):
 
