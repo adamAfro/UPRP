@@ -314,6 +314,18 @@ for d in [prfl, patt, rgst, subj, grph, rprt, difp, difw]:
 
   flow[d.__name__] = X
 
+if sys.argv[1] == 'plot':
+
+  for k in flow.keys():
+    for f in flow[k].values():
+      if f.mapping is None: continue
+      if isinstance(f.mapping, str) and f.mapping.endswith('.pdf'):
+        f(forced=True)
+      elif any(u is not None and u.endswith('.pdf') for u in f.mapping):
+        f(forced=True)
+
+  exit()
+
 for a in sys.argv[1:]:
 
   f = None

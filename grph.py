@@ -298,10 +298,6 @@ def delayplot(edges:DF):
 
   return D&p
 
-@lib.flow.map(('fig/grph/M-delay.pdf'))
-@lib.flow.init(network[0])
-def delaycart(): raise NotImplementedError()
-
 @lib.flow.map(('fig/grph/F-dist.pdf'))
 @lib.flow.init(network[0])
 def distplot(edges:pandas.DataFrame):
