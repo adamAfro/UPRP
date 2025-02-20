@@ -223,7 +223,25 @@ def mx(edges:DF, regions:DF):
 def exogcorr(edges:DF, variables:DF):
 
   r"""
+  \newpage
   \subsection{Korelacja zmiennych egzogenicznych}
+
+  Relacje między województwami są zjawiskiem zależnym od wielu czynników.
+  Wśród nich można wyróżnić odległość oraz opóźnienie w złożeniu patentu.
+  Tutaj trzeba zaznaczyć, że pomiary nie dają podstaw do odrzucenia hipotezy,
+  że opóźnienie między składaniem aplikacji w relacji cytowania patentów
+  jest zerowe.
+  Po za nimi zmienne takie jak nakłady przedsiębiorstw oraz poziom infrastruktury
+  także są istotne. Na następnej stronie znajduje się tabel przedstawiająca
+  korelację zmiennych pobranych z Banku Danych Lokalnych Głównego Urzędu Statystycznego.
+  Wzięte pod uwagę zmienne zostały wyznaczone przez arbitralny wybór kategorii,
+  pobranie ich oraz zmierzenie korelacji. Zmienne w tabeli to wyłącznie zmienne
+  o najwyższej korelacji i nie wyczerpują tematu wpływu czynników wewnętrznych
+  województwa na wymianę między nimi. Nie są też szczególnie wysokie, jednak
+  prezentują pewien znaczący wpływ na zachodzenie dyfuzji na tak dużych dystansach
+  jak między województwami. Warty uwagi jest też fakt istnienia .
+
+  \nextpage
 
   \tbl{tbl/difw/exogcorr.tex}
   { Korelacja wybranych zmiennych z liczbą cytowań 
