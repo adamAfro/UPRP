@@ -514,7 +514,8 @@ for k0 in ['Lens', 'Google']:
 
   flow[k]['narrow'] = Narrow(queries=flow[k]['query'], indexes=flow['UPRP']['index'], pbatch=None, ngram=False).map(D[k]+'/narrow.pkl')
 
-drop = Drop(queries, [flow[k]['narrow'] for k in D.keys()]).map('alien.pkl')
+indexing = flow['UPRP']['index']
+narrow = flow['UPRP']['narrow']
 
 
 @lib.flow.map('cache/rprt/edges.pkl')
