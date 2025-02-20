@@ -14,6 +14,96 @@ from scipy.cluster.hierarchy import linkage, fcluster
 import altair as Pt
 from util import A4
 
+@lib.flow.map('fig/difp/F.pdf')
+@lib.flow.init(grph.network[0], grph.network[1], gloc.region[2])
+def citekind(edges:DF, nodes:DF, regions:DF):
+
+  r"""
+  \newpage
+  \chart{fig/difp/F.pdf}
+  { Cytowania patentów w zależności od ich pochodzenia --- poziom powiatowy }
+  """
+
+  N0 = nodes
+  E0 = edges
+  R0 = regions
+
+ #zakres dyfuzji
+  E0['internal'] = E0['pgid'] == E0['pgidY']
+  EI = E0.query('  internal')
+  EE = E0.query('~ internal')
+
+ #wpływ patentów
+  N0['cytowany wewn.'] = N0['doc'].isin(EI['to'])
+  N0['cytowany zewn.'] = N0['doc'].isin(EE['to'])
+  N0['generator'] = N0.apply(lambda x: ' i '.join([k for k in ['cytowany wewn.', 'cytowany zewn.'] if x[k]]), axis=1)
+  N0['generator'] = N0['generator'].replace({'cytowany wewn. i cytowany zewn.': 'cytowany w.&z.'})
+  N0['generator'] = N0['generator'].replace({'': 'nie cytowane'})
+
+  N0['cytujący wewn.'] = N0['doc'].isin(EI['from'])
+  N0['cytujący zewn.'] = N0['doc'].isin(EE['from'])
+  N0['synthesis'] = N0.apply(lambda x: ' i '.join([k for k in ['cytujący wewn.', 'cytujący zewn.'] if x[k]]), axis=1)
+  N0['synthesis'] = N0['synthesis'].replace({'cytujący wewn. i cytujący zewn.': 'cytujący w.&z.'})
+  N0['synthesis'] = N0['synthesis'].replace({'': 'nie cytujące'})
+
+ #ograniczenie danych
+  E0 = E0[['pgid', 'year', 'pgidY', 'yearY', 'to', 'from', 'internal']].copy()
+  N0 = N0[['pgid', 'year', 'doc', 'generator', 'synthesis']].copy()
+  N0 = N0.query('year >= 2011')
+
+ #regionalizacja
+  R0 = R0[['gid', 'name']]
+  E0 = E0.set_index('pgid').join(R0.set_index('gid')).reset_index()
+  E0 = E0.set_index('pgidY').join(R0.set_index('gid').add_suffix('Y')).reset_index()
+  N0 = N0.set_index('pgid').join(R0.set_index('gid')).reset_index()
+
+ #grupowanie (...) ilościowe
+  gN = N0.groupby(['pgid', 'name', 'year', 'generator', 'synthesis'])
+  N = gN.size().rename('size').reset_index()
+
+  s = N.groupby('pgid')['size'].sum().rename('sum').reset_index()
+  s['cluster'] = fcluster(linkage(s[['sum']], method='ward', metric='euclidean'), 2, criterion='maxclust')
+  N = N.set_index('pgid').join(s.set_index('pgid')['cluster']).reset_index()
+
+ #zgrupowanie mniejszych
+  U = N.query('cluster == 1').groupby(['year', 'generator', 'synthesis'])['size'].sum().reset_index()
+  U['name'] = 'pozostałe'
+ #zgrupowanie szczegółowe większych
+  Z = N.query('cluster == 2').drop(columns=['cluster', 'pgid'])
+
+ #wymiary
+  x = Pt.X('year', type='ordinal')
+  x = x.axis(values=[2011, 2020])
+  y = Pt.Y('size', type='quantitative')
+  y = y.axis(values=[0,1, 5, 10, 20, 50, 100, 200, 500, 1000, 2000])
+  f = Pt.Column('synthesis', type='nominal')
+  c = Pt.Color('generator', type='nominal')
+  c = c.legend(orient='bottom')
+  c = c.scale(range=['black', 'red', 'blue', 'grey'])
+  n = Pt.Row('name', type='nominal')
+
+ #etykiety
+  Z['name'] = Z['name'].str.split(' ').apply(lambda x: x[1])
+  for a in [x, y, f, c, n]: a.title=None 
+
+  c = c.title('Pochodzenie cytowanych patentów')
+
+ #wykres zgrupowania
+  u0 = Pt.Chart(U.query('synthesis == "nie cytujące"')).mark_bar().encode(x, y, c, f, n)
+  u0 = u0.properties(width=0.1*A4.W, height=0.04*A4.H)
+
+  u = Pt.Chart(U.query('synthesis != "nie cytujące"')).mark_bar().encode(x, y, c, f, n)
+  u = u.properties(width=0.1*A4.W, height=0.04*A4.H)
+
+ #wykres szczegółowy
+  p0 = Pt.Chart(Z.query('synthesis == "nie cytujące"')).mark_bar().encode(x, y, c, f, n)
+  p0 = p0.properties(width=0.1*A4.W, height=0.04*A4.H)
+
+  p = Pt.Chart(Z.query('synthesis != "nie cytujące"')).mark_bar().encode(x, y, c, f, n)
+  p = p.properties(width=0.1*A4.W, height=0.04*A4.H)
+
+  return (p0 | p) & (u0 | u)
+
 @lib.flow.map('fig/difp/M-x.pdf')
 @lib.flow.init(grph.network[0], gloc.region[2], gloc.region[0])
 def xmap(edges:DF, regions:GDF, borders:GDF):
@@ -134,93 +224,3 @@ def ymap(edges:DF, regions:GDF, borders:GDF):
   m = Pt.concat(*M.values.tolist(), columns=3, spacing=0)
 
   return m
-
-@lib.flow.map('fig/difp/F.pdf')
-@lib.flow.init(grph.network[0], grph.network[1], gloc.region[2])
-def citekind(edges:DF, nodes:DF, regions:DF):
-
-  r"""
-  \newpage
-  \chart{fig/difp/F.pdf}
-  { Cytowania patentów w zależności od ich pochodzenia --- poziom powiatowy }
-  """
-
-  N0 = nodes
-  E0 = edges
-  R0 = regions
-
- #zakres dyfuzji
-  E0['internal'] = E0['pgid'] == E0['pgidY']
-  EI = E0.query('  internal')
-  EE = E0.query('~ internal')
-
- #wpływ patentów
-  N0['cytowany wewn.'] = N0['doc'].isin(EI['to'])
-  N0['cytowany zewn.'] = N0['doc'].isin(EE['to'])
-  N0['generator'] = N0.apply(lambda x: ' i '.join([k for k in ['cytowany wewn.', 'cytowany zewn.'] if x[k]]), axis=1)
-  N0['generator'] = N0['generator'].replace({'cytowany wewn. i cytowany zewn.': 'cytowany w.&z.'})
-  N0['generator'] = N0['generator'].replace({'': 'nie cytowane'})
-
-  N0['cytujący wewn.'] = N0['doc'].isin(EI['from'])
-  N0['cytujący zewn.'] = N0['doc'].isin(EE['from'])
-  N0['synthesis'] = N0.apply(lambda x: ' i '.join([k for k in ['cytujący wewn.', 'cytujący zewn.'] if x[k]]), axis=1)
-  N0['synthesis'] = N0['synthesis'].replace({'cytujący wewn. i cytujący zewn.': 'cytujący w.&z.'})
-  N0['synthesis'] = N0['synthesis'].replace({'': 'nie cytujące'})
-
- #ograniczenie danych
-  E0 = E0[['pgid', 'year', 'pgidY', 'yearY', 'to', 'from', 'internal']].copy()
-  N0 = N0[['pgid', 'year', 'doc', 'generator', 'synthesis']].copy()
-  N0 = N0.query('year >= 2011')
-
- #regionalizacja
-  R0 = R0[['gid', 'name']]
-  E0 = E0.set_index('pgid').join(R0.set_index('gid')).reset_index()
-  E0 = E0.set_index('pgidY').join(R0.set_index('gid').add_suffix('Y')).reset_index()
-  N0 = N0.set_index('pgid').join(R0.set_index('gid')).reset_index()
-
- #grupowanie (...) ilościowe
-  gN = N0.groupby(['pgid', 'name', 'year', 'generator', 'synthesis'])
-  N = gN.size().rename('size').reset_index()
-
-  s = N.groupby('pgid')['size'].sum().rename('sum').reset_index()
-  s['cluster'] = fcluster(linkage(s[['sum']], method='ward', metric='euclidean'), 2, criterion='maxclust')
-  N = N.set_index('pgid').join(s.set_index('pgid')['cluster']).reset_index()
-
- #zgrupowanie mniejszych
-  U = N.query('cluster == 1').groupby(['year', 'generator', 'synthesis'])['size'].sum().reset_index()
-  U['name'] = 'pozostałe'
- #zgrupowanie szczegółowe większych
-  Z = N.query('cluster == 2').drop(columns=['cluster', 'pgid'])
-
- #wymiary
-  x = Pt.X('year', type='ordinal')
-  x = x.axis(values=[2011, 2020])
-  y = Pt.Y('size', type='quantitative')
-  y = y.axis(values=[0,1, 5, 10, 20, 50, 100, 200, 500, 1000, 2000])
-  f = Pt.Column('synthesis', type='nominal')
-  c = Pt.Color('generator', type='nominal')
-  c = c.legend(orient='bottom')
-  c = c.scale(range=['black', 'red', 'blue', 'grey'])
-  n = Pt.Row('name', type='nominal')
-
- #etykiety
-  Z['name'] = Z['name'].str.split(' ').apply(lambda x: x[1])
-  for a in [x, y, f, c, n]: a.title=None 
-
-  c = c.title('Pochodzenie cytowanych patentów')
-
- #wykres zgrupowania
-  u0 = Pt.Chart(U.query('synthesis == "nie cytujące"')).mark_bar().encode(x, y, c, f, n)
-  u0 = u0.properties(width=0.1*A4.W, height=0.04*A4.H)
-
-  u = Pt.Chart(U.query('synthesis != "nie cytujące"')).mark_bar().encode(x, y, c, f, n)
-  u = u.properties(width=0.1*A4.W, height=0.04*A4.H)
-
- #wykres szczegółowy
-  p0 = Pt.Chart(Z.query('synthesis == "nie cytujące"')).mark_bar().encode(x, y, c, f, n)
-  p0 = p0.properties(width=0.1*A4.W, height=0.04*A4.H)
-
-  p = Pt.Chart(Z.query('synthesis != "nie cytujące"')).mark_bar().encode(x, y, c, f, n)
-  p = p.properties(width=0.1*A4.W, height=0.04*A4.H)
-
-  return (p0 | p) & (u0 | u)
