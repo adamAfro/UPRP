@@ -46,14 +46,14 @@ def citekind(edges:DF, nodes:DF, regions:DF):
   EE = E0.query('~ internal')
 
  #wpływ patentów
-  N0['cytowany wewn.'] = N0['doc'].isin(EI['to'])
-  N0['cytowany zewn.'] = N0['doc'].isin(EE['to'])
+  N0['cytowany wewn.'] = N0['doc'].isin(EI['from'])
+  N0['cytowany zewn.'] = N0['doc'].isin(EE['from'])
   N0['generator'] = N0.apply(lambda x: ' i '.join([k for k in ['cytowany wewn.', 'cytowany zewn.'] if x[k]]), axis=1)
   N0['generator'] = N0['generator'].replace({'cytowany wewn. i cytowany zewn.': 'cytowany w.&z.'})
   N0['generator'] = N0['generator'].replace({'': 'nie cytowane'})
 
-  N0['cytujący wewn.'] = N0['doc'].isin(EI['from'])
-  N0['cytujący zewn.'] = N0['doc'].isin(EE['from'])
+  N0['cytujący wewn.'] = N0['doc'].isin(EI['to'])
+  N0['cytujący zewn.'] = N0['doc'].isin(EE['to'])
   N0['synthesis'] = N0.apply(lambda x: ' i '.join([k for k in ['cytujący wewn.', 'cytujący zewn.'] if x[k]]), axis=1)
   N0['synthesis'] = N0['synthesis'].replace({'cytujący wewn. i cytujący zewn.': 'cytujący w.&z.'})
   N0['synthesis'] = N0['synthesis'].replace({'': 'nie cytujące'})
