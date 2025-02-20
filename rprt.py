@@ -533,7 +533,6 @@ for k0 in ['Lens', 'Google']:
 drop = Drop(queries, [flow[k]['narrow'] for k in D.keys()]).map('alien.pkl')
 
 
-@lib.flow.ipy.globparams()
 @lib.flow.map('cache/rprt/edges.pkl')
 @lib.flow.init(flow['UPRP']['narrow'])
 def edges(results:pandas.DataFrame):
