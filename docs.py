@@ -196,6 +196,50 @@ Każde cytowanie jest więc relacją
 
     \chapter{Podsumowanie}
 
+Celem pracy jest przybliżenie zjawiska dyfuzji wiedzy innowacyjnej 
+w Polsce z wykorzystaniem danych urzędu patentowego i technik opisowych. 
+Dyfuzja wiedzy innowacyjnej, czyli przepływ informacji o nowych technologiach, 
+produktach i usługach, jest kluczowym elementem rozwoju gospodarczego. 
+Patenty stanowią dobry wskaźnik tego zjawiska, ponieważ dotyczą wyłącznie innowacji 
+i zawierają kluczowe informacje, takie jak innowacyjność, czas powstania i miejsce autorów.
+
+W pracy wykorzystano dane z Urzędu Patentowego Rzeczypospolitej Polskiej.
+Analiza obejmowała metadane patentów, wydarzenia związane z patentami, klasyfikacje patentowe 
+(\ac{IPC}) oraz dane lokalizacyjne. Wykorzystano również raporty o stanie techniki. 
+Do identyfikacji osób i uzupełniania braków geolokalizacji 
+zastosowano metody podobieństwa afiliacyjno-geolokalizacyjnego i nazewniczego.
+Wyniki. Analiza przepływu wiedzy opiera się na grafie 
+skierowanym relacji między osobami, tworzonym na podstawie 
+cytowań w raportach o stanie techniki. 
+Badanie przedstawia rozkład opóźnienia cytowań patentowych, 
+odległości między osobami cytującymi, a cytowanymi oraz 
+charakterystykę lokalizacji na podstawie ilości osób cytujących i cytowanych. 
+
+Analizowa obejmuje dyfuzję wiedzy innowacyjnej w powiatach i województwach, 
+uwzględniając pochodzenie cytowań.
+
+Z analizy wynika, że dyfuzja wiedzy innowacyjnej 
+w Polsce jest nierównomierna przestrzennie, 
+z wyraźną koncentracją w powiatach miejskich. 
+Istotną rolę odgrywają duże miasta, takie jak Warszawa, Kraków, Wrocław i Poznań. 
+Większość cytowań zachodzi między osobami z tej samej lokalizacji, 
+a odległość między osobami cytującymi a cytowanymi.
+W Polsce istnieje klaster innowacyjny obejmujący województwa
+mazowieckie, małopolskie i śląskie, dolnośląskie, łódzkie i wielkopolskie.
+Wymiana informacji w obszarze tych województw jest szczególnie widzoczna.
+
+Praca ma pewne ograniczenia związane z jakością i dostępnością danych. 
+Nie wszystkie wynalazki są opatentowane, a dane lokalizacyjne 
+są ograniczone do nazwy miejscowości. Normalizacja nazw miejscowości 
+i identyfikacja osób stanowią wyzwanie ze względu na niejednoznaczność danych. 
+Wykluczenie wsi z analizy mogło wpłynąć na wyniki.
+
+W przyszłych badaniach warto rozważyć wykorzystanie innych źródeł danych, 
+takich jak publikacje naukowe i dane o współpracy między firmami. 
+Można również zastosować bardziej zaawansowane metody analizy sieciowej 
+i modelowania przestrzennego, aby lepiej zrozumieć procesy dyfuzji wiedzy innowacyjnej. 
+Interesujące byłoby również zbadanie wpływu polityki innowacyjnej 
+na dyfuzję wiedzy oraz porównanie wyników z innymi krajami.
 
 \bibliographystyle{unsrt}\bibliography{cit}
 
