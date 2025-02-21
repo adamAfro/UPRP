@@ -196,53 +196,6 @@ Każde cytowanie jest więc relacją
 
     \chapter{Podsumowanie}
 
-  \section{Wnioski}
-
-Należy przypuszczać, 
-  że dyfuzja wiedzy innowacyjnej w Polsce
-    jest procesem ograniczonym najczęściej do miasta.
-      Wskazuje na to zarówno literatura (\cref{rozdział-literatura}),
-        w której to mały dystans jest kluczowy;
-      jak i przegląd danych: 
-        ośrodki miejskie są znaczące 
-          w tworzeniu wiedzy ulegającej dyfuzji
-          jak i jej syntezy.
-        To w samych miastach wymiana następuje najczęściej 
-          co jest wnioskiem 
-            z liczności odległości małych i zerowych
-              w relacjach cytowań patentowych
-                (\cref{fig/grph/distcart.pdf}, \cref{fig/grph/distplot.pdf}),
-
-Kluczowym elementem w dyfuzji wiedzy innowacyjnej
-  w Polsce
-    jest dystans,
-    oraz potencjał miast?
-      \TODO{korelacja}
-
-Na obszar szczególnie podatny dyfuzji rysuje się
-  Polska centralna oraz południowo-zachodnia.
-    Relacje wojewódzkie w dyfuzji wiedzy 
-    są silne 
-    własnie między nimi.
-  W pozostałych obszarach można wyróżnić jedynie 
-    miasta: Szczecin, Poznań oraz Lublin, które
-      są ośrodkami wojewódzkimi 
-        (\cref{fig/grph/distcart.pdf}).
-Charakterystyka ta jest relatywnie stabilna w badanym okresie,
-  a wymiana wiedzy jest znacząca między tymi regionami (\cref{fig/difu/F-mxyeartr.pdf}).
-
-Istnieje także pewne rozróżnienie 
-  na miejsca
-    generujące wiedzę
-    oraz te ją pobierające:
-      większość miast w Polsce, także dużych
-      charakteryzuje odpływ wiedzy,
-      ale wyjątkami jest sama stolica Warszawa
-      oraz okolice Rybnika (\cref{fig/grph/distcart.pdf}).
-      Warty uwagi jest fakt, że Rybnik jest 
-      bardzo blisko miasta Ostrawa w Czechach,
-      w którym pełni funkcję miasta znaczącego.
-
 
 \bibliographystyle{plain}\bibliography{cit}
 
