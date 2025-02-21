@@ -218,6 +218,21 @@ Każde cytowanie jest więc relacją
   \textbf{\tytul}
 \end{center}
 
+Analiza przedstawia dyfuzję wiedzy innowacyjnej w Polsce 
+w oparciu o dane patentowe z ostatnich dziesięciu lat. 
+Wykorzystane są dane z Urzędu Patentowego Rzeczypospolitej Polskiej, 
+w tym raporty o stanie techniki, 
+do zbadania przepływu wiedzy między osobami i organizacjami. 
+Analiza obejmuje identyfikację osób, ich lokalizację, 
+klasyfikacje patentowe oraz relacje cytowań między patentami. 
+Praca bada rozkład opóźnienia cytowań patentowych, odległości 
+między osobami cytującymi i cytowanymi oraz charakterystykę 
+lokalizacji pod względem ilości 
+osób zaangażowanych w proces dyfuzji.
+ Wyniki wskazują na nierównomierne rozłożenie 
+ dyfuzji wiedzy w Polsce, 
+ z koncentracją w kilku kluczowych powiatach i województwach.
+
 \bigskip
 
 \begin{center}
@@ -225,7 +240,10 @@ Każde cytowanie jest więc relacją
 \end{center}
 
 \selecthyphenation{english}
-{\it }
+{\it 
+The analysis presents the diffusion of innovative knowledge in Poland based on patent data from the last ten years. Data from the Polish Patent Office, including prior art reports, are used to examine the flow of knowledge between individuals and organizations. The analysis includes the identification of individuals, their locations, patent classifications, and citation relationships between patents. The study investigates the distribution of patent citation delays, distances between citing and cited individuals, and the characteristics of locations in terms of the number of people involved in the diffusion process. The results indicate an uneven distribution of knowledge diffusion in Poland, with concentration in a few key counties and provinces.
+
+}
 
 \end{document}
 """
