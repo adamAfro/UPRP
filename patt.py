@@ -1,9 +1,7 @@
 r"""
-\section{Tabele dotyczące patentów}
-
 W bazie danych istnieją 
   4 tabele
-    istotne dla analizy patentów.
+    istotne dla analizy samych patentów.
 """
 
 #lib
