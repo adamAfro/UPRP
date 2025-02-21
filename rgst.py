@@ -315,11 +315,15 @@ def named(pulled:pandas.DataFrame, nameset:pandas.DataFrame):
   r"""
   \subsection{Wyciąganie danych osobowych}
 
+  \begin{multicols}{2}
+  \chart{fig/rgst/F-named.pdf}{Wykres klasyfikacji imion}
+
   Na podstawie wcześniej określonych nazw charakterystycznych
   dla organizacji i tych dla imion, dane dotyczące podmiotów
   są dzielone na dane osobowe i dotyczące organizacji.
   Część nazw i imion nie ulega klasyfikacji w wyniku algorytmu. 
   Dla uproszczenia zakładamy, że dotyczą one osób fizycznych.
+  \end{multicols}
 
   Definiujemy przy tym ciąg imienniczy, który wykorzystany jest
   później przy identyfikacji tych samych osób jako autorów
@@ -394,10 +398,6 @@ def named(pulled:pandas.DataFrame, nameset:pandas.DataFrame):
 @lib.flow.map('fig/rgst/F-named.pdf')
 @lib.flow.init(named)
 def namedplot(data:pandas.DataFrame):
-
-  r"""
-  \chart{fig/rgst/F-named.pdf}{Wykres klasyfikacji imion}
-  """
 
 
   R = data['organisation']

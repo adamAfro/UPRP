@@ -49,6 +49,7 @@ r"""
         a wszystkie patenty wymienione w raporcie 
           są węzłami początkowymi.
 
+  \newpage
   \begin{multicols}{2}
     Po prawej 
       stronie zaprezentowany jest 
@@ -202,7 +203,7 @@ def network(docrefs:pandas.DataFrame,
 def delayplot(edges:DF): 
 
   r"""
-
+  \newpage
   \subsection{Rozkład opóźnienia cytowań patentowych}
 
     \begin{multicols}{2}

@@ -1,4 +1,5 @@
 r"""
+\newpage
 \section{Dyfuzja wiedzy innowacyjnej między województwami}
 """
 
