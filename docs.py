@@ -197,7 +197,7 @@ Każde cytowanie jest więc relacją
     \chapter{Podsumowanie}
 
 
-\bibliographystyle{plain}\bibliography{cit}
+\bibliographystyle{unsrt}\bibliography{cit}
 
 \listoffigures
 
