@@ -1,7 +1,4 @@
 r"""
-W bazie danych istnieją 
-  4 tabele
-    istotne dla analizy samych patentów.
 """
 
 #lib
@@ -16,25 +13,6 @@ import altair as Plot
 
 @lib.flow.placeholder()
 def Code(storage:lib.storage.Storage, assignpath:str):
-
-  r"""
-  \subsection{Metadane}
-  \label{metadane}
-
-  Metadane to informacje o patentach, 
-    których zbieranie jest realizowane 
-      na potrzeby wewnętrznych systemów \ac{UPRP}.
-  Wśród metadanych można wyróżnić 
-    informacje o numerze złożonej aplikacji patentowej oraz
-    kraju, w którym został złożony.
-  Niniejsza analiza 
-    wykorzystuje numery patentowe 
-      do ich identyfikacji.
-  Każdy patent ma przydzielony 
-    numer złożenia aplikacji.
-    W razie otrzymania ochrony, 
-      dostaje również numer przyznania patentu.
-  """
 
   S = storage
   with open(assignpath, 'r') as f:
@@ -275,7 +253,7 @@ def Geolocate(storage:lib.storage.Storage,
       sprzez zastosowanie algorytmu wybierającego 
         najbliższe współrzędne geograficzne 
           dla danej grupy:
-        rozważane są wszystkie kombinacje nazw miejscowości,
+        rozważane są wszystkie kombinacje lokalizacji miejscowości,
           kombinacja o najmniejszej sumie odległości jest wybierana.
   """
 

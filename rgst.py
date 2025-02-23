@@ -3,7 +3,7 @@ r"""
 
 Oprócz zbieranie informacji o samych patentach, 
 urząd zbiera także informacje o osobach związanych z patentami
-i organizacjach.
+i o organizacjach.
 Wyżej wspomniane są nazwy miejscowości zameldowania,
 oprócz nich urząd zbiera także imię i nazwisko
 albo nazwę organizacji.
@@ -19,7 +19,7 @@ wynalazca, właściciel, aplikant, pełnomocnik oraz urzędnik.
 Wynalazca jest (współ)autorem wynalazku, właściciel posiada
 prawa do patentu, aplikant składa wniosek patentowy, pełnomocnik
 reprezentuje właściciela w sprawach urzędowych, 
-a wskazany na rysunku \ref{struktura-patentowa} obok urzędnik
+a wskazany na rysunku \ref{struktura-patentowa} urzędnik
 przygotowuje raport o stanie techniki dla danego patentu.
 
 \columnbreak
@@ -74,7 +74,7 @@ przygotowuje raport o stanie techniki dla danego patentu.
         wynalazcy, właściciela albo aplikanta. }
 \end{multicols}
 
-Głownym problemen danych jest 
+Głownym problemen w danych jest 
 niejednoznaczność w kontekście identyfikacji osób i organizacji.
 W danych patentowych,
 osoby rozróżnia się za pomocą imienia, nazwiska oraz nazwy miejscowości. 
@@ -86,9 +86,9 @@ a jednocześnie nie jest wykluczone;
 niektóre podpisy zawierają pierwsze litery imion, inne są całościowe 
 mimo że dotyczą potencjalnie tej samej osoby.
 Nie ma także pełnego podziału na osoby i organizacje. 
-W wielu przypadkach organizacja rzeczywiście 
+W wielu przypadkach organizacja, rzeczywiście 
 jest oznaczona jako taki podmiot,
-jednak nie jest to regułą.
+jednak nie jest to ściśle spełnioną regułą.
 """
 
 #lib
@@ -117,10 +117,10 @@ def names(asnstores:dict[lib.storage.Storage, str],
   a inne zawierają podział na imię i nazwisko można ustalić zbiór słów
   kluczowych oraz pełnych nazw, które są charakterystyczne dla danego typu.
   Dodatkową informacją jest to, że
-  o ile aplikanci i właściciele patentów mogą dotyczyć zarówno osób
-  fizycznych jak i organizacji, to wynalazcy są zawsze osobami fizycznymi.
+  o ile aplikanci i właściciele patentów mogą być zarówno osobami
+  fizycznymi jak i organizacjami, to wynalazcy są zawsze osobami fizycznymi.
   Do zbioru wprowadzone są także słowa charakterystyczne dla nazw organizacji,
-  takie jak \textit{spółka}, \textit{fundacja}, \textit{instytut}, 
+  takie jak: \textit{spółka}, \textit{fundacja}, \textit{instytut}, 
   \textit{INC.}, \textit{SP. Z O. O.} itp. Zbiór ten wykorzystany jest dalej
   do oceny czy dany wpis dotyczy osoby fizycznej czy organizacji.
   """
@@ -271,7 +271,12 @@ def cityplot(data:pandas.DataFrame):
 
   r"""
   \chart{fig/rgst/pulled-city.pdf}
-  { Wykres liczności rejestrów z miast }
+  { Wykres liczności rejestrów miejscowości }
+
+  Powyższy wykres prezentuje stan uzupełnienia informacji dotyczących
+  miejsca zameldowania osób. Należy zauważyc istotną frakcję
+  osób, które nie mają uzupełnionej informacji dotyczącej miejscowości.
+  Duża frakcja jest miejscowościami rzadko wspominami --- mniej niż 500 razy.
   """
 
  #dane
@@ -291,7 +296,7 @@ def cityplot(data:pandas.DataFrame):
   yN2k = Pt.Y('size').title('≥2000')
 
   xN0 = Pt.Y('size').bin(step=500).title(None)
-  yN0 = Pt.X('count(size)').scale(type='log').title('Ilość miast')
+  yN0 = Pt.X('count(size)').scale(type='log').title('Ilość nazw')
 
   xNA = Pt.X('index').title(None)
   yNA = Pt.Y('size').title(None)
@@ -318,22 +323,14 @@ def named(pulled:pandas.DataFrame, nameset:pandas.DataFrame):
   \begin{multicols}{2}
   \chart{fig/rgst/F-named.pdf}{Wykres klasyfikacji imion}
 
+  \columnbreak
+
   Na podstawie wcześniej określonych nazw charakterystycznych
   dla organizacji i tych dla imion, dane dotyczące podmiotów
   są dzielone na dane osobowe i dotyczące organizacji.
   Część nazw i imion nie ulega klasyfikacji w wyniku algorytmu. 
   Dla uproszczenia zakładamy, że dotyczą one osób fizycznych.
   \end{multicols}
-
-  Definiujemy przy tym ciąg imienniczy, który wykorzystany jest
-  później przy identyfikacji tych samych osób jako autorów
-  różnych patentów.
-
-  \D{ciąg-imienniczy}{Ciąg imienniczy $N_k$}
-  { ciąg imion oraz nazwisk przypisany danej osobie. }
-
-  To czy dany element $n,\ n\in N_k$ jest imieniem, czy nazwiskiem 
-  nie zawsze jest jednoznaczne.
   """
 
   X = pulled
@@ -420,7 +417,7 @@ def placed(textual:pandas.DataFrame, geoloc:pandas.DataFrame, event:pandas.DataF
 
   Biorąc pod uwagę dane pozyskane na temat patentów oraz 
   osób z nimi związanych można zdefiniować przestrzeń
-  oraz czas w jakim te osoby działają.
+  oraz czas, w jakich te osoby działają.
   Każdej osobie przyporządkowany jest odpowiedni punkt, 
   wcześniej określony przy ustalaniu lokalizacji patentów.
   Czas działania osoby jest wyznaczony jako czas złożenia

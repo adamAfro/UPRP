@@ -51,7 +51,11 @@ def affilnames(registry:pandas.DataFrame):
 
   r"""
   \D{defi}{Główna para imiennicza $\hat N_k$}{Zbiór 2-elementowy pierwszego 
-  i ostatniego słowa ciągu imienniczego (\cref{ciąg-imienniczy})}
+  i ostatniego słowa ciągu imion i nazwiska. Założenie jest takie, że
+  najistotniejesze imię albo nazwisko (część nazwiska wieloczłonowego) 
+  znajduje się na początku, a koniec utożsamiany jest z nazwiskiem; 
+  w skrajnej sytuacji może to być mało znaczące drugie imię. 
+  Przyjęte jest, że są to przypadki bardzo rzadkie.
 
   \D{defi}{Zbiór afiliacyjno-nazewniczy $k$-osoby $\tilde N_k$}{Zbiór imion, 
   nazwisk oraz słów, które mogą być imieniem lub nazwą; zawiera
@@ -130,7 +134,7 @@ def simcalc(affilated:pandas.DataFrame):
 
   \begin{uwaga}
   Wpisy zawierają nazwy miejscowości zameldowania, jednak wyszukwianie za ich
-  pomocą odbywa się po geolokalizacji patentowej.
+  pomocą odbywa się używając geolokalizacji patentowej.
   W związku z tym, mimo identycznej nazwy miejscowości może nie dojść do
   zgodności geolokalizacyjnej.
   \end{uwaga}

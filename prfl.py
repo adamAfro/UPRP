@@ -167,7 +167,7 @@ def Profiling(dir:str, kind:str, assignpath:str, aliaspath:str,  profargs:dict={
         obiektów pojedynczych
       są tymi wartościami.
 
-  Etapem pierwszym w implementacji jest 
+  Etapem pierwszym w implementacji powyższego schematu jest 
     wyróżnienie tych obiektów,
       które są ciągami wartości;
   etap drugi to 

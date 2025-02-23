@@ -42,15 +42,15 @@ Z danych zebranych z \ac{API} można wyodrębnić tabelę
 zawierającą listę adresów internetowych
 z plikami związanymi z danym zgłoszeniem. Tabela składa się
 z kodów \ac{URI} oraz kodów rozróżniających typ dokumentu.
-Kody o typie \textit{RAPORT} albo \textit{RAPORT1} są kodami 
-\ac{URI} do z adresami \ac{URL} do plików zawierających raporty 
+Część kodów dotyczy identyfikatorów 
+\ac{URI}, które są adresami \ac{URL} do plików zawierających raporty 
 o stanie techniki. Są to pliki w formacie \ac{PDF}.
 
 Poniżej przedstawiono przykład tego jaką strukturę mogą tworzyć 
-\cref{fig:raport-ex}. Są to raporty dla patentów $p_1, p_2, p_3$. 
+(\cref{fig:raport-ex}). Są to raporty dla patentów $p_1, p_2, p_3$. 
 Zawierają odniesienia do patentów, które istnieją w zbiorze danych, 
 tj. $p_1, p_2, p_3$. Oprócz tego mają odniesienia do patentów 
-spoza domeny $\hat p_4, \hat p_5$ oraz publikacji naukowych 
+spoza domeny, np. zagraniczne: $\hat p_4, \hat p_5$; oraz publikacji naukowych 
 $\hat l_1, \hat l_2$, które nie są uwzględnione w poniższej analizie.
 
 \begin{figure}[H]\centering
@@ -99,16 +99,13 @@ Polega ono na wskazaniu sumy zbiorów
 słów: numerów patentowych, słów języka naturalnego oraz dat. 
 Wskazanie tej sumy zachodzi dla każdej pary wszystkich słów zapytań
 ze wszystkimi słowami ze zbioru danych. Dodatkowo zachodzi łączenie
-częściowe, które dopasowuje n-gramy poszczególnych słów. Od pewnego
-minimalnego dopasowania zostają one uwzględnione. Całość wymaga
-pewnych kroków optymalizacyjnych. Głównym jest zasada, że słowa
+częściowe, które dopasowuje n-gramy poszczególnych słów,
+które są uwzlgędnione od pewnego minimal nego stopnia dopasowania. 
+Całość wymaga pewnych kroków optymalizacyjnych. Głównym jest zasada, że słowa
 są dopasowywane tylko pod warunkiem, że zaszło dopasowanie numeru
 patentu.
-
 W trakcie wyszukiwania tworzona jest jego punktacja, aby odróżnić
-wartościowe wyniki. Oprócz punktacji jest też ustalanie poziomu
-wyszukiwania na podstawie tego jakie rzeczywiste dane są łącznikami.
-Wybierane są wyłącznie pojedyncze, najlepsze wyniki.
+wartościowe wyniki. Wybierane są wyłącznie pojedyncze, najlepsze wyniki.
 
 Raporty \ac{PDF} nie posiadają adnotacji tekstowych. 
 Znaczy to tyle, że dane są zawarte w sposób czytelny
@@ -119,9 +116,9 @@ przekształca na kod binarny, które można przetwarzać na komputerze
 jako ciągi znaków odpowiadające prawdziwemu tekstowi. Pierwszą
 czynnością w tym procesie jest zastosowanie pakietu \textit{paddle}.
 Zastosowanie modułu pozwala na pozyskanie linijek tekstu z przypisaniem
-do ich pozycji. Wynika z tego problem taki, że nie brak jest informacji
+do ich pozycji. Wynika z tego problem taki, że brak jest informacji
 o tym gdzie zaczyna i kończy się tekst dotyczący wskazanej obserwacji.
-W związku z tym nie sposób jest przypisać tekstu do odpowiednich
+W związku z tym nie sposób jest przypisać tekst do odpowiednich
 wpisów. Dodatkowo dochodzą problemy wynikające z błędów w procesie
 skanowania samych dokumentów - zniekształcenia, zaciemnienia, czy
 rotacje kartek sprawiają, że proces \ac{OCR} nie jest idealny.
@@ -140,7 +137,7 @@ zbiór wpisów tekstowych.
 
 Mimo, że model \textit{paddle} nie dawał wyników pozwalających na
 poprawną dalszą analizę to pozwolił na ograniczenie kosztów. Znalezienie
-słów kluczowych nagłówków i stopek tabeli z informacjami było wystarczające
+słów kluczowych nagłówków i stopek tabel z informacjami było wystarczające
 aby przyciąć zdjęcia do obszarów zainteresowania.
 
 """
@@ -162,12 +159,14 @@ from util import A4
 def Indexing(storage:lib.storage.Storage, assignpath:str):
 
   """
+
   Indeksowanie danych z profili, jest wymagane do przeprowadzenia
   wyszukiwania w optymalny komputacyjnie sposób.
   Jest to etap po profilowaniu, który fragmentuje dane na
   ustalone typy: ciągy cyfrowe, daty, słowa kluczowe, n-gramy słów i ciągów.
   W zależności od typu, ilości powtórzeń w danych i ich długości posiadaja
   inne punktacje, które mogą być dalej wykorzystane w procesie wyszukiwania.
+
   """
 
   from lib.index import Exact, Words, Digital, Ngrams, Date
@@ -203,13 +202,6 @@ def Indexing(storage:lib.storage.Storage, assignpath:str):
 @lib.flow.init(qpath='raport.uprp.gov.pl.csv', storage=prfl.repos['UPRP'], docsframe='raw')
 def identified(qpath:str, storage:lib.storage.Storage, docsframe:str):
 
-  """
-  Rozpoznawanie zapytań odbywa się w zupełnie innym kontekście i
-  nie zwraca dla zapytań informacji o tym skąd pochodzą.
-  Identyfikacja korzysta z nazw plików i metadanych samych zapytań
-  to dopasowania ich do odpowiednich danych w zbiorze.
-  """
-
   Q = pandas.read_csv(qpath)
   D = storage.data[docsframe]
 
@@ -232,7 +224,11 @@ def identified(qpath:str, storage:lib.storage.Storage, docsframe:str):
 @lib.flow.init(identified)
 def queries(searches: pandas.Series):
 
-  """
+  r"""
+  \skip
+
+  Cytowania w raportach o stanie techniki traktowane
+  są jako zapytania w wyszukiwaniu.
   Parsowanie zapytań to proces wyciągania z tekstów
   ciągów przypominających daty i numery patentowe.
   Proces polega na wstępnym podzieleniu całego napisu na
@@ -318,10 +314,12 @@ class Search:
 def Narrow(queries:pandas.Series, indexes:tuple, pbatch:int=2**14, ngram=True):
 
   """
+  \skip
+
   Wyszukiwanie w zależności od parametrów korzysta z dopasowania
   kodami patentowymi albo ich częściami. Później w grafie takich
-  połączeń szuka dodatkowych dowodów na istnienie połączenia:
-  wspólnych kluczy (np. imion i nazw miast) oraz dat.
+  połączeń poszukiwane są dodatkowe dowodów na istnienie połączenia:
+  wspólne kluczy (np. imion i nazw miast) oraz daty.
   Zbieżność słów kluczowych jest znacząca, jeśli ich punktacja
   jest przynajmniej równa 10, gdzie każdy punkt to jedno wspólne słowo,
   albo wystąpienie zbieżnych słów w każdej z kategorii: imiona, nazwy miast, tytuły.
@@ -540,7 +538,6 @@ def UPRPscoreplot(results=pandas.DataFrame):
   r"""
   \subsection{Wyniki wyszukiwania}
 
-  
   \begin{multicols}{2}
   \chart{fig/rprt/UPRP-score.pdf}
   { Wykres punktacji wyszukiwania patentów 
@@ -550,11 +547,11 @@ def UPRPscoreplot(results=pandas.DataFrame):
   Po lewej widać punktację wyników wyszukiwania patentów.
   Niemal wszystkie wyniki są w przedziale od 0 do 200,
   przy czym wyniki mają najczęściej punktację w okolicach 0.
-  Świadczy to o słabym częstym słabym wskazaniu cytowań.
+  Świadczy to o częstym i słabym wskazaniu cytowań.
   Większość wyników zawiera jednak dokładne przyporządkowanie
   kodem złożenia aplikacji. Istnieje także frakcja, która
-  została przyporządkowana częsciowym kodem, na podstawie
-  wysokiej punktacji.
+  została przyporządkowana częsciowym kodem, ale z
+  wysoką punktacją.
   \end{multicols}
   """
 
