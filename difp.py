@@ -63,7 +63,7 @@ def citekind(edges:DF, nodes:DF, regions:DF):
     Etykiety \textit{x-wewn}, \textit{x-zewn}; \textit{y-wewn}, \textit{y-zewn}
       oznaczają odpowiednio:
         osoby, których patenty są cytowane w innch patentach wewnętrznie / zewnętrznie;
-        osoby cytujące inne patenty wewnętrznei / zewnętrznie.
+        osoby cytujące inne patenty wewnętrznie / zewnętrznie.
     Zapisy \textit{x-w.&z}, \textit{y-w.&z}
       oznaczają cytowania zarówno wewnętrzne jak i zewnętrzne.
     \textit{Wnętrze} oraz \textit{zewnętrze}
@@ -78,7 +78,7 @@ def citekind(edges:DF, nodes:DF, regions:DF):
     Wyjątkiem jest tu miasto Lublin.
       W przypadku powiatu miasta Lublin nie obserwujemy spadku,
         dodatkowo należy zaznaczyć, że ilość patentów,
-          które korzystały z wiedzy z samego powiatu,
+          które korzystały z wiedzy z tego samego powiatu,
             a jednocześnie innych regionów Polski
             rośnie w czasie od 2016 roku.
     W przypadku powiatu Warszawa 
@@ -213,13 +213,13 @@ def xmap(edges:DF, regions:GDF, borders:GDF):
   straciła na znaczeniu. Był to jednocześnie szczyt popularności
   Warszawy dla osób spełniających kryteria późniejszego cytowania.
   Podobnie Poznań wraz z okolicami oraz Kraków były znaczące.
-  W 2013 roku posiadające wcześniej także relatywnie silną pozycje
-  Katowice osiągneły szczyt, także Warszawa i Wrocław były wtedy znaczące.
+  W 2013 roku, posiadające wcześniej także relatywnie silną pozycje
+  Katowice, osiągneły szczyt, także Warszawa i Wrocław były wtedy znaczące.
   Kolejne lata zawierają przejścia w dominacji wcześniej wymienionych
   powiatów. Dla całego okresu należy także wyróżnić inne duże miasta
   wojewódzkie, tj.: Poznań, Szczecin i Lublin. W całym okresie,
   wartości dla nich były znaczące, choć w mniejszym stopniu niż
-  te wymienionych wcześniej miast, oraz z mniejszą dynamiką.
+  te wymienionych wcześniej miast oraz z mniejszą dynamiką.
   Stopniowy spadek z roku na rok, od 2013 należy tłumaczyć
   faktem, że patenty mogą być cytowane w przyszłości, więc
   wraz z ich wiekiem, prawdopodobieństwo tego, że były
@@ -283,7 +283,7 @@ def ymap(edges:DF, regions:GDF, borders:GDF):
     ilość osób z danego powiatu,
       które cytowały patenty z Polski.
   Można więc stwierdzić, że są to obszary
-  charakteryzyjące się potencjałem do syntezy wiedzy w danym roku. 
+  charakteryzyjące się potencjałem do syntezy wiedzy.
 
   Synteza wiedzy, podobnie jak jej generacja,
     charakteryzuje się skupiskami osób powiązanych z patentami

@@ -540,8 +540,8 @@ def UPRPscoreplot(results=pandas.DataFrame):
 
   \begin{multicols}{2}
   \chart{fig/rprt/UPRP-score.pdf}
-  { Wykres punktacji wyszukiwania patentów 
-    z cytowań w raportach o stanie techniki. }
+  { Wykres punktacji wyszukiwania patentów z cytowań w raportach o stanie techniki. }
+
   \columnbreak
 
   Po lewej widać punktację wyników wyszukiwania patentów.

@@ -30,10 +30,10 @@ def citekind(edges:DF, nodes:DF, regions:DF):
   Wykresy obok przedstawiają zliczenie ilości
   osób cytujących i cytowanych w patentach z uwzględnieniem
   ich pochodzenia.
-  Widac znaczący fakt, że rozkład jest nierównomierny między
+  Widać znaczący fakt, że rozkład jest nierównomierny między
   województwami. Małopolska i Mazowsze to główne
   ośrodki, w których zamieszkują osoby pełniące role patentowe.
-  Wysokok plasuje się też woj. śląskie i dolnośląskie.
+  Wysoko plasuje się też woj. śląskie i dolnośląskie.
   Warto zauważyć że duża większość osób jest autorami
   patentów nie cytujących żadnego innego polskiego patentu.
   Podobnie w przypadku bycia patentem cytowanym --- patenty
@@ -46,7 +46,7 @@ def citekind(edges:DF, nodes:DF, regions:DF):
   województwa najczęściej, jeśli się tak w ogóle dzieje.
   Warto zaznaczyć stosukowo jednorodny rozkład.
   Okresowe wahania w niektórych województwach są raczej 
-  mało znaczące, dotyczą raczej tego czy patenty są cytowane
+  mało znaczące, dotyczą najczęściej tego czy patenty są cytowane
   i czy cytują, bardziej niż samego faktu powstawania patentów,
   które później otrzymują ochronę.
 
@@ -148,8 +148,8 @@ def mx(edges:DF, regions:DF):
   na województwo osoby cytowanej, 
   a kolumna, województwo osoby cytującej.
   Szczególny klaster cytowań widać wśród województw
-  mazoewskiego, małopolskiego i śląskiego, dolnośląskiego, łódzkiego oraz wielkopolskiego.
-  Po za tym zgrupowaniem taka międzywojewódzka wymiana wiedzy jest rzadka.
+  mazowieckiego, małopolskiego, śląskiego, dolnośląskiego, łódzkiego oraz wielkopolskiego.
+  Po za tym zgrupowaniem, taka międzywojewódzka wymiana wiedzy jest rzadka.
   W samodzielnych relacjach widać zwiazek województwa śląskiego i podkarpackiego.
   Osoby z województwa śląskiego często cytują patenty osób z województwa podkarpackiego.
   Tutaj warto zaznaczyć duży dystans między tymi województwami.

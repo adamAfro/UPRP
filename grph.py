@@ -1,14 +1,12 @@
 r"""
-\section{Graf skierowany na podstawie raportów o stanie techniki}
+\section{Graf skierowany raportów o stanie techniki}
 
   \label{grph}
 
-  Niniejsza praca
-    do analizy 
-      przepływu wiedzy
-        korzysta 
-          z grafu skierowanego
-            relacji między osobami.
+  Poniższa analiza
+    przyjmuje, że 
+      cytowania między patentami można
+      traktować jako krawędzie grafu skieroawnego.
   Graf ten 
     tworzony jest 
       w 2 etapach:
@@ -16,8 +14,8 @@ r"""
     utworzenie 
       grafu $G_P$ 
         między dokumentami $P$,
-        z krawędziami $R$.
-  Drugim etapem jest
+        z krawędziami $R$;
+  drugim etapem jest
     przetworzenie grafu $G_P$
       na graf $G$,
         gdzie wierzchołkami są osoby zbioru $O$.
@@ -29,7 +27,8 @@ r"""
   Zbiór $R$ jest zbiorem
     cytatów 
       z raportów o stanie techniki.
-  Relacja $p_x\ \rho\ p_y$,
+  Relacja $\rho$ 
+    zapisywana jako relacja między dwoma patentami $p_x\ \rho\ p_y$,
     czytana jako \textit{patent $p_x$ cytowany jest w patencie $p_y$},
     jest prawdziwa
       jeśli
@@ -53,8 +52,8 @@ r"""
   \begin{multicols}{2}
     Po prawej 
       stronie zaprezentowany jest 
-        przykładowy zestaw
-          z sekcji \ref{rprt} 
+        przykładowy zestaw danych
+          z sekcji \ref{rprt}, 
       jako graf 
         o wierzchołkach 
           $V = { p_1, p_2, p_3 }$
@@ -218,8 +217,8 @@ def delayplot(edges:DF):
       Po lewej stronie został 
         przedstawiony rozkład 
           długości okresu między 
-            składaniem aplikacji patentów,
-            będących w relacjach cytowania ($\rho$).
+            składaniem aplikacji patentów
+            będących w relacjach cytowania ($\rho$)
           dla każdej krawędzi grafu $G$,
             tj. po między osobami
               pełniącymi role patentowe
@@ -338,7 +337,7 @@ def distplot(edges:pandas.DataFrame):
     Histogram zawiera także 
       zaznaczone wartości statystyk pozycyjnych.
     Średnia jest 
-      znacząco więszka 
+      znacząco większa 
         od mediany
       co wskazuje na skośność rozkładu.
     Wartości w przedziale 260-280 
@@ -441,6 +440,9 @@ def distplotyear(edges:pandas.DataFrame):
             w danym roku.
       Widać na nim 
         pewną wariancję w kolejnych latach.
+      Wartości w latach 2011 i 2012 są znacząco mniejsze.
+        Należy to tłumaczyć brakami w lokalizacji dla starszych
+          patentów, które nie mogły zostać uwzględnione.
       Wykresy poniżej
         to wykresy gęstości
           dla kolejnych lat.
@@ -451,9 +453,16 @@ def distplotyear(edges:pandas.DataFrame):
           w kolejnych latach
         sięgając 700 kilometrów
           w skrajnych przypadkach.
+      Można przypuszczać o istnieniu pewnej
+      lokalnej mody w przedziale od 200 do 300 kilometrów,
+      dla wszystkich lat, jednak jest ona niewielka w porównaniu
+      z licznością dystansów bliskich zeru i zerowych.
       Większość 
         mieście się 
           w przedziale do 300 kilometrów.
+      Zmiany z roku na rok są słabo zauważalne,
+      co może świadczyć o stałej zależności między
+      prawdopodobieństwem przepływu wiedzy, a dystansem.
 
 
       \end{multicols}
@@ -511,12 +520,12 @@ def distcart(edges, borders, spatial=['lat', 'lon']):
           które jej ulegają.
     Rozróżniając miejsca ze względu
       na liczność osób
-        biorących udział w procesie
+        biorących udział w procesie,
       możemy wskazać 
         lokalizacje mniej lub bardziej
-          sprzyjające zachodzeniu tego procesu.
+          sprzyjające dla omawianego zjawiska.
     Fakt, że sieć przepływu wiedzy
-      jest grafem skierowanym
+      jest grafem skierowanym,
         pozwala na wskazanie
           punktów generujących wiedzę
           oraz tych, gdzie ulega syntezie
@@ -542,7 +551,7 @@ def distcart(edges, borders, spatial=['lat', 'lon']):
         Kolor punktów 
           odpowiada 
             średniej 
-              odległości między osobą a osobą referującą 
+              odległości między osobą, a osobą referującą 
             (żółty --- bliskie, czerwony --- dalekie).
       Rozmiar punktów 
         odpowiada 
@@ -592,7 +601,7 @@ def distcart(edges, borders, spatial=['lat', 'lon']):
           generatorów wiedzy, lub odbiorców.
       Po za wyjątkami 
         o niewielkiej skali,
-          Jeydnym wyjątkiem dużej (>5000 relacji) skali 
+          jedynym wyjątkiem dużej (>5000 relacji) skali 
             jest Dębica, 
               obserwujemy stosunek
               $\tfrac{\text{różnica}}{\text{cytujące} + \text{cytowane}}$ równy $0.4$,

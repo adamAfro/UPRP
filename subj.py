@@ -55,7 +55,7 @@ def affilnames(registry:pandas.DataFrame):
   najistotniejesze imię albo nazwisko (część nazwiska wieloczłonowego) 
   znajduje się na początku, a koniec utożsamiany jest z nazwiskiem; 
   w skrajnej sytuacji może to być mało znaczące drugie imię. 
-  Przyjęte jest, że są to przypadki bardzo rzadkie.
+  Przyjęte jest, że są to przypadki bardzo rzadkie.}
 
   \D{defi}{Zbiór afiliacyjno-nazewniczy $k$-osoby $\tilde N_k$}{Zbiór imion, 
   nazwisk oraz słów, które mogą być imieniem lub nazwą; zawiera

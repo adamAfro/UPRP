@@ -274,7 +274,7 @@ def cityplot(data:pandas.DataFrame):
   { Wykres liczności rejestrów miejscowości }
 
   Powyższy wykres prezentuje stan uzupełnienia informacji dotyczących
-  miejsca zameldowania osób. Należy zauważyc istotną frakcję
+  miejsca zameldowania osób. Należy zauważyć istotną frakcję
   osób, które nie mają uzupełnionej informacji dotyczącej miejscowości.
   Duża frakcja jest miejscowościami rzadko wspominami --- mniej niż 500 razy.
   """

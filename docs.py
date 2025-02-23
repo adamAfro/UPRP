@@ -174,13 +174,14 @@ Dyfuzja wiedzy
   Cytowania patentowe 
     są symptomem 
       tego procesu.
-  Dla uproszczenia, 
-    nazywamy je \emph{przepływem}.
-      Dotyczy on transferu wiedzy 
-        między osobami 
-          pełniącymi rolę patentowe
-            w jednym z patentów 
-              powiązanych cytowaniem.
+  W tym przypadku, za cytowania patentowe
+  uważane są odniesienia w raportach o stanie techniki.
+  Nie są to więc cytowania, wpisywane przez samych autorów patentów.
+  Analizowany transferu wiedzy dotyczy przepływu
+    między osobami 
+      pełniącymi rolę patentowe
+        w jednym z patentów 
+          powiązanych cytowaniem.
 Każde cytowanie jest więc relacją 
   między dwoma osobami.
   Relacja ta nie jest symetrzyczna:
@@ -208,24 +209,24 @@ Analiza obejmowała metadane patentów, wydarzenia związane z patentami, klasyf
 (\ac{IPC}) oraz dane lokalizacyjne. Wykorzystano również raporty o stanie techniki. 
 Do identyfikacji osób i uzupełniania braków geolokalizacji 
 zastosowano metody podobieństwa afiliacyjno-geolokalizacyjnego i nazewniczego.
-Wyniki. Analiza przepływu wiedzy opiera się na grafie 
+
+Analiza przepływu wiedzy opiera się na grafie 
 skierowanym relacji między osobami, tworzonym na podstawie 
 cytowań w raportach o stanie techniki. 
 Badanie przedstawia rozkład opóźnienia cytowań patentowych, 
 odległości między osobami cytującymi, a cytowanymi oraz 
 charakterystykę lokalizacji na podstawie ilości osób cytujących i cytowanych. 
-
-Analizowa obejmuje dyfuzję wiedzy innowacyjnej w powiatach i województwach, 
+Badanie obejmuje dyfuzję wiedzy innowacyjnej w powiatach i województwach, 
 uwzględniając pochodzenie cytowań.
 
 Z analizy wynika, że dyfuzja wiedzy innowacyjnej 
 w Polsce jest nierównomierna przestrzennie, 
-z wyraźną koncentracją w powiatach miejskich. 
+z wyraźną koncentracją w powiatach miejskich, będących stolicami konkretnych województw.
 Istotną rolę odgrywają duże miasta, takie jak Warszawa, Kraków, Wrocław i Poznań. 
 Większość cytowań zachodzi między osobami z tej samej lokalizacji, 
-a odległość między osobami cytującymi a cytowanymi.
+a odległość między osobami cytującymi i cytowanymi jest kluczowa.
 W Polsce istnieje klaster innowacyjny obejmujący województwa
-mazowieckie, małopolskie i śląskie, dolnośląskie, łódzkie i wielkopolskie.
+mazowieckie, małopolskie, śląskie, dolnośląskie, łódzkie i wielkopolskie.
 Wymiana informacji w obszarze tych województw jest szczególnie widzoczna.
 
 Praca ma pewne ograniczenia związane z jakością i dostępnością danych. 
@@ -234,8 +235,8 @@ są ograniczone do nazwy miejscowości. Normalizacja nazw miejscowości
 i identyfikacja osób stanowią wyzwanie ze względu na niejednoznaczność danych. 
 Wykluczenie wsi z analizy mogło wpłynąć na wyniki.
 
-W przyszłych badaniach warto rozważyć wykorzystanie innych źródeł danych, 
-takich jak publikacje naukowe i dane o współpracy między firmami. 
+W przyszłych badaniach warto skupić się na poprawieniu jakości danych
+oraz uwzględnienie organizacji jako czynnika w dyfuzji.
 Można również zastosować bardziej zaawansowane metody analizy sieciowej 
 i modelowania przestrzennego, aby lepiej zrozumieć procesy dyfuzji wiedzy innowacyjnej. 
 Interesujące byłoby również zbadanie wpływu polityki innowacyjnej 
@@ -266,7 +267,7 @@ Analiza przedstawia dyfuzję wiedzy innowacyjnej w Polsce
 w oparciu o dane patentowe z ostatnich dziesięciu lat. 
 Wykorzystane są dane z Urzędu Patentowego Rzeczypospolitej Polskiej, 
 w tym raporty o stanie techniki, 
-do zbadania przepływu wiedzy między osobami i organizacjami. 
+do zbadania przepływu wiedzy między osobami. 
 Analiza obejmuje identyfikację osób, ich lokalizację, 
 klasyfikacje patentowe oraz relacje cytowań między patentami. 
 Praca bada rozkład opóźnienia cytowań patentowych, odległości 
@@ -285,7 +286,7 @@ osób zaangażowanych w proces dyfuzji.
 
 \selecthyphenation{english}
 {\it 
-The analysis presents the diffusion of innovative knowledge in Poland based on patent data from the last ten years. Data from the Polish Patent Office, including prior art reports, are used to examine the flow of knowledge between individuals and organizations. The analysis includes the identification of individuals, their locations, patent classifications, and citation relationships between patents. The study investigates the distribution of patent citation delays, distances between citing and cited individuals, and the characteristics of locations in terms of the number of people involved in the diffusion process. The results indicate an uneven distribution of knowledge diffusion in Poland, with concentration in a few key counties and provinces.
+The analysis presents the diffusion of innovative knowledge in Poland based on patent data from the last ten years. Data from the Polish Patent Office, including prior art reports, are used to examine the flow of knowledge between individuals. The analysis includes the identification of individuals, their locations, patent classifications, and citation relationships between patents. The study investigates the distribution of patent citation delays, distances between citing and cited individuals, and the characteristics of locations in terms of the number of people involved in the diffusion process. The results indicate an uneven distribution of knowledge diffusion in Poland, with concentration in a few key counties and provinces.
 
 }
 
