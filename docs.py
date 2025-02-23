@@ -92,10 +92,10 @@ Dyfuzja wiedzy innowacyjnej w czasie i przestrzeni
       procesach 
     pomiędzy różnymi podmiotami.
   Jest kluczowym elementem rozwoju gospodarczego.
-  To jej przypisuje się siłę napędową dla wzrostu gospodarczego
+  To jej przypisuje się siłę napędową wzrostu gospodarczego
     w nowoczesnych gospodarkach. 
 Zrozumienie procesów dyfuzji wiedzy innowacyjnej 
-  może pozwolić na budowanie lepszych warunków dla 
+  może pozwolić na budowanie lepszych warunków 
     rozwoju gospodarczego.
 
 Patenty są dobrym wskaźnikiem tego zjawiska z 2 powodów:
@@ -106,7 +106,7 @@ Patenty są dobrym wskaźnikiem tego zjawiska z 2 powodów:
       czas powstania (data złożenia wniosku patentowego) oraz
       miejsce położenia autorów.
 
-Praca ta jest wglądem w dane urzędu patentowego,
+Niniejsza praca jest przeglądem danych urzędu patentowego,
   która przy użyciu technik opisowych
   ma przybliżyć zjawisko dyfuzji wiedzy innowacyjnej
   w Polsce.
