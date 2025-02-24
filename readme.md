@@ -1,26 +1,23 @@
-Geolokalizator patentów w czasie
-================================
+Analiza patentowa
+=================
 
-Dopasowuje patenty do miejsca powiązania oraz wyznacza punkty
-czasowe związane z danym patentem.
-
-
-
-Działanie
----------
-
-Tworzenie paczki danych na podstawie wyszukiwań:
+Uruchamianie skryptów
 
 ```sh
-python workflow.py All.bundle
+python main.py [plik].[funkcja]
 ```
 
-Generowanie dokumentacji:
+Generowanie pliku z wynikami analizy patentowej:
 
 ```sh
-python workflow.py docsgen
+python docs.py
 ```
 
+Generowanie podglądu analizy z pojedynczego skryptu
+
+```sh
+python docs.py [plik]
+```
 
 Wcześniejsze działania
 ----------------------
