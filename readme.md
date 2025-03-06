@@ -71,3 +71,9 @@ $pipreqs .
 - TeX: `pdflatex`
 
 - OS: `Linux Mint 21.2 Cinnamon 5.8.4 5.15.0-131-generic x86_64`
+
+
+
+Uwaga: projekt zawiera odniesienia do strony 
+`patents.google.com` i `lens.org`, ale sama analiza
+nie dotyczy żadnych danych z tych stron.
